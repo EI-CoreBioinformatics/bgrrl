@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+source checkM-git
+
+#incoming: <checkm> lineage_wf -t 8 -x fasta -f /path/to/qa_checkm.summary.1.tsv input output
+
+OUTPUTDIR=$9
+THREADS=$3
+OUTFILE=$7
+
+mkdir -p $OUTPUTDIR
+checkm lineage_wf $@
+
+checkm qa -o 2 -f $(dirname $OUTFILE)/qa_checkm.extended.2.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 3 -f $(dirname $OUTFILE)/qa_checkm.linspec.3.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 4 -f $(dirname $OUTFILE)/qa_checkm.markercounts.4.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 5 -f $(dirname $OUTFILE)/qa_checkm.markers.5.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 6 -f $(dirname $OUTFILE)/qa_checkm.multibin.6.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 7 -f $(dirname $OUTFILE)/qa_checkm.multiscaff.7.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 8 -f $(dirname $OUTFILE)/qa_checkm.markerpos.8.tsv -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR
+checkm qa -o 9 -f $(dirname $OUTFILE)/qa_checkm.markers.9.fasta -t $THREADS $OUTPUTDIR/lineage.ms $OUTPUTDIR

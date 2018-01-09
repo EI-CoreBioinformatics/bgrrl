@@ -1,0 +1,58 @@
+#!/bin/bash
+source busco-3.0
+
+
+outdir=$(echo $@ | cut -f 1 -d " ")
+params=$(echo $@ | cut -f 2- -d " ")
+
+# echo $outdir
+# echo $params
+mkdir -p "${outdir}"
+config="${outdir}/busco-config.ini"
+outdir=$(dirname $outdir)
+echo "[busco]" > $config
+echo "output_path = ${outdir}" >> $config
+echo "[tblastn]" >> $config
+echo "path = /tgac/software/testing/blast/2.2.30/x86_64/bin/" >> $config
+echo "[makeblastdb]" >> config
+echo "path = /tgac/software/testing/blast/2.2.30/x86_64/bin/" >> $config
+echo "[augustus]" >> $config
+echo "path = /tgac/software/testing/augustus/3.2.1/x86_64/bin/" >> $config
+echo "[etraining]" >> $config
+echo "path = /tgac/software/testing/augustus/3.2.1/x86_64/bin/" >> $config
+echo "[gff2gbSmallDNA.pl]" >> $config
+echo "path = /tgac/software/testing/augustus/3.2.1/x86_64/scripts/" >> $config
+echo "[new_species.pl]" >> $config
+echo "path = /tgac/software/testing/augustus/3.2.1/x86_64/scripts/" >> $config
+echo "[optimize_augustus.pl]" >> $config
+echo "path = /tgac/software/testing/augustus/3.2.1/x86_64/scripts/" >> $config
+echo "[hmmsearch]" >> $config
+echo "path = /tgac/software/testing/hmmer/3.1b2/x86_64/bin/" >> $config
+echo "[Rscript]" >> $config
+echo "path = /tgac/software/testing/R/3.3.1/x86_64/bin/" >> $config
+
+# export BUSCO_CONFIG_FILE="${config}"
+# echo $BUSCO_CONFIG_FILE
+# ls $BUSCO_CONFIG_FILE
+
+cd $outdir
+/usr/bin/time -v run_BUSCO.py $params
+
+
+
+# exit
+
+#rule qa_busco_geno:
+#        input:
+#                scaffolds = os.path.join(UNICYCLER_OUTDIR, "{sample}", "assembly.fasta")
+#        output:
+#                os.path.join(BUSCO_OUTDIR, "geno", "{sample}", "run_busco_geno", "short_summary_busco_test.txt")
+#        log:
+#                os.path.join(BUSCO_OUTDIR, "log", "geno", "{sample}_busco_geno.log")
+#        params:
+#                tmp = os.path.join(BUSCO_OUTDIR, "geno", "{sample}", "tmp")
+#        threads:
+#                8
+#        shell:
+#                BUSCO_WRAPPER + \
+#                " -i {input.scaffolds} -c {threads} -m geno --force -t {params.tmp} -l BUSCO_DATA -o busco_geno"

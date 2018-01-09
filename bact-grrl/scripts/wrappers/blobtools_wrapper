@@ -1,0 +1,31 @@
+#!/bin/bash
+
+module purge
+
+# these things will go into the wrapper later on
+export PATH=$(echo $PATH | cut -f 6- -d :)
+echo "SET PATH TO ${PATH}"
+echo "PYTHON IS $(which python)"
+
+unset CPLUS_INCLUDE_PATH
+unset LDFLAGS
+unset MANPATH
+unset CPPFLAGS
+unset LD_LIBRARY_PATH
+unset CPATH
+unset PKG_CONFIG_PATH
+
+source python_anaconda-2.5.0
+source blobtools-0.9.19
+source samtools-1.5
+
+
+# " {input.bwa} {input.blast} {input.assembly} {params.prefix} &> {log}"
+echo "ARGS: $@"
+blobtools create -t $2 -b $1 -i $3 -o $4 -x bestsumorder &&
+blobtools view -i $4.blobDB.json -o $(dirname $4)/ -x bestsumorder -r species &&
+blobtools plot -i $4.blobDB.json -o $(dirname $4)/ -r species
+
+# blobtools create -i Analysis/assembly/unicycler/PRO1638_Plate3_A1/assembly.fasta -b Analysis/qa/blobtools/bwa/PRO1638_Plate3_A1/PRO1638_Plate3_A1.blob_bwa.bam -t Analysis/qa/blobtools/blast/PRO1638_Plate3_A1/PRO1638_Plate3_A1.blob_blast.tsv -o blobtest -x bestsumorder
+# blobtools view -i blobtest.blobDB.json -o blobtest -x bestsumorder -r species
+# blobtools plot -i blobtest.blobDB.json -o blobtest

@@ -1,0 +1,10 @@
+#!/bin/bash
+source kat-2.3.4
+
+out_prefix=$1
+threads=$2
+r1=$3
+r2=$4
+log=$5
+
+/usr/bin/time -v kat hist -o $out_prefix -t $threads -v <(zcat $r1 $r2) && kat_distanalysis.py -v $out_prefix &> $log

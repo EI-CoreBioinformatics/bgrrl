@@ -1,0 +1,18 @@
+#!/bin/bash
+
+r1=$(gzip -dc $1 | wc -l)
+r2=$(gzip -dc $2 | wc -l)
+r1=$(($r1/4))
+r2=$(($r2/4))
+
+status="FAIL"
+if [[ "${r1}" -eq "${r2}" ]] 
+then
+  if [[ "${r1}" -ge "${3}" ]] 
+  then
+    status="PASS"
+  fi
+fi
+
+echo "${1},${2},${r1},${r2},${3},${status}" | tr "," "\t"
+
