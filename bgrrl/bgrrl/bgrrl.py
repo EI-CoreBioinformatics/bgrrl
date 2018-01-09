@@ -34,8 +34,9 @@ def verifySamplesheet(fn, delimiter=","):
 
 
 
-def run_qc(samplesheet, out_dir, args, exe_env, bgrrl_config=None):
-    config = dict()
+def run_qc(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
+    print(bgrrl_config)
+    config = bgrrl_config # dict()
     if verifySamplesheet(samplesheet):
         config["samplesheet"] = samplesheet
     config["out_dir"] = out_dir

@@ -67,6 +67,11 @@ def main():
 		bgrrl_config_file = args.bgrrl_config
 		print("done.")
 		print()
+	else:
+		print("Loading default BGRRL configuration ...", end="", flush=True)
+		bgrrl_config = yaml.load(open(bgrrl_config_file))
+		print("done.")
+		print()
 
 	if os.path.exists(args.output_dir):
 		if args.force:
@@ -101,7 +106,7 @@ def main():
         """
 	print(args.mode.upper())
 	if run_mode == PipelineStep.READ_QC:
-		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=None)	
+		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)	
 	elif run_mode == PipelineStep.ASSEMBLY:
 		pass
 	elif run_mode == PipelineStep.ANNOTATION:

@@ -1,16 +1,4 @@
 
-jira:
-  site: "http://jira.tgac.bbsrc.ac.uk"
-  username: "tgacpap"
-  password: "dff0LmqWKDgysG0RsIBFUgZrnsJfiMK9dqpzlhMcqSjj1uron9B0zZX70mv"
-
-miso:
-  site: "http://miso.tgac.ac.uk"
-  username: "leggettr"
-  pub_key: "bGVnZ2V0dHI6OntTSEF9dm5iZjNTNHc1dDAzSVhZWTRFQTg5YVJWcHNVPQ"
-  # user = "tgacpap"
-  # key = b"ZGF2ZXk6OjU4MmRmYzdlZTlmMTBhMWExNDA0MzMyMzU0Mjk3NjVhMGUzYTc2Mjg"
-
 paths:
 
   # Directory that contain the results of the PAP after the transfer procedure has been executed
@@ -70,4 +58,3 @@ load:
 
   # No longer necessary to source these in our environment as they should be included as git submodules to eipap
   multiqc: ""
-

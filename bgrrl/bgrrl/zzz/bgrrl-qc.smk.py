@@ -5,6 +5,7 @@ import glob
 from os.path import join, basename
 
 from bgrrl.bgrrl import Sample
+from bgrrl import loadPreCmd
 
 TIME_CMD = " /usr/bin/time -v"
 
@@ -85,8 +86,10 @@ rule qc_bbduk:
 		os.path.join(QC_OUTDIR, "log", "{sample}.qc_bbduk.log")
 	threads:
 		8
+	params:
+		load = loadPreCmd(config["load"]["bbduk"])
 	shell:
-		TIME_CMD + " " + BBDUK + \
+		"{params.load}" + TIME_CMD + " " + BBDUK + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
 		" ref=" + ADAPTERS + \
 		" ktrim=r k=21 mink=11 hdist=2 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo &> {log}"
@@ -97,13 +100,14 @@ rule qc_fastqc:
 	output:
 		fqc = os.path.join(FASTQC_DIR, "{sample}", "{fastq}.bbduk_fastqc.html")
 	params:
-		outdir = os.path.join(FASTQC_DIR, "{sample}")
+		outdir = os.path.join(FASTQC_DIR, "{sample}"),
+                load = loadPreCmd(config["load"]["fastqc"])
 	log:
 		os.path.join(QC_OUTDIR, "log", "{fastq}.qc_fastqc.log")
 	threads:
 		2
 	shell:
-		TIME_CMD + " " + FASTQC + \
+		"{params.load}" + TIME_CMD + " " + FASTQC + \
 		" --extract --threads={threads} --outdir={params.outdir} {input} &> {log}"
 
 '''

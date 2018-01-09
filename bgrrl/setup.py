@@ -55,10 +55,11 @@ setup(
 	#	"eipap.illumina": ["*.smk", "*.css"]
 	#},
 	include_package_data=True,
-	#data_files=[("etc", ["etc/eipap_config.yaml", "etc/fastq_screen.conf", "etc/hpc_config.json", "etc/multiqc_config.yaml", "etc/ei_logo.png"])],
+	data_files=[("etc", ["etc/bgrrl_config.yaml", "etc/busco-config.ini", "etc/hpc_config.json", "etc/multiqc_config.yaml"])],
 	#scripts=["bin/eicd", "bin/eipap_sub", "bin/eitransfer_sub", "bin/eianalysis_sub"],
 	#cmdclass={
 	#	'build': build,
         #'install_all': InstallAll
 	#}
 )
+
