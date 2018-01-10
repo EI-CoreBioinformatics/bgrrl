@@ -26,7 +26,6 @@ FASTQC = os.path.join(SOFTWAREPATH, "fastqc", "0.11.5", "x86_64", "bin", "fastqc
 WRAPPERS = os.path.join(BGRRL, "scripts", "wrappers")
 KAT_WRAPPER = os.path.join(WRAPPERS, "kat_wrapper")
 
-# OUTPUTDIR = os.path.join(os.getcwd(), "Analysis")
 OUTPUTDIR = config["out_dir"]
 
 QC_OUTDIR = os.path.join(OUTPUTDIR, "qc")
@@ -38,16 +37,6 @@ KATGCP_DIR = os.path.join(QC_OUTDIR, "kat", "gcp")
 BBNORM_DIR = os.path.join(QC_OUTDIR, "bbnorm")
 TADPOLE_DIR = os.path.join(QC_OUTDIR, "tadpole")
 
-'''
-INPUTDIR = os.path.join(os.getcwd(), "Reads")
-INPUTFILES = dict((os.path.basename(_file).replace("_R1.fastq.gz", ""),
-                   (_file, _file.replace("_R1.fastq.gz", "_R2.fastq.gz")))
-                  for _file in glob.glob(os.path.join(INPUTDIR, "*_R1.fastq.gz")))
-
-FASTQS = [os.path.basename(_file).strip(".fastq.gz")
-          for _file in glob.glob(os.path.join(INPUTDIR, "*.fastq.gz"))]
-'''
-
 # Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
 INPUTFILES = dict((row[0], Sample(*row)) for row in csv.reader(open(config["samplesheet"]), delimiter=","))
 with open("inputfiles.txt", "w") as input_out:
@@ -58,17 +47,10 @@ TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R1.bbduk_fastqc.h
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R1.bbnorm_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R2.bbnorm_fastqc.html"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta")
+TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
 
-# TARGETS = list()
-# TARGETS.extend(map(lambda s:join(FASTQC_DIR, s.replace('_R2', '_R1').replace('_R1', ''), s + '.bbduk_fastqc.html'), FASTQS))
-# TARGETS.extend(map(lambda s:join(KATHIST_DIR, s.replace('_R1', ''), s.replace('_R1', '') + '.kat.hist'), filter(lambda x:x.endswith('_R1'), FASTQS)))
-# TARGETS.extend(map(lambda s:join(KATGCP_DIR, s.replace('_R1', ''), s.replace('_R1', '') + '.kat-gcp.mx'), filter(lambda x:x.endswith('_R1'), FASTQS)))
-# TARGETS.extend(map(lambda s:join(BBNORM_DIR, s.replace('_R2', '_R1').replace('_R1', ''), s + '.bbnorm.fastq.gz'), FASTQS))
-# TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s.replace('_R1', ''), 'tadpole_contigs.fasta'), filter(lambda x:x.endswith('_R1'), FASTQS)))
-
-with open('targets.txt', 'w') as targets_out:
-	print(*TARGETS, sep='\n', file=targets_out)
+with open("targets.txt", "w") as targets_out:
+	print(*TARGETS, sep="\n", file=targets_out)
 
 def get_sample_files(wc):
 	return INPUTFILES[wc.sample].R1, INPUTFILES[wc.sample].R2
@@ -111,6 +93,27 @@ rule qc_fastqc_bbduk:
 		"{params.load}" + TIME_CMD + " " + FASTQC + \
 		" --extract --threads={threads} --outdir={params.outdir} {input} &> {log}"
 
+rule qc_bbnorm:
+	input:
+		r1 = os.path.join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
+		r2 = os.path.join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
+	output:
+		r1 = os.path.join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+		r2 = os.path.join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
+		prehist = os.path.join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
+		posthist = os.path.join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
+	params:
+		load = loadPreCmd(config["load"]["bbduk"])
+	log:
+		os.path.join(QC_OUTDIR, "log", "{sample}.qc_bbnorm.log")
+	threads:
+		8
+	shell:
+		"{params.load}" + TIME_CMD + " " + BBNORM + \
+		" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
+		" target=100 min=2 prefilter" + \
+		" khist={output.prehist} khistout={output.posthist} &> {log}"
+
 rule qc_fastqc_bbnorm:
 	input:
 		os.path.join(BBNORM_DIR, "{sample}", "{fastq}.bbnorm.fastq.gz")
@@ -126,27 +129,6 @@ rule qc_fastqc_bbnorm:
 	shell:
 		"{params.load}" + TIME_CMD + " " + FASTQC + \
 		" --extract --threads={threads} --outdir={params.outdir} {input} &> {log}"
-
-rule qc_bbnorm:
-	input:
-		r1 = os.path.join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
-		r2 = os.path.join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
-	output:
-		r1 = os.path.join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-		r2 = os.path.join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
-		prehist = os.path.join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
-		posthist = os.path.join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
-	params:
-		load = loadPreCmd(config["load"]["bbduk"]
-	log:
-		os.path.join(QC_OUTDIR, "log", "{sample}.qc_bbnorm.log")
-	threads:
-		8
-	shell:
-		"{params.load}" + TIME_CMD + " " + BBNORM + \
-		" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
-		" target=100 min=2 prefilter" + \
-		" khist={output.prehist} khistout={output.posthist} &> {log}"
 
 rule qc_tadpole:
 	input:
