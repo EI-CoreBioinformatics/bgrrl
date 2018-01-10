@@ -70,7 +70,7 @@ rule qc_bbduk:
 	threads:
 		8
 	params:
-		load = loadPreCmd(config["load"]["bbduk"])
+		load = loadPreCmd(config["load"]["bbmap"])
 	shell:
 		"{params.load}" + TIME_CMD + " " + BBDUK + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
@@ -103,7 +103,7 @@ rule qc_bbnorm:
 		prehist = os.path.join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
 		posthist = os.path.join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
 	params:
-		load = loadPreCmd(config["load"]["bbduk"])
+		load = loadPreCmd(config["load"]["bbmap"])
 	log:
 		os.path.join(QC_OUTDIR, "log", "{sample}.qc_bbnorm.log")
 	threads:
@@ -137,7 +137,7 @@ rule qc_tadpole:
 	output:
 		contigs = os.path.join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
 	params:
-		load = loadPreCmd(config["load"]["bbduk"])
+		load = loadPreCmd(config["load"]["bbmap"])
 	log:
 		os.path.join(QC_OUTDIR, "log", "{sample}.qc_tadpole.log")
 	threads:
@@ -145,6 +145,24 @@ rule qc_tadpole:
 	shell:
 		"{params.load}" + TIME_CMD + " " + TADPOLE + \
 		" -Xmx30g threads={threads} in={input.r1} in2={input.r2} out={output.contigs} &> {log}"
+
+
+rule qa_quast:
+	input:
+		contigs = os.path.join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
+	output:
+		os.path.join(TADPOLE_DIR, "{sample}", "quast", "quast.log")
+	params:
+		load = loadPreCmd(config["load"]["quast"]),
+		outdir = lambda wildcards: os.path.join(TADPOLE_DIR, wildcards.sample, "quast")
+	log:
+		os.path.join(QC_OUTDIR, "log", "{sample}.qc_quast_tadpole.log")
+	threads:
+		2
+	shell:
+		"{params.load}" + TIME_CMD + \
+		" quast.py -o {params.outdir} -t {threads} -L -s {input.scaffolds} &> {log}"
+
 
 '''
 rule qc_kat_hist:

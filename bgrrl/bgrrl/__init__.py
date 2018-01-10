@@ -196,7 +196,7 @@ def run_snakemake(snakefile, out_dir, cfg_file, exe_env, dryrun=False, unlock=Fa
 		                force_incomplete=True,
 		                # detailed_summary=args.detailed_summary,
 		                # list_resources=True,
-		                latency_wait=60 if exe_env.use_scheduler or exe_env.use_drmaa else 1,
+		                latency_wait=120 if exe_env.use_scheduler or exe_env.use_drmaa else 1,
 		                printdag=dryrun,
 		                dryrun=dryrun,
 		                forceall=dryrun,

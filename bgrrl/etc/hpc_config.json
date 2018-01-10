@@ -15,6 +15,14 @@
     "J": "bg-qc",
     "c": "2"
   },
+  "qc_fastqc_bbnorm": {
+    "J": "bg-qc",
+    "c": "2"
+  },
+  "qc_fastqc_bbduk": {
+    "J": "bg-qc",
+    "c": "2"
+  },
   "qc_kat_hist": {
     "memory": "32000",
     "c": "8",

@@ -48,13 +48,8 @@ centrifuge:
   threads: 16
 
 load:
-  bcl2fastq: "source bcl2fastq-2.17.1.14"
   fastqc: "source fastqc-0.11.5"
-  fastq_screen: "source fastqscreen-0.11.1"
   seqtk: "source seqtk-git20160921"
-  bbduk: "source jre-8u144 && source bbmap-37.24"
-  krona: "source krona-2.7"
-  centrifuge: "source centrifuge-1.0.3_multi"
+  bbmap: "source jre-8u144 && source bbmap-37.24"
+  quast: "source quast-4.3"
 
-  # No longer necessary to source these in our environment as they should be included as git submodules to eipap
-  multiqc: ""
