@@ -131,14 +131,17 @@ class ExecutionEnvironment:
 			"HPC configuration file: " + self.hpc_config
 		])
 
-def loadPreCmd(command):
+def loadPreCmd(command, is_dependency=True):
 	'''
 	Used to prefix a shell command that utilises some external software with another command used to load that software
 	'''
 	if command:
 		cc = command.strip()
 		if cc != "":
-			return "set +u && {} &&".format(cc)
+			if is_dependency:
+				return "set +u && {} &&".format(cc)
+			else:
+				return " {} ".format(cc)
 
 	return ""
 
@@ -174,7 +177,7 @@ def run_snakemake(snakefile, out_dir, cfg_file, exe_env, dryrun=False, unlock=Fa
 			print("Error occured processing EI-BGRRL:\n" + "\n".join(output))
 
 	else:
-
+		print("USE SCHEDULER:", exe_env.use_scheduler, "USE DRMAA:", exe_env.use_drmaa)
 		cluster_cfg = exe_env.hpc_config if exe_env.use_scheduler else None
 		cluster = (
 			exe_env.sub_cmd + exe_env.res_cmd if not exe_env.use_drmaa else None) if exe_env.use_scheduler else None

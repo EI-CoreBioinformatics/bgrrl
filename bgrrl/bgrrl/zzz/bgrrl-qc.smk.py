@@ -47,7 +47,8 @@ TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R1.bbduk_fastqc.h
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R1.bbnorm_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R2.bbnorm_fastqc.html"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, "quast", "quast.log"), INPUTFILES))
 
 with open("targets.txt", "w") as targets_out:
 	print(*TARGETS, sep="\n", file=targets_out)
@@ -154,14 +155,15 @@ rule qa_quast:
 		os.path.join(TADPOLE_DIR, "{sample}", "quast", "quast.log")
 	params:
 		load = loadPreCmd(config["load"]["quast"]),
-		outdir = lambda wildcards: os.path.join(TADPOLE_DIR, wildcards.sample, "quast")
+		outdir = lambda wildcards: os.path.join(TADPOLE_DIR, wildcards.sample, "quast"),
+		cmd = loadPreCmd(config["cmd"]["quast"], is_dependency=False)
 	log:
 		os.path.join(QC_OUTDIR, "log", "{sample}.qc_quast_tadpole.log")
 	threads:
 		2
 	shell:
 		"{params.load}" + TIME_CMD + \
-		" quast.py -o {params.outdir} -t {threads} -L -s {input.scaffolds} &> {log}"
+		" {params.cmd} -o {params.outdir} -t {threads} -L -s {input.contigs} --min-contig 0 &> {log}"
 
 
 '''
