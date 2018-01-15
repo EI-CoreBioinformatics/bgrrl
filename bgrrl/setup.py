@@ -26,7 +26,7 @@ setup(
 	keywords="bacterial genomics illumina sequencing assembly annotation",
 	# packages=["bgrrl"],
 	packages=find_packages(exclude=["test"]),
-	entry_points={"console_scripts": ["bgrrl=bgrrl.__main__:main"]},
+	entry_points={"console_scripts": ["bgrrl=bgrrl.__main__:main", "qc_eval=bgrrl.bin.qc_eval:main"]},
 	# entry_points={"console_scripts": ["eipap = eipap.__main__:main",
 	#                                  "eipap_cd=eipap.eicd:main",
 	#                                  "centrifuge_mm=eipap.illumina.centrifuge_mm:main",

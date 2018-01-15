@@ -131,6 +131,9 @@ class ExecutionEnvironment:
 			"HPC configuration file: " + self.hpc_config
 		])
 
+# def readSamplesheet(fn):
+#	return dict((row[0], Sample(*row)) for row in csv.reader(open(fn), delimiter=","))
+
 def loadPreCmd(command, is_dependency=True):
 	'''
 	Used to prefix a shell command that utilises some external software with another command used to load that software

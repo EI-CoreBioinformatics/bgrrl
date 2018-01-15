@@ -11,6 +11,7 @@ from snakemake.utils import min_version
 
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
 from bgrrl.bgrrl import run_qc
+from bgrrl.bin.qc_eval import main as qc_eval_main
 
 
 # min_version("4.0")
@@ -107,6 +108,7 @@ def main():
 	print(args.mode.upper())
 	if run_mode == PipelineStep.READ_QC:
 		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)	
+		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
 		pass
 	elif run_mode == PipelineStep.ANNOTATION:

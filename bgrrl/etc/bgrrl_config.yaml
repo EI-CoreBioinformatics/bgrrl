@@ -52,6 +52,7 @@ load:
   seqtk: "source seqtk-git20160921"
   bbmap: "source jre-8u144 && source bbmap-37.24"
   quast: "source quast-4.3"
+  kat: "source kat-dev"
 
 cmd:
   quast: "python2 /tgac/software/testing/quast/4.3/x86_64/bin/quast.py"
