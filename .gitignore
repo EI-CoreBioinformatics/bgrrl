@@ -2,3 +2,4 @@ bgrrl.egg-info/
 build/
 dist/
 bgrrl/bgrrl/__pycache__/
+bgrrl/etc/data/

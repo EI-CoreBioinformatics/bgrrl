@@ -25,6 +25,8 @@ DEFAULT_BGRRL_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "..", "etc",
 
 PAP_CONFIG = None
 
+TIME_CMD = " /usr/bin/time -v"
+
 @unique
 class RunMode(Enum):
 	NORMAL = 0
@@ -94,7 +96,7 @@ class ExecutionEnvironment:
 			self.use_drmaa = not args.no_drmaa
 			self.max_nodes = args.max_nodes
 			self.max_cores = args.max_cores
-			log_prefix = os.path.join(log_dir, now + "_{rule}_%j")
+			log_prefix = os.path.join(log_dir, now + "_{rule}_%j_%N")
 			job_name = "{rule}_" + job_suffix if job_suffix and job_suffix != "" else "{rule}"
 			if scheduler.upper() == "LSF":
 				self.sub_cmd = "bsub"

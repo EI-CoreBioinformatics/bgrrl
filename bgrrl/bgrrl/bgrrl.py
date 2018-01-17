@@ -56,6 +56,23 @@ def run_qc(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     # generate samplesheet for bg-asm
     return res
 
+def run_asm(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
+    print(bgrrl_config)
+    config = bgrrl_config
+    if verifySamplesheet(samplesheet):
+        config["samplesheet"] = samplesheet
+    config["out_dir"] = out_dir
+    config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+
+    config_file = os.path.join(out_dir, "bg-asm.conf.xml")
+    with open(config_file, "w") as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
+
+    print("Running BG-ASM")
+    # print("THIS:", __file__)
+    res = run_snakemake(os.path.join(os.path.dirname(__file__), "zzz", "bgrrl-asm.smk.py"), out_dir, config_file, exe_env, dryrun=False, unlock=args.unlock)
+    return res
+
 
 
 if __name__ == "__main__":

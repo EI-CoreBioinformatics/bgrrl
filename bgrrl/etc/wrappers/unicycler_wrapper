@@ -1,0 +1,27 @@
+#!/bin/bash -e
+
+module purge
+
+# these things will go into the wrapper later on
+export PATH=$(echo $PATH | cut -f 6- -d :)
+echo "SET PATH TO ${PATH}"
+echo "PYTHON IS $(which python)"
+
+
+export PYTHONPATH=$PYTHONPATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/lib/python3.5/site-packages
+export PATH=$PATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/bin
+
+source lmod-6.1
+ml python/3.5
+ml gcc/6.2.0
+
+source pilon-1.22
+source bowtie-2.2.9
+source spades-3.8.1
+source blast-2.6.0
+source jre-8u92
+source samtools-1.5
+
+/usr/bin/time -v unicycler $@
+
+# sbatch -p ei-medium --mem 64GB -c 8 <(echo '#!/bin/bash -e'$'\n'"source pilon-1.22; source bowtie-2.2.9; source spades-3.8.1; source blast-2.6.0; source jre-8u92; source samtools-1.5; /tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/bin/unicycler -1 data/PRO1761_A1_L004_R1.fastq.gz -2 data/PRO1761_A1_L004_R2.fastq.gz -o unicycler_test -t 8 --verbosity 3")

@@ -10,7 +10,7 @@ from textwrap import dedent
 from snakemake.utils import min_version
 
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
-from bgrrl.bgrrl import run_qc
+from bgrrl.bgrrl import run_qc, run_asm
 from bgrrl.bin.qc_eval import main as qc_eval_main
 
 
@@ -110,7 +110,7 @@ def main():
 		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)	
 		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
-		pass
+		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 	elif run_mode == PipelineStep.ANNOTATION:
 		pass
 	elif run_mode == PipelineStep.REPORT_AND_PACKAGE:
@@ -121,10 +121,10 @@ def main():
 
 	# result = eipap.illumina.pap.do_illumina_pap(jira, out_dir, run_dir, args, run_mode, exe_env, pap_config,
 	#	                                            pap_per_lane=args.pap_per_lane)
-	result = True
+	# result = True
 
 	print()
-	if result:
+	if run_result:
 		print("BGRRL completed successfully.")
 	else:
 		print("BGRRL failed.  Please consult logs to debug run.")

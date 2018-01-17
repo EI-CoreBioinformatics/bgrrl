@@ -14,6 +14,15 @@ install_requires = [
     'drmaa'
     ]
 
+import os 
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join(path, filename))
+    return paths
+
+
 setup(
 	name=name,
 	version=release,
@@ -55,7 +64,7 @@ setup(
 	#	"eipap.illumina": ["*.smk", "*.css"]
 	#},
 	include_package_data=True,
-	data_files=[("etc", ["etc/bgrrl_config.yaml", "etc/busco-config.ini", "etc/hpc_config.json", "etc/multiqc_config.yaml"])],
+	data_files=[("etc", ["etc/bgrrl_config.yaml", "etc/busco-config.ini", "etc/hpc_config.json", "etc/multiqc_config.yaml"]), ("etc/wrappers", ["etc/wrappers/unicycler_wrapper"]), ("etc/util", ["etc/util/busco_init_dir"]), ("etc/data", package_files("etc/data"))],
 	#scripts=["bin/eicd", "bin/eipap_sub", "bin/eitransfer_sub", "bin/eianalysis_sub"],
 	#cmdclass={
 	#	'build': build,

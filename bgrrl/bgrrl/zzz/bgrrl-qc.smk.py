@@ -5,9 +5,7 @@ import glob
 from os.path import join, basename
 
 from bgrrl.bgrrl import readSamplesheet
-from bgrrl import loadPreCmd
-
-TIME_CMD = " /usr/bin/time -v"
+from bgrrl import loadPreCmd, TIME_CMD
 
 BGRRL = "/tgac/workarea/group-pb/schudomc_bact/bact-grrl"
 READCOUNT = os.path.join(BGRRL, "scripts", "readcount")
