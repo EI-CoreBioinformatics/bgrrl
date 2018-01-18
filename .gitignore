@@ -3,3 +3,4 @@ build/
 dist/
 bgrrl/bgrrl/__pycache__/
 bgrrl/etc/data/
+bgrrl/bgrrl/zzz/.nfs*

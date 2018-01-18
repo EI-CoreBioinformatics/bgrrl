@@ -63,6 +63,7 @@ def run_asm(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
         config["samplesheet"] = samplesheet
     config["out_dir"] = out_dir
     config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+    config["cwd"] = os.getcwd()
 
     config_file = os.path.join(out_dir, "bg-asm.conf.xml")
     with open(config_file, "w") as outfile:
