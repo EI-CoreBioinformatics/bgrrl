@@ -48,6 +48,8 @@ def main():
 	                    help="If snakemake is not running because it is reporting that the directory is locked, then you can unlock it using this option.  Please make sure that there are no other snakemake jobs running in this directory before using this option!")
 	parser.add_argument("--bgrrl-config", help="Configuration file for BGRRL. This file specifies details for accessing services and commands to be executed prior to running each pipeline tool.  Default config file is: " + DEFAULT_BGRRL_CONFIG_FILE)
 
+	parser.add_argument("--contig-minlen", type=int, default=0)
+
 	make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
 
 	args = parser.parse_args()

@@ -160,7 +160,7 @@ rule qa_quast:
 		2
 	shell:
 		"{params.load}" + TIME_CMD + \
-		" {params.cmd} -o {params.outdir} -t {threads} -L -s {input.contigs} --min-contig 0 &> {log}"
+		"({params.cmd} -o {params.outdir} -t {threads} -L -s {input.contigs} --min-contig 0 || (mkdir -p {params.outdir} && touch {output[0]})) &> {log}"
 
 rule qc_katgcp:
 	input:

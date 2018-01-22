@@ -20,6 +20,8 @@ CWD = os.getcwd()
 
 OUTPUTDIR = config["out_dir"]
 ASSEMBLY_DIR = join(OUTPUTDIR, "assembly")
+QA_DIR = join(OUTPUTDIR, "qa")
+
 QC_OUTDIR = os.path.join(OUTPUTDIR, "qc")
 FASTQC_DIR = os.path.join(QC_OUTDIR, "fastqc")
 BBDUK_DIR = os.path.join(QC_OUTDIR, "bbduk")
@@ -32,15 +34,25 @@ with open("asm-inputfiles.txt", "w") as input_out:
     print(*INPUTFILES.values(), sep="\n", file=input_out)
 
 TARGETS = list()
-TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, "quast", "quast.log"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, "busco", "run_geno", "short_summary_geno.txt"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, "blobtools", "bwa", s + ".blob_bwa.bam"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, "blobtools", "blast", s + ".blob_blast.tsv"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(QA_DIR, "quast", s, "quast.log"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", "run_geno", s,  "short_summary_geno.txt"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "blob", s, s + ".blobDB.table.txt"), INPUTFILES))
 
+# TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "bwa", s, s + ".blob_bwa.bam"), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "blast", s, s + ".blob_blast.tsv"), INPUTFILES))
+#if config.get("use_asm_lengthfilter", ""):
+# TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
+
+print("CONFIG")
+print(config)
+
+print(config.get("use_asm_length_filter", "NA"))
 
 with open("asm-targets.txt", "w") as targets_out:
 	print(*TARGETS, sep="\n", file=targets_out)
+
+localrules: all, asm_link_assembly
 
 rule all:
 	input: TARGETS
@@ -50,7 +62,7 @@ rule asm_assembly:
 		r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
 		r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
 	output:
-		join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+		join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
 	log:
 		join(ASSEMBLY_DIR, "log", "{sample}.asm_assembly.log")
 	params:
@@ -62,19 +74,58 @@ rule asm_assembly:
 		8
 	shell:
 		UNICYCLER_WRAPPER + \
-		" -1 {input.r1} -2 {input.r2} -t {threads} -o {params.outdir}" + \
-		" && cp {params.assembly} {params.final_assembly} &> {log}"
+		" -1 {input.r1} -2 {input.r2} -t {threads} -o {params.outdir} &> {log}" 
+		# + \
+		# " && ln -s {params.assembly} {params.final_assembly} &> {log}"
+
+"""
+if 0:
+	rule asm_link_assembly:
+		input:
+			assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
+		output:
+			link = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+		# params:
+		#	linktarget = lambda wildcards: os.path.basename(input.assembly) 
+		shell:
+			"ln -s assembly.fasta {output.link}"
+
+else: 
+	#config.get("use_asm_lengthfilter", ""):
+"""
+rule asm_lengthfilter:
+	input:
+		assembly = os.path.join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
+	output:
+		filtered_assembly = os.path.join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+	log:
+		join(ASSEMBLY_DIR, "log", "{sample}.asm_lengthfilter.log")
+	params:
+		minlen = int(config["asm_lengthfilter_contig_minlen"])
+	threads:
+		1
+	run:
+		import shutil
+		from ktio.ktio import readFasta
+		with open(output[0], "w") as seqout:
+			for _id, _seq in readFasta(input.assembly):
+				if len(_seq) >= params.minlen:
+					print(_id, _seq, sep="\n", file=seqout)
+		# original_assembly = join(os.path.dirname(input.assembly), "assembly.fasta")
+		# shutil.copy2(original_assembly, original_assembly + ".full")
+		# shutil.copy2(output[0], wildcards.sample + "." + original_assembly)
+
 
 rule qa_busco_geno:
 	input:
 		assembly = join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	output:
-		join(config["cwd"], ASSEMBLY_DIR, "{sample}", "busco", "run_geno", "short_summary_geno.txt")
+		join(config["cwd"], QA_DIR, "busco", "run_geno", "{sample}", "short_summary_geno.txt")
 	log:	
-		join(config["cwd"], ASSEMBLY_DIR, "log", "{sample}_busco_geno.log")
+		join(config["cwd"], QA_DIR, "log", "{sample}_busco_geno.log")
 	params:
-		outdir = lambda wildcards: join(config["cwd"], ASSEMBLY_DIR, wildcards.sample, "busco", "run_geno"),
-		tmp = lambda wildcards: join(config["cwd"], ASSEMBLY_DIR, wildcards.sample, "busco", "tmp"),
+		outdir = lambda wildcards: join(config["cwd"], QA_DIR, "busco", "run_geno", wildcards.sample ),
+		tmp = lambda wildcards: join(config["cwd"], QA_DIR, "busco", "tmp", wildcards.sample),
 		load = loadPreCmd(config["load"]["busco"])
 	threads:
 		8
@@ -86,15 +137,15 @@ rule qa_busco_geno:
 
 rule qa_quast:
         input:
-                assembly = os.path.join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+                assembly = os.path.join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
         output:
-                os.path.join(ASSEMBLY_DIR, "{sample}", "quast", "quast.log")
+                os.path.join(QA_DIR, "quast", "{sample}", "quast.log")
         params:
                 load = loadPreCmd(config["load"]["quast"]),
-                outdir = lambda wildcards: os.path.join(ASSEMBLY_DIR, wildcards.sample, "quast"),
+                outdir = lambda wildcards: os.path.join(QA_DIR, "quast", wildcards.sample),
                 cmd = loadPreCmd(config["cmd"]["quast"], is_dependency=False)
         log:
-                join(ASSEMBLY_DIR, "log", "{sample}.asm_quast_assembly.log")
+                join(QA_DIR, "log", "{sample}.asm_quast_assembly.log")
         threads:
                 2
         shell:
@@ -105,15 +156,15 @@ rule qa_blob_bwa_mem:
 	input:
 		r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
 		r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
-                assembly = os.path.join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+                assembly = os.path.join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	output:
-		bam = join(ASSEMBLY_DIR, "{sample}", "blobtools", "bwa", "{sample}.blob_bwa.bam")
+		bam = join(QA_DIR, "blobtools", "bwa", "{sample}", "{sample}.blob_bwa.bam")
 	log:
-		join(ASSEMBLY_DIR, "log", "{sample}.blob_bwa.log")
+		join(QA_DIR, "log", "{sample}.blob_bwa.log")
 	params:
-		outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "blobtools", "bwa"),
-		index = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "blobtools", "bwa", wildcards.sample + ".assembly.fasta"),
-		outbam = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "blobtools", "bwa", wildcards.sample + ".blob_bwa.bam"),
+		outdir = lambda wildcards: join(QA_DIR, "blobtools", "bwa", wildcards.sample),
+		index = lambda wildcards: join(QA_DIR, "blobtools", "bwa", wildcards.sample, wildcards.sample + ".assembly.fasta"),
+		outbam = lambda wildcards: join(QA_DIR, "blobtools", "bwa", wildcards.sample, wildcards.sample + ".blob_bwa.bam"),
 		load = loadPreCmd(config["load"]["blob_bwa"])
 	threads:
 		8
@@ -124,13 +175,13 @@ rule qa_blob_bwa_mem:
 
 rule qa_blob_blast:
 	input:
-                assembly = os.path.join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+                assembly = os.path.join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	output:
-		tsv = join(ASSEMBLY_DIR, "{sample}", "blobtools", "blast", "{sample}.blob_blast.tsv")
+		tsv = join(QA_DIR, "blobtools", "blast", "{sample}", "{sample}.blob_blast.tsv")
 	log:
-		join(ASSEMBLY_DIR, "log", "{sample}.blob_blast.log")
+		join(QA_DIR, "log", "{sample}.blob_blast.log")
 	params:
-		outdir = join(ASSEMBLY_DIR, "{sample}", "blobtools", "blast"),
+		outdir = lambda wildcards: join(QA_DIR, "blobtools", "blast", wildcards.sample),
 		load = loadPreCmd(config["load"]["blob_blast"])
 	threads:
 		8
@@ -141,13 +192,13 @@ rule qa_blob_blast:
 
 rule qa_blobtools:
 	input:
-		bwa = join(ASSEMBLY_DIR, "{sample}", "blobtools", "bwa", "{sample}.blob_bwa.bam"),
-		blast = join(ASSEMBLY_DIR, "{sample}", "blobtools", "blast", "{sample}.blob_blast.tsv"),
-		assembly = os.path.join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+		bwa = join(QA_DIR, "blobtools", "bwa", "{sample}", "{sample}.blob_bwa.bam"),
+		blast = join(QA_DIR, "blobtools", "blast", "{sample}", "{sample}.blob_blast.tsv"),
+		assembly = os.path.join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	output:
-		blobtable = join(ASSEMBLY_DIR, "{sample}", "blobtools", "blob", "{sample}.blobDB.table.txt")
+		blobtable = join(QA_DIR, "blobtools", "blob", "{sample}", "{sample}.blobDB.table.txt")
 	log:
-		join(ASSEMBLY_DIR, "log", "{sample}.blobtools.log")
+		join(QA_DIR, "log", "{sample}.blobtools.log")
 	params:
 		prefix = lambda wildcards: join(ASSEMBLY_DIR, "{sample}", "blobtools", wildcards.sample, wildcards.sample),
 		load = loadPreCmd(config["load"]["blobtools"])
@@ -158,3 +209,27 @@ rule qa_blobtools:
 		" blobtools create -t {input.blast} -b {input.bwa} -i {input.assembly} -o {params.prefix} -x bestsumorder &&" + \
 		"blobtools view -i {params.prefix}.blobDB.json -o $(dirname {params.prefix}) -x bestsumorder -r species &&" + \
 		"blobtools blobplot -r species -l 1000 -i {params.prefix}.blobDB.json -o $(dirname {params.prefix}) &> {log}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
