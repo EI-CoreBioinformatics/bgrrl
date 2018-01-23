@@ -36,7 +36,8 @@ with open("asm-inputfiles.txt", "w") as input_out:
 TARGETS = list()
 TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(QA_DIR, "quast", s, "quast.log"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", "run_geno", s,  "short_summary_geno.txt"), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", s, "run_geno", "short_summary_geno.txt"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", s, "short_summary_{}.txt".format(s)), INPUTFILES))
 TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "blob", s, s + ".blobDB.table.txt"), INPUTFILES))
 
 # TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "bwa", s, s + ".blob_bwa.bam"), INPUTFILES))
@@ -120,20 +121,26 @@ rule qa_busco_geno:
 	input:
 		assembly = join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	output:
-		join(config["cwd"], QA_DIR, "busco", "run_geno", "{sample}", "short_summary_geno.txt")
+		# join(config["cwd"], QA_DIR, "busco", "{sample}", "run_geno", "short_summary_geno.txt")
+		join(config["cwd"], QA_DIR, "busco", "{sample}", "short_summary_{sample}.txt")
 	log:	
 		join(config["cwd"], QA_DIR, "log", "{sample}_busco_geno.log")
 	params:
-		outdir = lambda wildcards: join(config["cwd"], QA_DIR, "busco", "run_geno", wildcards.sample ),
-		tmp = lambda wildcards: join(config["cwd"], QA_DIR, "busco", "tmp", wildcards.sample),
+		#outdir = lambda wildcards: join(config["cwd"], QA_DIR, "busco", wildcards.sample, "run_geno"),
+		outdir = lambda wildcards: join(config["cwd"], QA_DIR, "busco", "run_" + wildcards.sample),
+		final_outdir = lambda wildcards: join(config["cwd"], QA_DIR, "busco", wildcards.sample),
+		tmp = lambda wildcards: join(config["cwd"], QA_DIR, "busco",  "tmp", wildcards.sample),
 		load = loadPreCmd(config["load"]["busco"])
 	threads:
 		8
 	shell:
-		BUSCO_INIT_DIR + " {params.outdir} && cd {params.outdir} && cd .. && " + \
+		BUSCO_INIT_DIR + " {params.outdir} && cd {params.outdir} && cd .. &&" + \
 		" {params.load}" + TIME_CMD + \
 		" run_BUSCO.py -i {input.assembly} -c {threads} -m geno" + \
-		" --force -t {params.tmp} -l " + BUSCO_DATA + " -o geno &> {log} && cd " + CWD + " &> {log}"
+		" --force -t {params.tmp} -l " + BUSCO_DATA + " -o {wildcards.sample} &> {log} && cd " + CWD + \
+		" && mkdir -p {params.final_outdir} && mv -v {params.outdir}/* {params.final_outdir}/" + \
+		" && rm -rf {params.outdir}" + \
+		" &> {log}"
 
 rule qa_quast:
         input:
@@ -200,15 +207,15 @@ rule qa_blobtools:
 	log:
 		join(QA_DIR, "log", "{sample}.blobtools.log")
 	params:
-		prefix = lambda wildcards: join(ASSEMBLY_DIR, "{sample}", "blobtools", wildcards.sample, wildcards.sample),
+		prefix = lambda wildcards: join(QA_DIR, "blobtools", "blob", wildcards.sample, wildcards.sample),
 		load = loadPreCmd(config["load"]["blobtools"])
 	threads:
 		1
 	shell:
 		"{params.load}" + TIME_CMD + \
 		" blobtools create -t {input.blast} -b {input.bwa} -i {input.assembly} -o {params.prefix} -x bestsumorder &&" + \
-		"blobtools view -i {params.prefix}.blobDB.json -o $(dirname {params.prefix}) -x bestsumorder -r species &&" + \
-		"blobtools blobplot -r species -l 1000 -i {params.prefix}.blobDB.json -o $(dirname {params.prefix}) &> {log}"
+		" blobtools view -i {params.prefix}.blobDB.json -o $(dirname {params.prefix})/ -x bestsumorder -r species &&" + \
+		" blobtools blobplot -r species -l 1000 -i {params.prefix}.blobDB.json -o $(dirname {params.prefix})/ &> {log}"
 
 
 

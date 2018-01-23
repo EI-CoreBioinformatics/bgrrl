@@ -10,7 +10,7 @@ from textwrap import dedent
 from snakemake.utils import min_version
 
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
-from bgrrl.bgrrl import run_qc, run_asm
+from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER
 from bgrrl.bin.qc_eval import main as qc_eval_main
 
 
@@ -113,6 +113,8 @@ def main():
 		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
 		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		with open(os.path.join(os.path.dirname(args.output_dir), "Data_Package", "quast_report.tsv"), "w") as qout, open(os.path.join(os.path.dirname(args.output_dir), "Data_Package", "quast_report.enterobase.tsv"), "w") as qeout:
+			ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella enterica", out=qeout)
 	elif run_mode == PipelineStep.ANNOTATION:
 		pass
 	elif run_mode == PipelineStep.REPORT_AND_PACKAGE:

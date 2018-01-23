@@ -12,6 +12,62 @@ from bgrrl import run_snakemake
 
 Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
 
+"""
+parse quast reports and check Enterobase criteria
+1. obtain header from one sample
+head -n1 Analysis/qa/quast/FD01543398_L006/transposed_report.tsv > quast_report.tsv
+2. get data from all samples' transposed reports
+find Analysis/qa/quast -name 'transposed_report.tsv' -exec tail -n +2 {} \; >> quast_report.tsv
+3. Filter by S.enterica criteria
+awk -v FS="\t" -v OFS="\t" '/^Assembly/ {print $0; next;} {if (4000000 <= $9 && $9 <= 5800000 && $3 < 600 && $18 > 20000 && $22 < 0.03) print $0;}' quast_report.tsv > quast_report.enterobase.tsv
+"""
+
+
+
+def compileQUASTReport(quast_dir, out=sys.stdout):
+    header = ""
+    for cdir, dirs, files in os.walk(quast_dir):
+        if "transposed_report.tsv" in files:
+            with open(os.path.join(cdir, "transposed_report.tsv")) as qin:
+                if not header:
+                    header = next(qin)
+                    print(header, file=out, end="")
+                    yield header
+                for row in qin:
+                    print(row, file=out, end="")
+                    yield row
+
+ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
+# https://bitbucket.org/enterobase/enterobase-web/wiki/EnteroBase%20Backend%20Pipeline%3A%20QA%20evaluation
+ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 0.7),
+                    "Escherichia": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
+                    "Shigella": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
+                    "Yersinia": ECriteria(3700000, 5500000, 15000, 600, 0.03, 0.65),
+                    "Moraxella": ECriteria(1800000, 2600000, 20000, 600, 0.03, 0.65)
+ }
+
+def ENTERO_FILTER(_in, organism="Salmonella", out=sys.stdout):
+    header = ""
+    crit = ENTERO_CRITERIA.get(organism, None)
+    for row in csv.reader(_in, delimiter="\t"):
+        if not header:
+            header = row
+            print(*header, sep="\t", file=out)
+        elif crit is not None:
+            print(*row, sep="\t", file=out)
+        else:
+            if crit.minsize <= int(row[8]) <= crit.maxsize:
+                if int(row[2]) < crit.ncontigs:
+                    if int(row[17]) > crit.n50:
+                        if float(row[21]) < crit.ncount:
+                            print(*row, sep="\t", file=out)
+            
+            
+
+        
+
+
+
 def readSamplesheet(fn, delimiter=","):
     with open(fn) as fi:
         for row in csv.reader(fi, delimiter=delimiter):
