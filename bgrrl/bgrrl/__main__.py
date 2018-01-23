@@ -114,7 +114,7 @@ def main():
 	elif run_mode == PipelineStep.ASSEMBLY:
 		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		with open(os.path.join(os.path.dirname(args.output_dir), "Data_Package", "quast_report.tsv"), "w") as qout, open(os.path.join(os.path.dirname(args.output_dir), "Data_Package", "quast_report.enterobase.tsv"), "w") as qeout:
-			ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella enterica", out=qeout)
+			ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella", out=qeout)
 	elif run_mode == PipelineStep.ANNOTATION:
 		pass
 	elif run_mode == PipelineStep.REPORT_AND_PACKAGE:
