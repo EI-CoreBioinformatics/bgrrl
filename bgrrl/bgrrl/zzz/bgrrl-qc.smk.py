@@ -53,6 +53,7 @@ with open("targets.txt", "w") as targets_out:
 def get_sample_files(wc):
 	return INPUTFILES[wc.sample].R1, INPUTFILES[wc.sample].R2
 
+localrules: all
 
 rule all:
 	input: TARGETS
@@ -88,8 +89,8 @@ rule qc_fastqc_bbduk:
 	threads:
 		2
 	shell:
-		"{params.load}" + TIME_CMD + " " + FASTQC + \
-		" --extract --threads={threads} --outdir={params.outdir} {input} &> {log}"
+		"{params.load} (" + TIME_CMD + " " + FASTQC + \
+		" --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_bbnorm:
 	input:
@@ -125,8 +126,8 @@ rule qc_fastqc_bbnorm:
 	threads:
 		2
 	shell:
-		"{params.load}" + TIME_CMD + " " + FASTQC + \
-		" --extract --threads={threads} --outdir={params.outdir} {input} &> {log}"
+		"{params.load} (" + TIME_CMD + " " + FASTQC + \
+		" --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_tadpole:
 	input:

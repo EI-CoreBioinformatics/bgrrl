@@ -14,17 +14,19 @@ TestResult = namedtuple("TestResult", "test status errmsg data".split(" "))
 
 def test_fastqc_readcount(sample, min_reads=1000):
     def extractReadCount(fn):
-        with open(fn) as fi:
-            for line in fi:
-                if line.startswith("Total Sequences"):
-                    return int(line.strip().split("\t")[-1])
-        return 0
+        try:
+                with open(fn) as fi:
+                    for line in fi:
+                        if line.startswith("Total Sequences"):
+                            return int(line.strip().split("\t")[-1])
+        except FileNotFoundError:
+            return 0
 
     test = "FASTQC:READCOUNT"
     fastqc_dir = os.path.join(QCDIR, "fastqc", "bbnorm", sample)
     fastqc_r1 = os.path.join(fastqc_dir, sample + "_R1.bbnorm_fastqc", "fastqc_data.txt")
     fastqc_r2 = os.path.join(fastqc_dir, sample + "_R2.bbnorm_fastqc", "fastqc_data.txt")   
-    if not os.path.exists(fastqc_r1) and os.path.exists(fastqc_r2):
+    if not (os.path.exists(fastqc_r1) and os.path.exists(fastqc_r2)):
         return TestResult(test, "FAIL", "MISSING", (0, 0)) 
     n1, n2 = map(extractReadCount, (fastqc_r1, fastqc_r2))
     if n1 != n2: 

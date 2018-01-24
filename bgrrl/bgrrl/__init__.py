@@ -42,7 +42,7 @@ class PipelineStep(Enum):
 	ASSEMBLY = 1
 	ANNOTATION = 2
 	DATA_QA = 3
-	PACKAGING = 4
+	FINALIZE = 4
 	ATTEMPT_FULL = 5
 
 

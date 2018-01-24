@@ -7,6 +7,8 @@ import argparse
 from collections import namedtuple, Counter
 from os.path import exists
 import yaml
+# https://stackoverflow.com/a/600612
+import pathlib
 
 from bgrrl import run_snakemake
 
@@ -26,19 +28,22 @@ check blobtools tables for taxonomic classification
 
 def TAX_FILTER(blob_dir, organism="Salmonella", out=sys.stdout):
     crit = ENTERO_CRITERIA.get(organism, None)
-    taxctr = Counter()
+    print("Sample", "Organism", "nContigs", "nContigs[Organism]", "nCO/nC", "MeetsEnterobaseCriteria?", sep="\t", file=out)
     for cdir, dirs, files in os.walk(blob_dir):
         blobtable = list(filter(lambda s:s.endswith(".blobDB.table.txt"), files))
         if blobtable:
+            taxcounter = Counter()
             with open(os.path.join(cdir, blobtable[0])) as tin:
                 for row in csv.reader(tin, delimiter="\t"):
                     if not row[0].startswith("#"):
-                        taxctr[row[5].split(" ")[0]] += 1
+                        taxcounter[row[5].split(" ")[0]] += 1
             sample = blobtable[0].split(".")[0]
-            orgcount = sum(taxctr[org] for org in taxctr if org.startswith(organism))
+            orgcount = sum(taxcounter[org] for org in taxcounter if org.startswith(organism))
             orgfrac = orgcount/sum(taxcounter.values())
             meets_enterobase = crit is None or orgfrac >= crit.spcount 
-            print(sample, organism, orgcount, "{:.3f}".format(orgfrac), int(meets_enterobase), sep="\t", file=out)
+            print(sample, organism, sum(taxcounter.values()), orgcount, "{:.3f}".format(orgfrac), int(meets_enterobase), sep="\t", file=out)
+            if meets_enterobase:
+                yield sample
 
 def compileQUASTReport(quast_dir, out=sys.stdout):
     header = ""
@@ -71,12 +76,14 @@ def ENTERO_FILTER(_in, organism="Salmonella", out=sys.stdout):
             print(*header, sep="\t", file=out)
         elif crit is not None:
             print(*row, sep="\t", file=out)
+            yield row[0]
         else:
             if crit.minsize <= int(row[8]) <= crit.maxsize:
                 if int(row[2]) < crit.ncontigs:
                     if int(row[17]) > crit.n50:
                         if float(row[21]) < crit.ncount:
                             print(*row, sep="\t", file=out)
+                            yield row[0]
             
             
 
@@ -104,6 +111,21 @@ def verifySamplesheet(fn, delimiter=","):
             raise ValueError("Cannot find R1/R2 data at R1={}, R2={}.".format(sample.R1, sample.R2))
         return True
 
+def run_fin(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
+    config = bgrrl_config
+    if verifySamplesheet(samplesheet):
+        config["samplesheet"] = samplesheet
+    config["out_dir"] = out_dir
+    config["package_dir"] = os.path.join(os.path.dirname(out_dir), "Data_Package")
+    config["project_prefix"] = args.project_prefix
+
+    config_file = os.path.join(out_dir, "bg-fin.conf.xml")
+    with open(config_file, "w") as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
+
+    print("Running BG-FIN")
+    res = run_snakemake(os.path.join(os.path.dirname(__file__), "zzz", "bgrrl-fin.smk.py"), out_dir, config_file, exe_env, dryrun=False, unlock=args.unlock)
+    return res
 
 
 def run_qc(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
