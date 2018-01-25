@@ -14,6 +14,21 @@ from bgrrl import run_snakemake
 
 Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
 
+def compileBUSCO(busco_dir, out=sys.stdout):
+    print("Sample", "Mode", "Complete BUSCOs (C)", "Complete and single-copy BUSCOs (S)", "Complete and duplicated BUSCOs (D)", "Fragmented BUSCOs (F)", "Missing BUSCOs (M)", "Total BUSCO groups searched", "C%", "S%", "D%", "F%", "M%", sep="\t", file=out)
+    for cdir, dirs, files in os.walk(busco_dir):
+        summary = list(filter(lambda s:"short_summary" in s, files))
+        if summary:
+            with open(os.path.oin(cdir, summary[0])) as _in:
+                for line in _in:
+                    if line.startswith('# BUSCO was run in mode:'):
+                        mode = re.search(' (transcriptome|proteins|genome)', line).group().strip()
+                        break
+                [next(_in), next(_in), next(_in)]
+                numbers = [int(line.strip().split()[0]) for line in _in]
+                percentages = list(map(lambda x:"{:.1f}".format(int(x)/int(numbers[-1] * 100)), numbers[:-1]))
+                print("_".join(summary[0].split("_")[1:3]), mode, *numbers, *percentages, sep="\t", file=out)
+
 """
 parse quast reports and check Enterobase criteria
 1. obtain header from one sample
@@ -28,7 +43,7 @@ check blobtools tables for taxonomic classification
 
 def TAX_FILTER(blob_dir, organism="Salmonella", out=sys.stdout):
     crit = ENTERO_CRITERIA.get(organism, None)
-    print("Sample", "Organism", "nContigs", "nContigs[Organism]", "nCO/nC", "MeetsEnterobaseCriteria?", sep="\t", file=out)
+    print("Sample", "Organism", "nC=nContigs", "nCO=nContigs[Organism]", "fO=nCO/nC", "MeetsEnterobaseCriteria? (fO >= {:.3f})".format(crit.spcount), sep="\t", file=out)
     for cdir, dirs, files in os.walk(blob_dir):
         blobtable = list(filter(lambda s:s.endswith(".blobDB.table.txt"), files))
         if blobtable:
@@ -50,8 +65,9 @@ def compileQUASTReport(quast_dir, out=sys.stdout):
     for cdir, dirs, files in os.walk(quast_dir):
         if "transposed_report.tsv" in files:
             with open(os.path.join(cdir, "transposed_report.tsv")) as qin:
+                first = next(qin)
                 if not header:
-                    header = next(qin)
+                    header = first
                     print(header, file=out, end="")
                     yield header
                 for row in qin:
@@ -70,14 +86,16 @@ ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 
 def ENTERO_FILTER(_in, organism="Salmonella", out=sys.stdout):
     header = ""
     crit = ENTERO_CRITERIA.get(organism, None)
+    print("Running ENTERO_FILTER for organism: {}".format(organism), crit)
     for row in csv.reader(_in, delimiter="\t"):
         if not header:
             header = row
             print(*header, sep="\t", file=out)
-        elif crit is not None:
+        elif crit is None:
             print(*row, sep="\t", file=out)
             yield row[0]
         else:
+            # print(row)
             if crit.minsize <= int(row[8]) <= crit.maxsize:
                 if int(row[2]) < crit.ncontigs:
                     if int(row[17]) > crit.n50:

@@ -64,3 +64,4 @@ cmd:
 
 blob_blastdb: "/ei/public/databases/blast/ncbi/nt_20171013/nt"
 
+multiqc_config: "/tgac/software/testing/bgrrl/0.1/src/ei_bgrrl/bgrrl/etc/multiqc_config.yaml"

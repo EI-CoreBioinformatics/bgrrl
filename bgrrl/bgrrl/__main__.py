@@ -12,7 +12,7 @@ from textwrap import dedent
 from snakemake.utils import min_version
 
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
-from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin
+from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin, compileBUSCO
 from bgrrl.bin.qc_eval import main as qc_eval_main
 
 
@@ -53,6 +53,7 @@ def main():
 	parser.add_argument("--bgrrl-config", help="Configuration file for BGRRL. This file specifies details for accessing services and commands to be executed prior to running each pipeline tool.  Default config file is: " + DEFAULT_BGRRL_CONFIG_FILE)
 
 	parser.add_argument("--contig-minlen", type=int, default=0)
+	parser.add_argument("--enterobase-groups", type=str, default="", help="Comma-separated list of Enterobase microbial organisms. The set of assemblies is tested against organism-specific criteria and assemblies are packaged according to their species. [NEEDS REWORDING!]. By default, the enterobase mode is disabled.")
 
 	make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
 
@@ -119,16 +120,12 @@ def main():
 		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		report_dir = os.path.join(args.output_dir, "reports")
 		pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
-		"""
-		try:
-			os.makedirs(report_dir)
-		except:
-			pass
-		"""
 		with open(os.path.join(report_dir, "quast_report.tsv"), "w") as qout, open(os.path.join(report_dir, "quast_report.enterobase.tsv"), "w") as qeout, open(os.path.join(report_dir, "blobtools_taxonomy_report.tsv"), "w") as teout, open(os.path.join(report_dir, "Salmonella_EB_samples.txt"), "w") as vout:
 			entero_pass_assembly = set(ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella", out=qeout))
 			entero_pass_taxonomy = set(TAX_FILTER(os.path.join(args.output_dir, "qa", "blobtools", "blob"), organism="Salmonella", out=teout))
 			print(*sorted(entero_pass_assembly.intersection(entero_pass_taxonomy)), sep="\n", file=vout)
+		with open(os.path.join(report_dir, "busco_report.tsv"), "w") as bout:
+			compileBUSCO(os.path.join(args.output_dir, "qa", "busco"), out=bout)
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		pass
