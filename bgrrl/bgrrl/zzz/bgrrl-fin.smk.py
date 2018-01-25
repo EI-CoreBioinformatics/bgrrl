@@ -20,13 +20,15 @@ TARGETS.append(join(OUTPUTDIR, "ASSEMBLY_PKG_DONE"))
 localrules: all
 
 EB_ORGANISMS = ["Salmonella"]
+# needed for tar-ball generation
+CWD = os.getcwd()
 
 rule all:
 	input: 
 		expand(join(OUTPUTDIR, "{organism}_ASSEMBLY_PKG_DONE"), organism=EB_ORGANISMS),
 		expand(join(OUTPUTDIR, "{organism}_READ_PKG_DONE"), organism=EB_ORGANISMS),
 		expand(join(OUTPUTDIR, "{organism}_RESULTS_PKG_DONE"), organism=EB_ORGANISMS),
-		expand(join(OUTPUTDIR, config["project_prefix"] + "{organism}_multiqc_report.html"), organism=EB_ORGANISMS)
+		expand(join(OUTPUTDIR, config["project_prefix"] + "_{organism}_multiqc_report.html"), organism=EB_ORGANISMS)
 	# TARGETS
 
 rule fin_compile_assembly:
@@ -39,10 +41,14 @@ rule fin_compile_assembly:
 		prefix = config["project_prefix"]
 	shell:
 		"mkdir -p {params.outdir} &&" + \
-		" (for s in $(cat {input.eb_samples});" + \
-		" do ln -s ../../Analysis/assembly/$s/$s.assembly.fasta {params.outdir}/$s.assembly.1k.fasta;" + \
-		" done) && tar chvzf {params.outdir}.tar.gz {params.outdir} &&" + \
-		" md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5 && touch {output.done}"
+		" (for s in $(cat {input.eb_samples}); do" + \
+		" ln -s ../../Analysis/assembly/$s/$s.assembly.fasta {params.outdir}/$s.assembly.1k.fasta;" + \
+		" done)" + \
+		" && cd " + OUTPUTDIR + \
+		" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+		" && cd " + CWD + \
+		" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
+		" && touch {output.done}"
 
 rule fin_compile_reads:
 	input:
@@ -59,7 +65,9 @@ rule fin_compile_reads:
 		" ln -s $r {params.outdir}/$(basename $r);" + \
 		" r=$(dirname $r)/$(basename $r _R1.fastq.gz)_R2.fastq.gz;" + \
 		" ln -s $r {params.outdir}/$(basename $r); done)" + \
-		" && tar chvzf {params.outdir}.tar.gz {params.outdir}" + \
+		" && cd " + OUTPUTDIR + \
+		" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+		" && cd " + CWD + \
 		" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
 		" && touch {output.done}"
 
@@ -75,24 +83,26 @@ rule fin_compile_qa:
 	log:
 		join(OUTPUTDIR, config["project_prefix"] + "_{organism}.finalize.log")
 	shell:
-		"mkdir -p {params.outdir}/{{blobtools,busco,fastqc,quast}}" + \
+		"(mkdir -p {params.outdir}/{{blobtools,busco,fastqc,quast}}" + \
 		" && (for s in $(cat {input.eb_samples}); do" + \
 		" echo \"$s -> blobtools\";" + \
 		" ln -s ../../../Analysis/qa/blobtools/blob/$s/$s.blobDB.table.txt {params.outdir}/blobtools/$s.blobDB.table.txt;" + \
 		" echo \"$s -> busco\";" + \
-		" cp -v {params.indir}/qa/busco/$s/full_table_$s.tsv {params.outdir}/busco/$s.full_table.tsv;" + \
-		" cp -v {params.indir}/qa/busco/$s/missing_busco_list_$s.tsv {params.outdir}/busco/$s.missing_busco_list.tsv;" + \
-		" cp -v {params.indir}/qa/busco/$s/short_summary_$s.txt {params.outdir}/busco/$s.short_summary.txt;" + \
+		" ln -s ../../../Analysis/qa/busco/$s/full_table_$s.tsv {params.outdir}/busco/${{s}}_full_table.tsv;" + \
+		" ln -s ../../../Analysis/qa/busco/$s/missing_busco_list_$s.tsv {params.outdir}/busco/${{s}}_missing_busco_list.tsv;" + \
+		" ln -s ../../../Analysis/qa/busco/$s/short_summary_$s.txt {params.outdir}/busco/${{s}}_short_summary.txt;" + \
 		" echo \"$s -> fastqc\";" + \
 		" ln -s ../../../Analysis/qc/fastqc/bbnorm/$s/$s\"_R1.bbnorm_fastqc.html\" {params.outdir}/fastqc/$s\"_R1.bbnorm_fastqc.html\";" + \
 		" ln -s ../../../Analysis/qc/fastqc/bbnorm/$s/$s\"_R2.bbnorm_fastqc.html\" {params.outdir}/fastqc/$s\"_R2.bbnorm_fastqc.html\";" + \
-		" ln -s ../../../Analysis/qc/fastqc/bbnorm/$s/$s\"_R1.bbnorm_fastqc.zip\" {params.outdir}/fastqc/$s\"_R1.bbnorm_fastqc.zip\";" + \
-		" ln -s ../../../Analysis/qc/fastqc/bbnorm/$s/$s\"_R2.bbnorm_fastqc.zip\" {params.outdir}/fastqc/$s\"_R2.bbnorm_fastqc.zip\";" + \
+		" ln -s ../../../Analysis/qc/fastqc/bbnorm/$s/$s\"_R1.bbnorm_fastqc\" {params.outdir}/fastqc/$s\"_R1.bbnorm_fastqc\";" + \
+		" ln -s ../../../Analysis/qc/fastqc/bbnorm/$s/$s\"_R2.bbnorm_fastqc\" {params.outdir}/fastqc/$s\"_R2.bbnorm_fastqc\";" + \
 		" echo \"$s -> quast\";" + \
 		" ln -s ../../../Analysis/qa/quast/$s {params.outdir}/quast/$s;" + \
 		" done)" + \
-		" && (echo \"CREATING TARBALL: {params.outdir}.tar.gz...\"" + \
-		" && tar chvzf {params.outdir}.tar.gz {params.outdir}" + \
+		" && cd " + OUTPUTDIR + \
+		" && echo \"CREATING TARBALL: $(basename {params.outdir}).tar.gz...\"" + \
+		" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+		" && cd " + CWD + \
 		" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
 		" && touch {output.done}) &> {log}"
 
@@ -100,7 +110,7 @@ rule fin_multiqc:
 	input:
 		join(OUTPUTDIR, "{organism}_RESULTS_PKG_DONE")
 	output:
-		join(OUTPUTDIR, config["project_prefix"] + "{organism}_multiqc_report.html")
+		join(OUTPUTDIR, config["project_prefix"] + "_{organism}_multiqc_report.html")
 	params:	
 		prefix = config["project_prefix"],
 		load = loadPreCmd(config["load"]["multiqc"]),
