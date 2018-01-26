@@ -14,6 +14,7 @@ from snakemake.utils import min_version
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
 from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin, compileBUSCO
 from bgrrl.bin.qc_eval import main as qc_eval_main
+from bgrrl.bin.asm_report import main as asm_report_main
 
 
 # min_version("4.0")
@@ -117,20 +118,25 @@ def main():
 		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)	
 		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
-		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		run_result = True
+		# run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		asm_report_main([args.output_dir, args.enterobase_groups])
+		"""
 		report_dir = os.path.join(args.output_dir, "reports")
 		pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
 		with open(os.path.join(report_dir, "quast_report.tsv"), "w") as qout, open(os.path.join(report_dir, "quast_report.enterobase.tsv"), "w") as qeout, open(os.path.join(report_dir, "blobtools_taxonomy_report.tsv"), "w") as teout, open(os.path.join(report_dir, "Salmonella_EB_samples.txt"), "w") as vout:
 			entero_pass_assembly = set(ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella", out=qeout))
 			entero_pass_taxonomy = set(TAX_FILTER(os.path.join(args.output_dir, "qa", "blobtools", "blob"), organism="Salmonella", out=teout))
 			print(*sorted(entero_pass_assembly.intersection(entero_pass_taxonomy)), sep="\n", file=vout)
-		with open(os.path.join(report_dir, "busco_report.tsv"), "w") as bout:
-			compileBUSCO(os.path.join(args.output_dir, "qa", "busco"), out=bout)
+		"""
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		pass
 	elif run_mode == PipelineStep.FINALIZE:
 		run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+
+		with open(os.path.join(report_dir, "busco_report.tsv"), "w") as bout:
+			compileBUSCO(os.path.join(args.output_dir, "qa", "busco"), out=bout)
 	else:
 		print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", run_mode)
 		exit(1)
