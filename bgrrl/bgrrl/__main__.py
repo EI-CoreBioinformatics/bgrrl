@@ -118,8 +118,8 @@ def main():
 		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)	
 		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
-		run_result = True
-		# run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		# run_result = True
+		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		asm_report_main([args.output_dir, args.enterobase_groups])
 		"""
 		report_dir = os.path.join(args.output_dir, "reports")

@@ -181,6 +181,10 @@ def run_asm(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     if args.contig_minlen:
         config["use_asm_lengthfilter"] = True
         config["asm_lengthfilter_contig_minlen"] = args.contig_minlen
+    else:
+        config["use_asm_lengthfilter"] = False
+        config["asm_lengthfilter_contig_minlen"] = 0
+        
         # print(config)
 
     config_file = os.path.join(out_dir, "bg-asm.conf.xml")
