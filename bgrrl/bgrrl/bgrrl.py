@@ -196,6 +196,26 @@ def run_asm(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     res = run_snakemake(os.path.join(os.path.dirname(__file__), "zzz", "bgrrl-asm.smk.py"), out_dir, config_file, exe_env, dryrun=False, unlock=args.unlock)
     return res
 
+def run_ann(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
+    print(bgrrl_config)
+    config = bgrrl_config
+    if verifySamplesheet(samplesheet):
+        config["samplesheet"] = samplesheet
+    config["out_dir"] = out_dir
+    config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+    config["cwd"] = os.getcwd()
+
+    config_file = os.path.join(out_dir, "bg-ann.conf.xml")
+    with open(config_file, "w") as outfile:
+        yaml.dump(config, outfile, default_flow_style=False)
+
+    print("Running BG-ANN")
+    res = run_snakemake(os.path.join(os.path.dirname(__file__), "zzz", "bgrrl-ann.smk.py"), out_dir, config_file, exe_env, dryrun=False, unlock=args.unlock)
+    return res
+    
+
+
+
 
 
 if __name__ == "__main__":
