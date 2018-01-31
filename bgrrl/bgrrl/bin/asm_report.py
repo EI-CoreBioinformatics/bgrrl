@@ -105,14 +105,19 @@ with open(os.path.join(report_dir, "quast_report.tsv"), "w") as qout, open(os.pa
 """
 
 
-def main(args_in=sys.argv):
+def main(args_in=sys.argv[1:]):
     ap = argparse.ArgumentParser()
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("enterobase_groups", type=str, default="")
+    ap.add_argument("--report-dir", type=str, default="")
     args = ap.parse_args(args_in)
+
     
     print("Running asm:report generation...") #, end="", flush=True)
-    report_dir = os.path.join(args.indir, "reports")
+    if not args.report_dir:
+        report_dir = os.path.join(args.indir, "reports")
+    else:
+        report_dir = os.path.join(args.report_dir)
     pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
 
     print("Compiling global QUAST report...", end="", flush=True)
@@ -141,7 +146,8 @@ def main(args_in=sys.argv):
             print("No valid Enterobase groups found. Proceeding without checking Enterobase criteria.")
             pass
         elif valid_sample_groups:
-            print(" EB")
+            if not args.enterobase_groups == "all":
+                print(" EB")
             print("Moving forward with Enterobase groups: {}.".format(",".join(sorted(valid_sample_groups))))
         if invalid_sample_groups:
             print("Found invalid Enterobase groups: {}.".format(",".join(sorted(invalid_sample_groups)))) 

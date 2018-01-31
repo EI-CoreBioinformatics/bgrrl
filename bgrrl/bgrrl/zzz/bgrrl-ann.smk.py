@@ -77,7 +77,7 @@ rule qa_busco_tran:
 	shell:
 		BUSCO_INIT_DIR + " {params.outdir} && cd {params.outdir} && cd .." + \
 		" && {params.load}" + TIME_CMD + \
-		" runBUSCO.py -i {input.transcripts} -c {threads} -m tran" + \
+		" run_BUSCO.py -i {input.transcripts} -c {threads} -m tran" + \
 		" --force -t {params.tmp} -l " + BUSCO_DATA + " -o {wildcards.sample}" + \
 		" && cd " + CWD + \
 		" && mkdir -p {params.final_outdir} && mv -v {params.outdir}/* {params.final_outdir}/" + \
@@ -100,7 +100,7 @@ rule qa_busco_prot:
         shell:
                 BUSCO_INIT_DIR + " {params.outdir} && cd {params.outdir} && cd .." + \
                 " && {params.load}" + TIME_CMD + \
-                " runBUSCO.py -i {input.proteins} -c {threads} -m prot" + \
+                " run_BUSCO.py -i {input.proteins} -c {threads} -m prot" + \
                 " --force -t {params.tmp} -l " + BUSCO_DATA + " -o {wildcards.sample}" + \
                 " && cd " + CWD + \
                 " && mkdir -p {params.final_outdir} && mv -v {params.outdir}/* {params.final_outdir}/" + \
