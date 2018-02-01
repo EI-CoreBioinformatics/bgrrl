@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import csv
 import sys
 import shutil
 import yaml
@@ -8,6 +9,7 @@ import yaml
 import pathlib 
 from argparse import ArgumentParser
 from textwrap import dedent
+import copy
 
 from snakemake.utils import min_version
 
@@ -16,7 +18,7 @@ from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 
-from qaa import TIME_CMD as tcmd
+from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file
 print("QAA_TIME_CMD="+tcmd) 
 
 
@@ -118,7 +120,19 @@ def main():
         """
 	print(args.mode.upper())
 	if run_mode == PipelineStep.READ_QC:
-		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)	
+		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+
+		qaa_args = copy.copy(args)
+		qaa_args.config = qaa_config_file
+		qaa_args.survey_assembly = True
+		qaa_args.qaa_mode = "genome"
+		qaa_args.blobtools_no_bwa = False
+		qaa_args.input_stream = list()
+		for row in csv.reader(open(args.input), delimiter=","):
+			qaa_args.input_stream.append([row[0], os.path.join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta"), "", row[2], row[3], "bacteria_odb9"])
+			
+		qaa_run = QAA_Runner(qaa_args).run()
+
 		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
 		# run_result = True
