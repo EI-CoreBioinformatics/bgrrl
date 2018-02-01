@@ -1,0 +1,3 @@
+[submodule "bgrrl/deps/qaa"]
+	path = bgrrl/deps/qaa
+	url = https://github.com/cschu/qaa

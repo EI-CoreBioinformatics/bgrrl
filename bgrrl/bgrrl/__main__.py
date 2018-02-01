@@ -16,6 +16,9 @@ from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 
+from qaa import TIME_CMD as tcmd
+print("QAA_TIME_CMD="+tcmd) 
+
 
 # min_version("4.0")
 
