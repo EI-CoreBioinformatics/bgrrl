@@ -27,9 +27,10 @@ with open("ann-inputfiles.txt", "w") as input_out:
     print(*INPUTFILES.values(), sep="\n", file=input_out)
 
 TARGETS = list()
+TARGETS.extend(map(lambda s:join(ANNOTATION_DIR, s, s + ".log"), INPUTFILES))
 # TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", "tran", s, "short_summary_{}.txt".format(s)), INPUTFILES))
-TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", "prot", s, "short_summary_{}.txt".format(s)), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", "tran", s, "short_summary_{}.txt".format(s)), INPUTFILES))
+#TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", "prot", s, "short_summary_{}.txt".format(s)), INPUTFILES))
 
 print("CONFIG")
 print(config)
@@ -60,6 +61,7 @@ rule ann_prokka:
 		PROKKA_WRAPPER + \
 		" {params.outdir} {params.prefix} {input.contigs} {log} {threads}"
 
+"""
 rule qa_busco_tran:
 	input:
 		transcripts = join(config["cwd"], ANNOTATION_DIR, "{sample}", "{sample}.ffn")
@@ -106,3 +108,4 @@ rule qa_busco_prot:
                 " && mkdir -p {params.final_outdir} && mv -v {params.outdir}/* {params.final_outdir}/" + \
                 " && rm -rf {params.outdir}" + \
                 " &> {log}"
+"""

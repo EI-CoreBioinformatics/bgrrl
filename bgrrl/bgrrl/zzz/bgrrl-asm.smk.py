@@ -35,10 +35,10 @@ with open("asm-inputfiles.txt", "w") as input_out:
 
 TARGETS = list()
 TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(QA_DIR, "quast", s, "quast.log"), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(QA_DIR, "quast", s, "quast.log"), INPUTFILES))
 # TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", s, "run_geno", "short_summary_geno.txt"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", s, "short_summary_{}.txt".format(s)), INPUTFILES))
-TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "blob", s, s + ".blobDB.table.txt"), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(config["cwd"], QA_DIR, "busco", s, "short_summary_{}.txt".format(s)), INPUTFILES))
+# TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "blob", s, s + ".blobDB.table.txt"), INPUTFILES))
 
 # TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "bwa", s, s + ".blob_bwa.bam"), INPUTFILES))
 # TARGETS.extend(map(lambda s:join(QA_DIR, "blobtools", "blast", s, s + ".blob_blast.tsv"), INPUTFILES))
@@ -116,7 +116,7 @@ rule asm_lengthfilter:
 		# shutil.copy2(original_assembly, original_assembly + ".full")
 		# shutil.copy2(output[0], wildcards.sample + "." + original_assembly)
 
-
+"""
 rule qa_busco_geno:
 	input:
 		assembly = join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
@@ -216,7 +216,7 @@ rule qa_blobtools:
 		" blobtools create -t {input.blast} -b {input.bwa} -i {input.assembly} -o {params.prefix} -x bestsumorder &&" + \
 		" blobtools view -i {params.prefix}.blobDB.json -o $(dirname {params.prefix})/ -x bestsumorder -r species &&" + \
 		" blobtools blobplot -r species -l 1000 -i {params.prefix}.blobDB.json -o $(dirname {params.prefix})/ &> {log}"
-
+"""
 
 
 

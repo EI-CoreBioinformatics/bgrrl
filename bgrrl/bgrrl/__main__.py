@@ -14,17 +14,37 @@ import copy
 from snakemake.utils import min_version
 
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
-from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin, compileBUSCO, run_ann
+from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin, run_ann
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 
 from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file
+from qaa.reporting.busco_report import compileBUSCOReport
 print("QAA_TIME_CMD="+tcmd) 
 
 
 # min_version("4.0")
 
-
+def makeQAAArgs(args, **kwargs):
+	from copy import copy
+	qaa_args = copy(args)
+	for k in kwargs:
+       		setattr(qaa_args, k, kwargs[k])
+	return qaa_args
+def makeQAASheet(args):
+	sheet = list()
+	asm_path = ""
+	for row in csv.reader(open(args.input), delimiter=","):
+		if args.runmode == "asm":
+			asm_path = os.path.join(args.output_dir, "assembly", row[0], row[0] + ".assembly.fasta")
+		elif args.runmode == "survey":
+			asm_path = os.path.join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")	
+		new_row = [row[0], asm_path, "", row[2], row[3], "bacteria_odb9"]
+		if args.runmode == "ann":
+			new_row.extend([os.path.join(args.output_dir, "annotation", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", row[0], row[0] + ".faa")])
+		sheet.append(new_row)
+	return sheet
+		
 def main():
 	print("Starting EI BGRRL V" + __version__)
 	print()
@@ -53,6 +73,7 @@ def main():
 						\"report_and_package\" - This step performs report generation and data packaging.
 						\"attempt_full\" - If you know the data and what you're doing, you can attempt to run the 4 pipeline steps without breaks (not implemented yet)
 						"""))
+	parser.add_argument("--fin-report-only", action="store_true", help="If finalize-module is called with this parameter, then it will only generate reports instead of generating data packages. [False]")
 
 	parser.add_argument("--unlock", action='store_true', default=False,
 	                    help="If snakemake is not running because it is reporting that the directory is locked, then you can unlock it using this option.  Please make sure that there are no other snakemake jobs running in this directory before using this option!")
@@ -92,8 +113,9 @@ def main():
 			print("Output directory already exists and overwrite was requested (-f option).  Deleting directory contents ... ",
 			      end='',
 			      flush=True)
-			shutil.rmtree(args.output_dir)
-			os.makedirs(args.output_dir)
+			print("DEACTIVATED DUE TO TOO MANY ACCIDENTS.")
+			# shutil.rmtree(args.output_dir)
+			# os.makedirs(args.output_dir)
 			print("done.")
 		else:
 			print("Output already exists, attempting to resume.", flush=True)
@@ -109,58 +131,43 @@ def main():
 		print("done.")
 
 	print()
-
-	"""
-        run_dir = None
-	if args.run_dir:
-		run_dir = args.run_dir
-
-	if not run_dir:
-		raise ValueError("Illegal configuration: No run directory established.")
-        """
 	print(args.mode.upper())
 	if run_mode == PipelineStep.READ_QC:
 		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-
-		qaa_args = copy.copy(args)
-		qaa_args.config = qaa_config_file
-		qaa_args.survey_assembly = True
-		qaa_args.qaa_mode = "genome"
-		qaa_args.blobtools_no_bwa = False
-		qaa_args.input_stream = list()
-		for row in csv.reader(open(args.input), delimiter=","):
-			qaa_args.input_stream.append([row[0], os.path.join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta"), "", row[2], row[3], "bacteria_odb9"])
-			
+		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey")
+		qaa_args.input_stream = makeQAASheet(qaa_args)
 		qaa_run = QAA_Runner(qaa_args).run()
 
 		qc_eval_main([args.input, args.output_dir])
 	elif run_mode == PipelineStep.ASSEMBLY:
-		# run_result = True
 		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-		asm_report_main([args.output_dir, args.enterobase_groups])
-		"""
-		report_dir = os.path.join(args.output_dir, "reports")
-		pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
-		with open(os.path.join(report_dir, "quast_report.tsv"), "w") as qout, open(os.path.join(report_dir, "quast_report.enterobase.tsv"), "w") as qeout, open(os.path.join(report_dir, "blobtools_taxonomy_report.tsv"), "w") as teout, open(os.path.join(report_dir, "Salmonella_EB_samples.txt"), "w") as vout:
-			entero_pass_assembly = set(ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella", out=qeout))
-			entero_pass_taxonomy = set(TAX_FILTER(os.path.join(args.output_dir, "qa", "blobtools", "blob"), organism="Salmonella", out=teout))
-			print(*sorted(entero_pass_assembly.intersection(entero_pass_taxonomy)), sep="\n", file=vout)
-		"""
+		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm")
+		qaa_args.input_stream = makeQAASheet(qaa_args)
+		qaa_run = QAA_Runner(qaa_args).run()		
+
+		# TODO: fix this!!!
+		# asm_report_main([args.output_dir, args.enterobase_groups])
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
+		qaa_args.input_stream = makeQAASheet(qaa_args)
+		qaa_run = QAA_Runner(qaa_args).run()
+		
 	elif run_mode == PipelineStep.FINALIZE:
-		run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		if not args.fin_report_only:
+			run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+		else:
+			run_result = True
 
-		with open(os.path.join(report_dir, "busco_report.tsv"), "w") as bout:
-			compileBUSCO(os.path.join(args.output_dir, "qa", "busco"), out=bout)
+		# qaa_args = makeQAAArgs(args, config=qaa_config_file,  
+
+		# report_dir = os.path.join(args.output_dir, "reports")
+		# with open(os.path.join(report_dir, "busco_report.tsv"), "w") as bout:
+		#	compileBUSCOReport(os.path.join(args.output_dir, "qa", "asm", "busco"), out=bout)
 	else:
 		print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", run_mode)
 		exit(1)
-
-	# result = eipap.illumina.pap.do_illumina_pap(jira, out_dir, run_dir, args, run_mode, exe_env, pap_config,
-	#	                                            pap_per_lane=args.pap_per_lane)
-	# result = True
 
 	print()
 	if run_result:
