@@ -95,23 +95,13 @@ def TAX_FILTER(blob_dir, organism="Salmonella", out=sys.stdout):
                 yield sample
 
 
-
-
-"""
-with open(os.path.join(report_dir, "quast_report.tsv"), "w") as qout, open(os.path.join(report_dir, "quast_report.enterobase.tsv"), "w") as qeout, open(os.path.join(report_dir, "blobtools_taxonomy_report.tsv"), "w") as teout, open(os.path.join(report_dir, "Salmonella_EB_samples.txt"), "w") as vout:
-                        entero_pass_assembly = set(ENTERO_FILTER(compileQUASTReport(os.path.join(args.output_dir, "qa", "quast"), out=qout), organism="Salmonella", out=qeout))
-                        entero_pass_taxonomy = set(TAX_FILTER(os.path.join(args.output_dir, "qa", "blobtools", "blob"), organism="Salmonella", out=teout))
-                        print(*sorted(entero_pass_assembly.intersection(entero_pass_taxonomy)), sep="\n", file=vout)
-"""
-
-
 def main(args_in=sys.argv[1:]):
     ap = argparse.ArgumentParser()
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("enterobase_groups", type=str, default="")
     ap.add_argument("--report-dir", type=str, default="")
     args = ap.parse_args(args_in)
-
+ 
     
     print("Running asm:report generation...") #, end="", flush=True)
     if not args.report_dir:
@@ -120,17 +110,16 @@ def main(args_in=sys.argv[1:]):
         report_dir = os.path.join(args.report_dir)
     pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
 
-    print("Compiling global QUAST report...", end="", flush=True)
-    with open(os.path.join(report_dir, "quast_report.tsv"), "w") as quast_out:
-        quast_path = os.path.join(args.indir, "qa", "quast")
-        try:
-            quast_report = list(compileQUASTReport(quast_path, out=quast_out))
-        except:
-            print()
-            print("Error: No QUAST data found at {}. Exiting.".format(quast_path))
-            sys.exit(1)
-            pass
-    print(" Done")
+    print("Reading global QUAST report...", end="", flush=True)
+    try:
+        with open(os.path.join(report_dir, "quast_report.tsv")) as quast_in:
+            quast_report = list(row for row in csv.reader(quast_in, delimiter="\t"))
+    except:
+        print()
+        print("Error: No QUAST report found at {}. Exiting.".format(report_dir))
+        sys.exit(1)
+        pass
+    print(" Done")        
 
     print("Determining downstream processing mode...", end="", flush=True)
     if args.enterobase_groups:
@@ -160,6 +149,7 @@ def main(args_in=sys.argv[1:]):
     if not valid_sample_groups:
         print("No Enterobase groups specified. Proceeding without checking Enterobase criteria.")
         with open(os.path.join(report_dir, "all_samples.txt"), "w") as samples_out:
+            print(quast_report)
             print(*sorted(line[0] for line in quast_report[1:]), sep="\n", file=samples_out)
         with open(os.path.join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
             list(TAX_FILTER(blob_path, organism="", out=tax_out))

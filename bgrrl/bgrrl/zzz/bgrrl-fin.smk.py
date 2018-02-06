@@ -7,10 +7,8 @@ from os.path import join, basename
 from bgrrl.bgrrl import readSamplesheet
 from bgrrl import loadPreCmd, TIME_CMD
 
-SOFTWAREPATH = "/tgac/software/testing"
 INPUTDIR = config["out_dir"]
 OUTPUTDIR = config["package_dir"]
-
 
 INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 

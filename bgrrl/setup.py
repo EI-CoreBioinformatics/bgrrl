@@ -85,7 +85,7 @@ setup(
 		"bgrrl.zzz": ["*.smk.py"]
 	},
 	include_package_data=True,
-	data_files=[("etc", ["etc/bgrrl_config.yaml", "etc/busco-config.ini", "etc/hpc_config.json", "etc/multiqc_config.yaml"]), ("etc/wrappers", ["etc/wrappers/unicycler_wrapper"]), ("etc/util", ["etc/util/busco_init_dir"])],
+	data_files=[("etc", ["etc/bgrrl_config.yaml", "etc/busco-config.ini", "etc/hpc_config.json", "etc/multiqc_config.yaml"]), ("etc/wrappers", ["etc/wrappers/unicycler_wrapper", "etc/wrappers/asm_wrapper", "etc/wrappers/prokka_wrapper"]), ("etc/util", ["etc/util/busco_init_dir"])],
 	cmdclass={
         	'install_all': InstallAll
 	}

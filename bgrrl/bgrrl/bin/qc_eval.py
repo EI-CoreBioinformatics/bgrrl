@@ -90,7 +90,8 @@ def test_tadpole_size(sample, min_size=1e6):
                 return int(row[1])
         return 0
     test = "TADPOLE:SIZE"
-    quast_report = os.path.join(QCDIR, "tadpole", sample, "quast", "report.tsv")   
+    # quast_report = os.path.join(QADIR, "tadpole", sample, "quast", "report.tsv")   
+    quast_report = os.path.join(QADIR, "quast", sample, "report.tsv")
     if os.path.exists(quast_report) and extractAssemblySize(open(quast_report)) < min_size:
         return TestResult(test, "FAIL", "TOO_SMALL", extractAssemblySize(open(quast_report)))
     return TestResult(test, "PASS", "", str(extractAssemblySize(open(quast_report))))
@@ -116,6 +117,8 @@ def main(args_in=sys.argv):
     global QCDIR
     # QCDIR  = os.path.join(args.indir, "Analysis", "qc")
     QCDIR = os.path.join(args.indir, "qc")
+    global QADIR
+    QADIR = os.path.join(args.indir, "qa", "survey")
 
     #Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
     

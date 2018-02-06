@@ -1,0 +1,43 @@
+#!/bin/bash -e
+
+module purge
+
+# these things will go into the wrapper later on
+export PATH=$(echo $PATH | cut -f 6- -d :)
+echo "SET PATH TO ${PATH}"
+echo "PYTHON IS $(which python)"
+
+
+export PYTHONPATH=$PYTHONPATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/lib/python3.5/site-packages
+export PATH=$PATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/bin
+
+source lmod-6.1
+ml python/3.5
+ml gcc/6.2.0
+
+source pilon-1.22
+source bowtie-2.2.9
+source spades-3.8.1
+source blast-2.6.0
+source jre-8u92
+source samtools-1.5
+
+# unicycler input: -1 <r1> -2 <r2> -t <threads> -o <outdir>
+# spades input -1 <r1> -2 <r2> -t <threads> -o <outdir> -m 64
+
+r1=$1
+r2=$2
+t=$3
+outdir=$4
+ur1=$5
+ur2=$6
+log=$7
+
+# /usr/bin/time -v
+((unicycler -1 $r1 -2 $r2 -t $3 -o $outdir && touch $outdir/asm_main) || (rm -rf $outdir && unicycler -1 $ur1 -2 $ur2 -t $3 -o $outdir && touch $outdir/asm_fb1) || (rm -rf $outdir && spades.py -1 $r1 -2 $r2 -t $3 -o $outdir -m 64 && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb2)) &> $log
+
+
+#/tgac/software/testing/bin/core/../..//spades/3.8.1/x86_64/bin/spades.py  -o      /tgac/workarea/group-pb/CB-PPBFX-552/Analysis/assembly/spades/PRO1638_Plate3_D11        -1      /tgac/workarea/group-pb/CB-PPBFX-552/Analysis/qc/bbduk/PRO1638_Plate3_D11/PRO1638_Plate3_D11_R1.bbduk.fastq.gz  -2      /tgac/workarea/group-pb/CB-PPBFX-552/Analysis/qc/bbduk/PRO1638_Plate3_D11/PRO1638_Plate3_D11_R2.bbduk.fastq.gz  -t      8       -m      64
+
+
+# sbatch -p ei-medium --mem 64GB -c 8 <(echo '#!/bin/bash -e'$'\n'"source pilon-1.22; source bowtie-2.2.9; source spades-3.8.1; source blast-2.6.0; source jre-8u92; source samtools-1.5; /tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/bin/unicycler -1 data/PRO1761_A1_L004_R1.fastq.gz -2 data/PRO1761_A1_L004_R2.fastq.gz -o unicycler_test -t 8 --verbosity 3")

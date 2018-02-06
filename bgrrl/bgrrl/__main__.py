@@ -139,14 +139,14 @@ def main():
 		qaa_run = QAA_Runner(qaa_args).run()
 
 		qc_eval_main([args.input, args.output_dir])
+
 	elif run_mode == PipelineStep.ASSEMBLY:
 		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm")
 		qaa_args.input_stream = makeQAASheet(qaa_args)
 		qaa_run = QAA_Runner(qaa_args).run()		
 
-		# TODO: fix this!!!
-		# asm_report_main([args.output_dir, args.enterobase_groups])
+		asm_report_main([args.output_dir, args.enterobase_groups])
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
@@ -159,12 +159,6 @@ def main():
 			run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		else:
 			run_result = True
-
-		# qaa_args = makeQAAArgs(args, config=qaa_config_file,  
-
-		# report_dir = os.path.join(args.output_dir, "reports")
-		# with open(os.path.join(report_dir, "busco_report.tsv"), "w") as bout:
-		#	compileBUSCOReport(os.path.join(args.output_dir, "qa", "asm", "busco"), out=bout)
 	else:
 		print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", run_mode)
 		exit(1)
