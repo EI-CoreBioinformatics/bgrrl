@@ -176,6 +176,7 @@ def run_asm(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     config["out_dir"] = out_dir
     config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
     config["cwd"] = os.getcwd()
+    config["assembler"] = args.assembler
     # print(args)
     
     if args.contig_minlen:

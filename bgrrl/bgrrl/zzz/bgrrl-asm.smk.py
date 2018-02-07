@@ -55,13 +55,14 @@ if True:
 		params:
 			outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 			assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
-			final_assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, wildcards.sample + ".assembly.fasta")
+			final_assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, wildcards.sample + ".assembly.fasta"),
+			assembler = config["assembler"]
 			# load = loadPreCmd(config["load"]["unicycler"])
 		threads:
 			8
 		shell:
 			ASM_WRAPPER + \
-			" {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} {log}"
+			" {params.assembler} {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} {log}"
 			#" &> {log}"
 			# UNICYCLER_WRAPPER + \
 			# " -1 {input.r1} -2 {input.r2} -t {threads} -o {params.outdir} &> {log}" 

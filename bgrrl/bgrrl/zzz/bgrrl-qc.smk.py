@@ -73,7 +73,8 @@ rule qc_fastqc_bbduk:
 		2
 	shell:
 		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
-		" --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+		" --extract --threads={threads} --outdir={params.outdir} {input} && touch {output.fqc}) &> {log}"
+		# " --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_bbnorm:
 	input:
@@ -112,7 +113,8 @@ rule qc_fastqc_bbnorm:
 		2
 	shell:
 		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
-		" --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+		" --extract --threads={threads} --outdir={params.outdir} {input} && touch {output.fqc}) &> {log}"
+		# " --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_tadpole:
 	input:

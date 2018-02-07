@@ -22,7 +22,7 @@ from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_
 from qaa.reporting.busco_report import compileBUSCOReport
 print("QAA_TIME_CMD="+tcmd) 
 
-
+VALID_ASSEMBLERS = ["unicycler", "velvet"]
 # min_version("4.0")
 
 def makeQAAArgs(args, **kwargs):
@@ -81,10 +81,12 @@ def main():
 
 	parser.add_argument("--contig-minlen", type=int, default=0)
 	parser.add_argument("--enterobase-groups", type=str, default="", help="Comma-separated list of Enterobase microbial organisms. The set of assemblies is tested against organism-specific criteria and assemblies are packaged according to their species. [NEEDS REWORDING!]. By default, the enterobase mode is disabled.")
+	parser.add_argument("--assembler", type=str, default="unicycler", help="Assembly software to use for genome assembly. Valid options: {} [unicycler]".format(",".join(VALID_ASSEMBLERS)))
 
 	make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
 
 	args = parser.parse_args()
+	assert args.assembler in VALID_ASSEMBLERS
 
 	# Set run mode
 	run_mode = PipelineStep[args.mode.upper()]
