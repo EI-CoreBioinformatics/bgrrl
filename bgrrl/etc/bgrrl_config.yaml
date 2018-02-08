@@ -19,6 +19,7 @@ load:
   blob_blast: "source blast-2.6.0"
   blobtools: "source python_anaconda-2.5.0 && source blobtools-0.9.19 && source samtools-1.5"
   multiqc: "source multiqc-1.3_dev"
+  ratt: "source ratt-dev && emboss-6.6.0"
 
 cmd:
   quast: "python2 /tgac/software/testing/quast/4.3/x86_64/bin/quast.py"

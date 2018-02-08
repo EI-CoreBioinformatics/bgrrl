@@ -206,6 +206,12 @@ def run_ann(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
     config["cwd"] = os.getcwd()
 
+    config["run_ratt"] = args.annotation in ("both", "ratt")
+    config["run_prokka"] = args.annotation in ("both", "prokka")
+    config["ratt_reference"] = args.ratt_reference_dir
+
+    assert not config["run_ratt"] or os.path.exists(config["ratt_reference"]), "Missing reference data for ratt. Please make sure to use the --ratt-reference-dir parameter."
+
     config_file = os.path.join(out_dir, "bg-ann.conf.xml")
     with open(config_file, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)

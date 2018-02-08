@@ -23,6 +23,7 @@ from qaa.reporting.busco_report import compileBUSCOReport
 print("QAA_TIME_CMD="+tcmd) 
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
+VALID_ANNOTATERS = ["prokka", "ratt", "both"]
 # min_version("4.0")
 
 def makeQAAArgs(args, **kwargs):
@@ -41,7 +42,11 @@ def makeQAASheet(args):
 			asm_path = os.path.join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")	
 		new_row = [row[0], asm_path, "", row[2], row[3], "bacteria_odb9"]
 		if args.runmode == "ann":
-			new_row.extend([os.path.join(args.output_dir, "annotation", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", row[0], row[0] + ".faa")])
+			if args.annotation in ("both", "prokka"):
+				new_row.extend([os.path.join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".faa")])
+			else:
+				new_row.extend([os.path.join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".faa")])
+				
 		sheet.append(new_row)
 	return sheet
 		
@@ -82,6 +87,16 @@ def main():
 	parser.add_argument("--contig-minlen", type=int, default=0)
 	parser.add_argument("--enterobase-groups", type=str, default="", help="Comma-separated list of Enterobase microbial organisms. The set of assemblies is tested against organism-specific criteria and assemblies are packaged according to their species. [NEEDS REWORDING!]. By default, the enterobase mode is disabled.")
 	parser.add_argument("--assembler", type=str, default="unicycler", help="Assembly software to use for genome assembly. Valid options: {} [unicycler]".format(",".join(VALID_ASSEMBLERS)))
+	parser.add_argument("--annotation", type=str, choices=["prokka","ratt","both"], help="Annotation software to use for genome annotation. Valid options: {} [prokka]".format(",".join(VALID_ANNOTATERS)), default="prokka")
+	parser.add_argument("--ratt-reference-dir", type=str, help="Path to reference data for ratt", default="")
+
+	"""
+	hpc_group = parser.add_argument_group("HPC Options",
+                                              "Controls for how jobs should behave across the HPC resources.")
+
+        hpc_group.add_argument("--partition", type=str,
+                               help="Will run all child jobs on this partition/queue, this setting overrides anything specified in the \"--hpc_config\" file.")
+	"""
 
 	make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
 

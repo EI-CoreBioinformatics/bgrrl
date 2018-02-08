@@ -68,17 +68,6 @@ if True:
 			# " -1 {input.r1} -2 {input.r2} -t {threads} -o {params.outdir} &> {log}" 
 			# + \
 			# " && ln -s {params.assembly} {params.final_assembly} &> {log}"
-"""
-if False:
-	rule asm_assembly:
-		input:
-			r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-			r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
-		output:
-			join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
-		log:
-			join(ASSEMBLY_DIR, "log", "{sample}.asm_assembly.log")
-"""
 
 rule asm_lengthfilter:
 	input:
