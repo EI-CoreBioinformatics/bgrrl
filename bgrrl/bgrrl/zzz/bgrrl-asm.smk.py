@@ -90,3 +90,68 @@ rule asm_lengthfilter:
 		# original_assembly = join(os.path.dirname(input.assembly), "assembly.fasta")
 		# shutil.copy2(original_assembly, original_assembly + ".full")
 		# shutil.copy2(output[0], wildcards.sample + "." + original_assembly)
+
+if config["reapr_correction"]:
+
+	rule asm_reapr_readlen:
+		input:
+			assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.fasta"),     		
+			r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+			r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
+		output:
+			r1 = join(ASSEMBLY_DIR, "{sample}", "reapr_R1.fastq.gz"),
+			r2 = join(ASSEMBLY_DIR, "{sample}", "reapr_R2.fastq.gz") 			
+		log:
+			join(ASSEMBLY_DIR, "log", "{sample}.asm_reapr_readlen.log")
+		params:
+			outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
+			load = loadPreCmd(config["load"]["bbmap"])
+		threads:
+			2
+		shell:
+			""
+			
+
+	rule asm_reapr_isize:
+		input:
+			assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.fasta"),
+			r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+                        r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
+		output:
+			isize = join(ASSEMBLY_DIR, "{sample}", "INSERT_SIZE")
+		log:
+			join(ASSEMBLY_DIR, "log", "{sample}.asm_reapr_isize.log")
+		params:
+			outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
+			load = loadPreCmd(config["load"]["bwa"])
+		threads:
+			8
+		shell:
+			""
+
+
+	rule asm_reapr:
+		input:
+			assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
+		output:
+			reapr_assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.pre_reapr.fasta")
+		log:
+			join(ASSEMBLY_DIR, "log", "{sample}.asm_reapr.log")
+		params:
+			load = loadPreCmd(config["load"]["reapr"])
+		threads:
+			8
+		shell:
+			"{params.load}" + \
+			" (reapr facheck {input.assembly} ||" + \
+			"  (reapr facheck {input.assembly} {input.assembly}.reapr_in &&" + \
+			"   mv {input.assembly} {input.assembly}.no_reapr &&" + \
+			"   mv {input.assembly}.reapr_in {input.assembly})) &&" + \
+			" reapr perfectmap {input.assembly} {input.r1} {input.r2} {params.isize} {params.prefix_perfect} &&" + \
+			" reapr smaltmap {input.assembly} {input.r1} {input.r2} {params.longbam} &&" + \
+			" reapr pipeline {input.assembly} {params.longbam} {params.outdir} {params.prefix_perfect}"
+			
+			
+		
+
+

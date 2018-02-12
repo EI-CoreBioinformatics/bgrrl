@@ -13,6 +13,7 @@ PROKKA_DIR = join(ANNOTATION_DIR, "prokka")
 RATT_DIR = join(ANNOTATION_DIR, "ratt")
 
 PROKKA_WRAPPER = join(config["etc"], "wrappers", "prokka_wrapper")
+RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
 
 INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 with open("ann-inputfiles.txt", "w") as input_out:
@@ -22,7 +23,8 @@ TARGETS = list()
 if config["run_prokka"]:
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".log"), INPUTFILES))
 if config["run_ratt"]:
-	TARGETS.extend(map(lambda s:join(RATT_DIR, s, s + ".done"), INPUTFILES))
+	for d in next(os.walk(config["ratt_reference"]))[1]:     
+	    TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
 
 CWD = os.getcwd()
 
@@ -59,28 +61,49 @@ if config["run_prokka"]:
 if config["run_ratt"]:
 	rule ann_ratt:
 		input:
-			contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+			contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta"),
+			reference = join(config["ratt_reference"], "{ref_ann}")
 		output:
-			done = join(RATT_DIR, "{sample}", "{sample}.done")
+			done = join(RATT_DIR, "{sample}", "{ref_ann}", "{sample}_{ref_ann}.done")
 		log:
-			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_ann_ratt.log")
+			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_{ref_ann}.ann_ratt.log")
 		params:	
-			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample),
+			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann),
 			load = loadPreCmd(config["load"]["ratt"]),
-			prefix = lambda wildcards: wildcards.sample,
-			reference = config["ratt_reference"]
+			# prefix1 = lambda wildcards: wildcards.sample,
+			# prefix2 = lambda wildcards: wildcards.ref_ann
 		threads:
 			1
 		shell:
-			"{params.load}" + \
-			" (cd {params.outdir} && " + TIME_CMD + \
-			" $RATT_HOME/start.ratt.sh {params.reference} " + \
-			join(config["cwd"], "{input.contigs}") + " {params.prefix} Strain" + \
-			" && touch " + join(config["cwd"], "{output.done}") + \
-			" && extractfeat -sequence *.final.embl -outseq {params.prefix}.fasta -type CDS" + \
-			" && transeq -sequence {params.prefix}.fasta {params.prefix}.pep.fasta" + \
-			" && mv {params.prefix}.fasta {params.prefix}.ffn" + \
-			" && mv {params.prefix}.pep.fasta {params.prefix}.faa" + \
-			" && cd " + CWD + ") &> {log}"
-			
-
+			RATT_WRAPPER + " {params.outdir} " + join(config["cwd"], "{input.contigs}") + \
+			" {input.reference} {output.done} &> {log}"
+			# " touch " + join(config["cwd"], "{output.done}") + ")" 
+			# " && extractfeat -sequence *.final.embl -outseq {params.prefix}.fasta -type CDS" + \
+			# " && transeq -sequence {params.prefix}.fasta {params.prefix}.pep.fasta" + \
+			# " && mv {params.prefix}.fasta {params.prefix}.ffn" + \
+			# " && mv {params.prefix}.pep.fasta {params.prefix}.faa" + \
+			#"{params.load}" + \
+			#" (cd {params.outdir} && " + TIME_CMD + \
+			#" $RATT_HOME/start.ratt.sh {input.reference} " + \
+			#join(config["cwd"], "{input.contigs}") + " {params.prefix1}_{params.prefix2} Strain" + \
+			#" && mkdir -p nucmer && mv nucmer.* nucmer/" + \
+			#" && rm -f DONUCMER.log Sequences query.* Reference.*.fasta" + \
+			#" && find . -maxdepth 1 -name '*.tmp2.embl' -exec rm {} \;" + \
+			#" && mkdir -p artemis" + \
+			#"  && mv *.final.embl artemis/ && cat artemis/*.final.embl > {params.prefix1}_{params.prefix2}.final.embl" + \
+			#" && find . -maxdepth 1 -name '*.Report.txt' -size -167c -size +165c -type f -exec rm {} \;" + \
+			#" && find . -maxdepth 1 -name '*.Report.gff' -size 0 -exec rm {} \;" + \
+			#" && header=0 && (for f in $(find . -maxdepth 1 -name '*.Report.txt'); do" + \
+			#" if [[ $header == 0 ]]; then head -n 1 $f | awk -v FS='\t' -v OFS='\t' '{{ print \"Sample\",\"Reference\",$0; }}'; header=1; fi;" + \
+			#" tail -n +2 $f | awk -v FS='\t' -v OFS='\t' -v col1='{params.prefix1}' -v col2='{params.prefix2}' '{{ print col1,col2,$0; }}';" + \
+			#" rm $f;" + \
+			#" done > {params.prefix1}_{params.prefix2}.report.tsv)" + \
+			#"" + \
+			#" && (for f in $(find . -maxdepth 1 -name '*.Report.gff'); do" + \
+			#" echo \"# \"$(basename $f .Report.gff);" + \
+			#" cat $f;" + \
+			#" rm $f;" + \
+			#" done > {params.prefix1}_{params.prefix2}.report.gff)" + \
+			#" && find . -maxdepth 1 -name '*.embl' -and -not -name '*.final.embl' -and -not -name '*.NOTTransfered.embl' -exec rm {} \;" + \
+			#" && touch " + join(config["cwd"], "{output.done}") + ")" + \
+			#" && cd " + CWD + " &> {log}"

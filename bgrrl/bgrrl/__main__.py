@@ -167,9 +167,11 @@ def main():
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
-		qaa_args.input_stream = makeQAASheet(qaa_args)
-		qaa_run = QAA_Runner(qaa_args).run()
+                
+		if run_result:
+			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
+			qaa_args.input_stream = makeQAASheet(qaa_args)
+			qaa_run = QAA_Runner(qaa_args).run()
 		
 	elif run_mode == PipelineStep.FINALIZE:
 		if not args.fin_report_only:
