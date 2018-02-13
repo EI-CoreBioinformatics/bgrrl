@@ -12,7 +12,7 @@ ANNOTATION_DIR = join(OUTPUTDIR, "annotation")
 PROKKA_DIR = join(ANNOTATION_DIR, "prokka")
 RATT_DIR = join(ANNOTATION_DIR, "ratt")
 
-# PROKKA_WRAPPER = join(config["etc"], "wrappers", "prokka_wrapper")
+PROKKA_WRAPPER = join(config["etc"], "wrappers", "prokka_wrapper")
 RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
 
 INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
@@ -64,6 +64,7 @@ if config["run_prokka"]:
 			" && {params.load} " + TIME_CMD + \				
 			# "prokka --cpus {threads} --outdir {params.outdir} --prefix {params.prefix} --centre {params.centre} {input.contigs} --force &> {log}" + \
 			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force &> {log}" + \
+			# " && " + PROKKA_WRAPPER + " . {params.prefix} prokka_contigs.fasta {log} {threads}" + \
 			" && rm prokka_contigs.fasta" + \
 			" && cd " + CWD
 			# PROKKA_WRAPPER + \

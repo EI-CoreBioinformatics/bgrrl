@@ -42,7 +42,7 @@ def makeQAASheet(args):
 			asm_path = os.path.join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")	
 		new_row = [row[0], asm_path, "", row[2], row[3], "bacteria_odb9"]
 		if args.runmode == "ann":
-			if args.annotation in ("both", "prokka"):
+			if args.annotation in ("both", "prokka"):				
 				new_row.extend([os.path.join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".faa")])
 			else:
 				new_row.extend([os.path.join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".faa")])
@@ -166,6 +166,9 @@ def main():
 		asm_report_main([args.output_dir, args.enterobase_groups])
 				
 	elif run_mode == PipelineStep.ANNOTATION:
+		if args.annotation in ("prokka", "both"):
+			print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan fails).")
+		
 		run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
                 
 		if run_result:

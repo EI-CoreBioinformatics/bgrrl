@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
-PROKKAPATH=/tgac/workarea/group-pb/schudomc_prokka/prokka
+PROKKAPATH=/tgac/software/testing/prokka/git/x86_64
+# /tgac/workarea/group-pb/schudomc_prokka/prokka
 
 export PATH=$PATH:$PROKKAPATH/binaries/linux
 

@@ -20,7 +20,8 @@ load:
   blobtools: "source python_anaconda-2.5.0 && source blobtools-0.9.19 && source samtools-1.5"
   multiqc: "source multiqc-1.3_dev"
   ratt: "source ratt-dev && source emboss-6.6.0"
-  prokka: "source prokka-1.12_cs"
+  # prokka: "source prokka-1.12_cs"
+  prokka: "source prokka-git"
 
 cmd:
   quast: "python2 /tgac/software/testing/quast/4.3/x86_64/bin/quast.py"
