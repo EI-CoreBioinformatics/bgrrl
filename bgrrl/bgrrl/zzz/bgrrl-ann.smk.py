@@ -12,7 +12,7 @@ ANNOTATION_DIR = join(OUTPUTDIR, "annotation")
 PROKKA_DIR = join(ANNOTATION_DIR, "prokka")
 RATT_DIR = join(ANNOTATION_DIR, "ratt")
 
-PROKKA_WRAPPER = join(config["etc"], "wrappers", "prokka_wrapper")
+# PROKKA_WRAPPER = join(config["etc"], "wrappers", "prokka_wrapper")
 RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
 
 INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
@@ -48,15 +48,26 @@ if config["run_prokka"]:
 			faa = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.faa"),
 			ffn = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.ffn")
 		log:
-			join(ANNOTATION_DIR, "log", "{sample}_ann_prokka.log")
+			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_ann_prokka.log")
 		params:
 			outdir = lambda wildcards: join(PROKKA_DIR, wildcards.sample),
-			prefix = lambda wildcards: wildcards.sample
+			prefix = lambda wildcards: wildcards.sample,
+			load = loadPreCmd(config["load"]["prokka"]),
+			centre = config["seqcentre"]
 		threads:
 			8
 		shell:
-			PROKKA_WRAPPER + \
-			" {params.outdir} {params.prefix} {input.contigs} {log} {threads}"
+			"cd {params.outdir}" + \
+			" && echo $(pwd)" + \
+			" && cp -v " + join(config["cwd"], "{input.contigs}") + " prokka_contigs.fasta" + \
+			" && ls -l" + \
+			" && {params.load} " + TIME_CMD + \				
+			# "prokka --cpus {threads} --outdir {params.outdir} --prefix {params.prefix} --centre {params.centre} {input.contigs} --force &> {log}" + \
+			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force &> {log}" + \
+			" && rm prokka_contigs.fasta" + \
+			" && cd " + CWD
+			# PROKKA_WRAPPER + \
+			# " {params.outdir} {params.prefix} {input.contigs} {log} {threads}"
 
 if config["run_ratt"]:
 	rule ann_ratt:
