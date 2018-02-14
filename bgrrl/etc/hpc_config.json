@@ -12,6 +12,13 @@
     "memory": 4000,
     "c": 1
   },
+  "ann_ratt_prepref": {
+    "partition": "ei-short",
+    "J": "bg-ann",
+    "memory": 1000,
+    "c": 1, 
+    "time": "0:20"
+  },
   "qc_bbduk": {
     "J": "bg-qc",
     "memory": "32000"

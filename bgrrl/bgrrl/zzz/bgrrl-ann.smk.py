@@ -24,7 +24,10 @@ if config["run_prokka"]:
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".log"), INPUTFILES))
 if config["run_ratt"]:
 	for d in next(os.walk(config["ratt_reference"]))[1]:     
-	    TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
+		TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
+		for f in next(os.walk(join(config["ratt_reference"], d)))[2]:
+			if f.endswith(".embl"):
+				TARGETS.append(join(config["ratt_reference"], d, "gff", f.replace(".embl", ".gff")))
 
 CWD = os.getcwd()
 
@@ -62,15 +65,33 @@ if config["run_prokka"]:
 			" && cp -v " + join(config["cwd"], "{input.contigs}") + " prokka_contigs.fasta" + \
 			" && ls -l" + \
 			" && {params.load} " + TIME_CMD + \				
-			# "prokka --cpus {threads} --outdir {params.outdir} --prefix {params.prefix} --centre {params.centre} {input.contigs} --force &> {log}" + \
-			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force &> {log}" + \
-			# " && " + PROKKA_WRAPPER + " . {params.prefix} prokka_contigs.fasta {log} {threads}" + \
+			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force" + \
 			" && rm prokka_contigs.fasta" + \
-			" && cd " + CWD
-			# PROKKA_WRAPPER + \
-			# " {params.outdir} {params.prefix} {input.contigs} {log} {threads}"
+			" && cd " + CWD + " &> {log}"
 
 if config["run_ratt"]:
+
+	if True:
+
+		rule ann_ratt_prepref:
+			input:
+				embl_ref = join(config["ratt_reference"], "{ref_ann}", "{prefix}.embl")
+			output:
+				join(config["ratt_reference"], "{ref_ann}", "gff", "{prefix}.gff")
+			log:
+				join(config["cwd"], ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_prepref.log")
+			params:
+				load = loadPreCmd(config["load"]["ratt"]),
+				refdir = join(config["cwd"], config["ratt_reference"], "{ref_ann}")				
+			threads:
+				1
+			shell:
+				"{params.load}" + \
+				" cd {params.refdir}" + \
+				" && seqret -sequence {input.embl_ref} -outseq $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff -offormat gff -feature" + \
+				" && rm $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff" + \
+				" && mkdir -p gff && mv $(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff gff/$(basename {input.embl_ref} .embl | sed 's/_x_/./g').gff && cd " + CWD 
+
 	rule ann_ratt:
 		input:
 			contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta"),
@@ -82,8 +103,6 @@ if config["run_ratt"]:
 		params:	
 			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann),
 			load = loadPreCmd(config["load"]["ratt"]),
-			# prefix1 = lambda wildcards: wildcards.sample,
-			# prefix2 = lambda wildcards: wildcards.ref_ann
 		threads:
 			1
 		shell:
@@ -91,31 +110,6 @@ if config["run_ratt"]:
 			" {input.reference} {output.done} &> {log}"
 			# " touch " + join(config["cwd"], "{output.done}") + ")" 
 			# " && extractfeat -sequence *.final.embl -outseq {params.prefix}.fasta -type CDS" + \
-			# " && transeq -sequence {params.prefix}.fasta {params.prefix}.pep.fasta" + \
+			# " && transeq -sequence {params.prefix}.fasta {params.prefix}.pep.fasta" + \
 			# " && mv {params.prefix}.fasta {params.prefix}.ffn" + \
 			# " && mv {params.prefix}.pep.fasta {params.prefix}.faa" + \
-			#"{params.load}" + \
-			#" (cd {params.outdir} && " + TIME_CMD + \
-			#" $RATT_HOME/start.ratt.sh {input.reference} " + \
-			#join(config["cwd"], "{input.contigs}") + " {params.prefix1}_{params.prefix2} Strain" + \
-			#" && mkdir -p nucmer && mv nucmer.* nucmer/" + \
-			#" && rm -f DONUCMER.log Sequences query.* Reference.*.fasta" + \
-			#" && find . -maxdepth 1 -name '*.tmp2.embl' -exec rm {} \;" + \
-			#" && mkdir -p artemis" + \
-			#"  && mv *.final.embl artemis/ && cat artemis/*.final.embl > {params.prefix1}_{params.prefix2}.final.embl" + \
-			#" && find . -maxdepth 1 -name '*.Report.txt' -size -167c -size +165c -type f -exec rm {} \;" + \
-			#" && find . -maxdepth 1 -name '*.Report.gff' -size 0 -exec rm {} \;" + \
-			#" && header=0 && (for f in $(find . -maxdepth 1 -name '*.Report.txt'); do" + \
-			#" if [[ $header == 0 ]]; then head -n 1 $f | awk -v FS='\t' -v OFS='\t' '{{ print \"Sample\",\"Reference\",$0; }}'; header=1; fi;" + \
-			#" tail -n +2 $f | awk -v FS='\t' -v OFS='\t' -v col1='{params.prefix1}' -v col2='{params.prefix2}' '{{ print col1,col2,$0; }}';" + \
-			#" rm $f;" + \
-			#" done > {params.prefix1}_{params.prefix2}.report.tsv)" + \
-			#"" + \
-			#" && (for f in $(find . -maxdepth 1 -name '*.Report.gff'); do" + \
-			#" echo \"# \"$(basename $f .Report.gff);" + \
-			#" cat $f;" + \
-			#" rm $f;" + \
-			#" done > {params.prefix1}_{params.prefix2}.report.gff)" + \
-			#" && find . -maxdepth 1 -name '*.embl' -and -not -name '*.final.embl' -and -not -name '*.NOTTransfered.embl' -exec rm {} \;" + \
-			#" && touch " + join(config["cwd"], "{output.done}") + ")" + \
-			#" && cd " + CWD + " &> {log}"

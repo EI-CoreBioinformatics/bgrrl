@@ -11,9 +11,11 @@ sample=$(basename $(dirname $contigs))
 prefix=${sample}_$(basename $refname)
 
 CWD=$(pwd)
+is_debug=0
 
 cd $outdir && 
 echo $(pwd) &&
+# if [[ $is_debug == 0 ]]; then 
 echo $RATT_HOME/start.ratt.sh $refname $contigs $prefix Strain && 
 /usr/bin/time -v $RATT_HOME/start.ratt.sh $refname $contigs $prefix Strain && 
 mkdir -p nucmer && 
@@ -46,6 +48,14 @@ for f in $(find . -maxdepth 1 -name '*.Report.gff'); do
   rm $f;
 done > $prefix.report.gff
 ) && 
-find . -maxdepth 1 -name '*.embl' -and -not -name '*.final.embl' -and -not -name '*.not_transfered.embl' -exec rm {} \; && 
+find . -maxdepth 1 -name '*.embl' -and -not -name '*.final.embl' -and -not -name '*.not_transfered.embl' -exec rm {} \; &&
+# fi &&
+# rm -f *.Report.gff *.done* &&
+seqret -sequence $prefix.final.embl -outseq $prefix.final.gff -offormat gff -feature &&
+head -n 1 final.gff > $prefix.final.gff &&
+head -n 5 final.gff | tail -n 3 >> $prefix.final.gff &&
+awk -v prefix=$prefix -v OFS="\t" -v FS="\t" '/^[^#]/ { if ($3 != "contig") { $1=gensub(".final$", "", "g", $1); $1=gensub("^"prefix".", "", "g", $1); print $0; }}' final.gff >> $prefix.final.gff &&
+rm final.gff &&
+
 cd $CWD && 
 touch $donefile
