@@ -35,9 +35,9 @@
     "J": "bg-qc",
     "c": "2"
   },
-  "qc_kat_hist": {
-    "memory": "32000",
-    "c": "8",
+  "qc_kat_gcp": {
+    "memory": "8000",
+    "c": "2",
     "J": "bg-qc"
   },
   "qc_tadpole": {

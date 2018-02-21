@@ -25,7 +25,7 @@ TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.h
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R1.bbnorm_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R2.bbnorm_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".kat-gcp.mx.dist"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".kat-gcp.mx"), INPUTFILES))
 
 with open("targets.txt", "w") as targets_out:
 	print(*TARGETS, sep="\n", file=targets_out)
@@ -56,7 +56,8 @@ rule qc_bbduk:
 		"{params.load}" + TIME_CMD + " {params.bbduk}" + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
 		" ref={params.adapters}" + \
-		" ktrim=r k=21 mink=11 hdist=2 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo &> {log}"
+		" ktrim=r k=21 mink=7 hdist=1 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo &> {log}"
+		#" ktrim=r k=21 mink=11 hdist=2 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo &> {log}"
 
 rule qc_fastqc_bbduk:
 	input:
@@ -163,16 +164,18 @@ rule qc_katgcp:
 	output:
 		katgcp = join(KAT_DIR, "{sample}", "{sample}.kat-gcp.mx")
 	log:
-		join(QC_OUTDIR, "log", "{sample}.qc_katgcp.log")
+		# join(QC_OUTDIR, "log", "{sample}.qc_katgcp.log")
+		join(KAT_DIR, "{sample}", "{sample}.kat")
 	params:
 		prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample + ".kat-gcp"),
 		load = loadPreCmd(config["load"]["kat"])
 	threads:
-		8
+		2
 	shell:
-		"{params.load}" + TIME_CMD + \
-		" kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp} &> {log}"
+		"{params.load}" + \
+		" (kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
 
+"""
 rule qc_katda:
 	input:
 		katgcp = join(KAT_DIR, "{sample}", "{sample}.kat-gcp.mx")
@@ -187,3 +190,4 @@ rule qc_katda:
 	shell:
 		"{params.load}" + \                                                                    		
 		" (kat_distanalysis {input.katgcp} || touch {output.katda}) > {output.katda} 2> {log}"
+"""

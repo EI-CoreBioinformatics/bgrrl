@@ -35,29 +35,87 @@ def test_fastqc_readcount(sample, min_reads=1000):
         return TestResult(test, "FAIL", "LOW", (n1, n2))
     return TestResult(test, "PASS", "", (n1, n2)) 
 
-def checkKatPeaks(kat_log):
-    def extractKatPeaks(fn):
-        with open(fn) as _in:
+def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
+    test = "KAT:PEAKS"
+    kat_log = os.path.join(QCDIR, "kat", sample, sample + ".kat")
+    status, errmsg, data = "PASS", "", tuple()
+    kmer_peaks, gc_peaks, gsize, unit, kmer_freq, mean_gc = None, None, None, None, None, None
+    if not os.path.exists(kat_log) or os.stat(kat_log).st_size == 0:
+        stats, errmsg = "FAIL", "MISSING"
+    else:
+        with open(kat_log) as _in:
+            kmer_peak_table, state, read_table = list(), "", False
             for line in _in:
-                if line.startswith('Peaks in analysis'):
-                    return int(line.strip().split(':')[1].strip())
-        return 0
+                if line.startswith("K-mer frequency spectra statistics"):
+                    state = "kmer_freq"
+                    try:
+                        [next(_in), next(_in), next(_in), next(_in)]
+                    except:
+                        print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
+                        sys.exit(1)
+                    read_table = True
+                elif line.startswith("Calculating genome statistics"):
+                    state = "genome_stats"
+                elif line.startswith("GC distribution statistics"):
+                    state = "gc_dist"
+                else:
+                    if state == "kmer_freq":
+                        if line.startswith("Peaks in analysis: "):
+                            try:
+                                kmer_peaks = int(line.replace("Peaks in analysis: ", "").strip())
+                            except:
+                                kmer_peaks = None
+                        elif line.startswith("Overall mean k-mer frequency: "):
+                            kmer_freq = line.replace("Overall mean k-mer frequency: ", "").strip()
+                        elif not line.strip() or line.startswith("K-value used: "):
+                            read_table = False
+                        elif read_table:
+                            try:
+                                kmer_peak_table.append(list(map(float, re.sub(" +", " ", line.strip()).split(" "))))
+                            except:
+                                kmer_peak_table.append(list(map(float, re.sub(" +", " ", line.strip()).split(" ")[:-1])))
+                                # print("Error with kmer_peak_table in", kat_log, file=sys.stderr)
+                                # sys.exit(1)
+                                # volume_col = 6
+                    elif state == "gc_dist":
+                        try:
+                            gc_peaks = int(line.replace("Peaks in analysis: ", "").strip())
+                        except:
+                            gc_peaks = None
+                    elif state == "genome_stats" and line.startswith("Estimated genome size: "):
+                        line = line.replace("Estimated genome size: ", "").strip()
+                        try:
+                            gsize, unit = line.split(" ")
+                        except:
+                            print("XXX", file=sys.stderr)
+                            gsize, unit = line, "bp"
+                        gsize = float(gsize)
+                    elif state == "gc_dist" and line.startswith("Mean GC: "):
+                        mean_gc = line.replace("Mean GC: ", "").strip()
 
-    if not os.path.exists(kat_log):
-        return ("FAIL", "MISSING", (0,))
-    kat_peaks = extractKatPeaks(kat_log)
-    if kat_peaks == 1:
-        return ("PASS", "", (1,))
-    return ("FAIL", "MULTIMODAL" if kat_peaks else "NO_PEAK", (kat_peaks,))
+    
 
+    try:
+        max_peak = sorted(kmer_peak_table, key=lambda x:x[6])[-1]
+    except: 
+        max_peak = [None]*7
+    try:
+        total_volume = sum(row[6] for row in kmer_peak_table)
+    except:
+        print(kmer_peak_table, file=sys.stderr)
+        total_volume = 0
+    data = (kmer_peaks, max_peak[6], max_peak[6] / total_volume if (max_peak[6] is not None and total_volume) else None,  gc_peaks, gsize, unit, kmer_freq, mean_gc)
 
-def test_kat_hist(sample):    
-    status, errmsg, data = checkKatPeaks(os.path.join(QCLOGDIR, sample + ".qc_kathist.log"))
-    return TestResult("KAT:HIST", status, errmsg, data)
-def test_kat_gcp(sample):
-    status, errmsg, data = checkKatPeaks(os.path.join(QCLOGDIR, sample + ".qc_katgcp.log"))
-    return TestResult("KAT:GCP", status, errmsg, data)
-   
+    if data[0] is None:
+        status, errmsg = "FAIL", "MISSING"
+    elif data[0] < 1:
+        status, errmsg = "FAIL", "NOPEAK"
+    elif data[0] > 1:
+        if max_peak[6] / total_volume < max_peak_volume_threshold:
+            status, errmsg = "PASS", "MULTI_MODAL"
+
+    return TestResult(test, status, errmsg, data)
+
 """
 Assembly	FD01543412_L006
 # contigs (>= 0 bp)	1477
@@ -90,7 +148,6 @@ def test_tadpole_size(sample, min_size=1e6):
                 return int(row[1])
         return 0
     test = "TADPOLE:SIZE"
-    # quast_report = os.path.join(QADIR, "tadpole", sample, "quast", "report.tsv")   
     quast_report = os.path.join(QADIR, "quast", sample, "report.tsv")
 
     status, errmsg, assembly_size = "PASS", "", 0
@@ -104,6 +161,7 @@ def test_tadpole_size(sample, min_size=1e6):
     return TestResult(test, status, errmsg, str(assembly_size))
 
 TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount),
+         ("KAT:PEAKS", test_kat_peaks),
          # ("KAT:HIST", test_kat_hist),
          # ("KAT:GCP", test_kat_gcp),
          ("TADPOLE:SIZE", test_tadpole_size)]
