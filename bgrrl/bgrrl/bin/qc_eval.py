@@ -92,9 +92,16 @@ def test_tadpole_size(sample, min_size=1e6):
     test = "TADPOLE:SIZE"
     # quast_report = os.path.join(QADIR, "tadpole", sample, "quast", "report.tsv")   
     quast_report = os.path.join(QADIR, "quast", sample, "report.tsv")
-    if os.path.exists(quast_report) and extractAssemblySize(open(quast_report)) < min_size:
-        return TestResult(test, "FAIL", "TOO_SMALL", extractAssemblySize(open(quast_report)))
-    return TestResult(test, "PASS", "", str(extractAssemblySize(open(quast_report))))
+
+    status, errmsg, assembly_size = "PASS", "", 0
+    if os.path.exists(quast_report):
+        assembly_size = extractAssemblySize(open(quast_report))
+        if assembly_size < min_size:
+            status, errmsg = "FAIL", "TOO_SMALL"
+    else:
+        status, errmsg = "FAIL", "NOT_ASSEMBLED"
+            
+    return TestResult(test, status, errmsg, str(assembly_size))
 
 TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount),
          # ("KAT:HIST", test_kat_hist),
@@ -140,7 +147,7 @@ def main(args_in=sys.argv):
 
     print(" Done.\n Generated qc_eval report in {} and asm-samplesheet in {}.".format(qc_eval_outf, asm_samplesheet_f))
 
-
+    return True
 
 if __name__ == "__main__":
     main()

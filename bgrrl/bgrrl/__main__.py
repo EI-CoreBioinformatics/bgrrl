@@ -17,10 +17,12 @@ from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineS
 from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin, run_ann
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
+from bgrrl.bin.ann_report import main as ann_report_main
 
-from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file
+from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 from qaa.reporting.busco_report import compileBUSCOReport
 print("QAA_TIME_CMD="+tcmd) 
+print("QAA_ID="+QAA_ID)
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
 VALID_ANNOTATERS = ["prokka", "ratt", "both"]
@@ -84,7 +86,7 @@ def main():
 	                    help="If snakemake is not running because it is reporting that the directory is locked, then you can unlock it using this option.  Please make sure that there are no other snakemake jobs running in this directory before using this option!")
 	parser.add_argument("--bgrrl-config", help="Configuration file for BGRRL. This file specifies details for accessing services and commands to be executed prior to running each pipeline tool.  Default config file is: " + DEFAULT_BGRRL_CONFIG_FILE)
 
-	parser.add_argument("--contig-minlen", type=int, default=0)
+	parser.add_argument("--contig-minlen", type=int, default=0, help="Minimum length [bp] of contigs retained in filtering step [0].")
 	parser.add_argument("--enterobase-groups", type=str, default="", help="Comma-separated list of Enterobase microbial organisms. The set of assemblies is tested against organism-specific criteria and assemblies are packaged according to their species. [NEEDS REWORDING!]. By default, the enterobase mode is disabled.")
 	parser.add_argument("--assembler", type=str, default="unicycler", help="Assembly software to use for genome assembly. Valid options: {} [unicycler]".format(",".join(VALID_ASSEMBLERS)))
 	parser.add_argument("--annotation", type=str, choices=["prokka","ratt","both"], help="Annotation software to use for genome annotation. Valid options: {} [prokka]".format(",".join(VALID_ANNOTATERS)), default="prokka")
@@ -151,19 +153,26 @@ def main():
 	print(args.mode.upper())
 	if run_mode == PipelineStep.READ_QC:
 		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey")
-		qaa_args.input_stream = makeQAASheet(qaa_args)
-		qaa_run = QAA_Runner(qaa_args).run()
-
-		qc_eval_main([args.input, args.output_dir])
+		if run_result:
+			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000)
+			qaa_args.input_stream = makeQAASheet(qaa_args)
+			qaa_run = QAA_Runner(qaa_args).run()
+			if qaa_run:
+				run_result = qc_eval_main([args.input, args.output_dir])
+				if run_result:
+					args.input = os.path.join(args.output_dir, "..", "samplesheet.qc_pass.tsv")
+					qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000)
+					qaa_args.input_stream = makeQAASheet(qaa_args)
+					qaa_run = QAA_Runner(qaa_args).run()
 
 	elif run_mode == PipelineStep.ASSEMBLY:
 		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-		qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm")
-		qaa_args.input_stream = makeQAASheet(qaa_args)
-		qaa_run = QAA_Runner(qaa_args).run()		
-
-		asm_report_main([args.output_dir, args.enterobase_groups])
+		if run_result:
+			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000)
+			qaa_args.input_stream = makeQAASheet(qaa_args)
+			qaa_run = QAA_Runner(qaa_args).run()		
+			if qaa_run:
+				run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		if args.annotation in ("prokka", "both"):
@@ -175,6 +184,9 @@ def main():
 			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
 			qaa_args.input_stream = makeQAASheet(qaa_args)
 			qaa_run = QAA_Runner(qaa_args).run()
+
+			if args.annotation in ("ratt", "both"):
+				ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
 		
 	elif run_mode == PipelineStep.FINALIZE:
 		if not args.fin_report_only:

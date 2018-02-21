@@ -72,9 +72,9 @@ rule qc_fastqc_bbduk:
 	threads:
 		2
 	shell:
-		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
-		" --extract --threads={threads} --outdir={params.outdir} {input} )" + \
-		" || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+		"{params.load} " + TIME_CMD + " {params.fastqc}" + \
+		" --extract --threads={threads} --outdir={params.outdir} {input} " + \
+		" || mkdir -p {params.outdir} && touch {output.fqc} &> {log}"
 		# " --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_bbnorm:
@@ -113,9 +113,9 @@ rule qc_fastqc_bbnorm:
 	threads:
 		2
 	shell:
-		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
-		" --extract --threads={threads} --outdir={params.outdir} {input} )" + \
-		" || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+		"{params.load} ({params.fastqc}" + \
+		" --extract --threads={threads} --outdir={params.outdir} {input}" + \
+		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 		# "{params.load} (" + TIME_CMD + " {params.fastqc}" + \
 		# " --extract --threads={threads} --outdir={params.outdir} {input} && touch {output.fqc}) &> {log}"
 		# " --extract --threads={threads} --outdir={params.outdir} {input}) || (mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
@@ -186,4 +186,4 @@ rule qc_katda:
 		1
 	shell:
 		"{params.load}" + \                                                                    		
-		" (kat_distanalysis.py {input.katgcp} || touch {output.katda}) > {output.katda} 2> {log}"
+		" (kat_distanalysis {input.katgcp} || touch {output.katda}) > {output.katda} 2> {log}"

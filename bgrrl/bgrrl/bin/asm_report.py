@@ -174,7 +174,7 @@ def main(args_in=sys.argv[1:]):
                 print(*sorted(eb_pass_assembly.intersection(eb_pass_taxonomy)), sep="\n", file=eb_samples_out)
 
     print(" Done.\n Generated asm reports in {}.".format(report_dir))
-
+    return True
 
 
 if __name__ == "__main__":

@@ -39,11 +39,9 @@ def main(args_in=sys.argv[1:]):
     samples = next(os.walk(args.indir))[1]
     for sample in samples:
         sdir = os.path.join(args.indir, sample)
-        # sample = os.path.basename(sdir)
         with open(os.path.join(sdir, sample + ".ratt_report.tsv"), "w") as ratt_out:
-            header = list()
+            header, rows = list(), list()
             for d in sorted(next(os.walk(sdir))[1]):
-                # print("D=", d)
                 try:
                     f = glob.glob(os.path.join(sdir, d, "*.final.gff"))[0]
                 except:
@@ -55,32 +53,29 @@ def main(args_in=sys.argv[1:]):
                 ref = d.replace(sample + ".", "")
                 print("SAMPLE=", sample, "REF=", ref)
                 row = [ref]
-                # keys = list(sorted(refcounts.get(ref, Counter()).keys()))
-                # print("KEYS=", keys)
-                keys = FEATURES
                 if not header:
-                    header = ["Reference"] + keys + keys + keys + ["Total[ref]", "Total[transferred]", "Total[%]"]
+                    header = ["Reference"]
+                    header.extend(map(lambda x:x+"[ref]", FEATURES))
+                    header.extend(map(lambda x:x+"[transferred]", FEATURES))
+                    header.extend(map(lambda x:x+"[%]", FEATURES))
+                    header.extend(["Total[ref]", "Total[transferred]", "Total[%]"])
                     print(*header, sep="\t", file=ratt_out)
                      
-                row.extend([refcounts.get(ref, Counter())[key] for key in keys])
-                row.extend([trfcounts[key] for key in keys])
+                row.extend([refcounts.get(ref, Counter())[feature] for feature in FEATURES])
+                row.extend([trfcounts[feature] for feature in FEATURES])
                 rtotal, ttotal = 0, 0
-                for key in keys:
-                    rcount = refcounts.get(ref, Counter())[key]
+                for feature in FEATURES:
+                    rcount = refcounts.get(ref, Counter())[feature]
                     rtotal += rcount
-                    ttotal += trfcounts[key]
-                    row.append(trfcounts[key]/rcount if rcount > 0 else "NA")
+                    ttotal += trfcounts[feature]
+                    row.append(trfcounts[feature]/rcount if rcount > 0 else "NA")
                 row.extend([rtotal, ttotal, ttotal/rtotal if rtotal > 0 else "NA"])
+                rows.append(row)
 
-                # row.extend([trfcounts[key]/refcounts.get(d, Counter())[key] for key in keys])
-                # row.extend([sum(refcounts.get(d, Counter()).values()), sum(trfcounts.values()), sum(trfcounts.values())/sum(refcounts.get(d, Counter()).values())])
-                
+            for row in sorted(rows, key=lambda x:x[-1] if x[-1] != "NA" else -1, reverse=True):            
                 print(*row, sep="\t", file=ratt_out)
-            
 
-
-
-            
+    return True  
 
 
 
