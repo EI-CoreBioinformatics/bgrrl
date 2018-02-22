@@ -20,20 +20,22 @@ ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 
                     "Moraxella": ECriteria(1800000, 2600000, 20000, 600, 0.03, 0.65)
  }
 
-ASSEMBLY_STAGES = OrderedDict({ "asm_main_ucn": "Main,Unicycler,normalized",
-                    "asm_fb1_uct": "Fallback1,Unicycler,trimmed",
-                    "asm_fb2_spn": "Fallback2,Spades,normalized",
-                    "asm_fb3_spt": "Fallback3,Spades,trimmed",
-                    "asm_main_ven": "Main,Velvet,normalized"})
+ASSEMBLY_STAGES = OrderedDict([("asm_main_ucn", "Main,Unicycler,normalized"),
+                               ("asm_fb1_uct", "Fallback1,Unicycler,trimmed"),
+                               ("asm_fb2_spn", "Fallback2,Spades,normalized"),
+                               ("asm_fb3_spt", "Fallback3,Spades,trimmed"),
+                               ("asm_main_ven", "Main,Velvet,normalized"),
+                               ("NA", "not_assembled")])
 
 def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
     asm_tag_ctr = Counter()
     for cdir, dirs, files in os.walk(asm_dir):
-        cdir = os.path.basename(cdir)
-        if cdir != "log":
-            asm_tag = ([f for f in files if f.startswith("asm_")] + ["NA"])[:1]
+        sample = os.path.basename(cdir)
+        if sample != "log" and os.path.dirname(cdir) == asm_dir:
+            asm_tag = ([f for f in files if f.startswith("asm_")] + ["NA"])[0]
             asm_tag_ctr[asm_tag] += 1 # .setdefault(asm_tag, list()).append(cdir)
-            print(cdir, asm_tag, sep="\t", file=out)
+            print(sample, asm_tag, sep="\t", file=out)
+    print(asm_tag_ctr)
     for asm_tag in ASSEMBLY_STAGES:
         if asm_tag_ctr[asm_tag] > 0:
             print(ASSEMBLY_STAGES[asm_tag], asm_tag_ctr[asm_tag], asm_tag_ctr[asm_tag]/sum(asm_tag_ctr.values()), sep="\t", file=asm_stat_out)
