@@ -91,6 +91,7 @@ def main():
 	parser.add_argument("--assembler", type=str, default="unicycler", help="Assembly software to use for genome assembly. Valid options: {} [unicycler]".format(",".join(VALID_ASSEMBLERS)))
 	parser.add_argument("--annotation", type=str, choices=["prokka","ratt","both"], help="Annotation software to use for genome annotation. Valid options: {} [prokka]".format(",".join(VALID_ANNOTATERS)), default="prokka")
 	parser.add_argument("--ratt-reference-dir", type=str, help="Path to reference data for ratt", default="")
+	parser.add_argument("--report-only", action="store_true", help="Only runs reporting modules, no snakemake pipelines [False]")
 
 	"""
 	hpc_group = parser.add_argument_group("HPC Options",
@@ -152,41 +153,52 @@ def main():
 	print()
 	print(args.mode.upper())
 	if run_mode == PipelineStep.READ_QC:
-		run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-		if run_result:
-			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000)
-			qaa_args.input_stream = makeQAASheet(qaa_args)
-			qaa_run = QAA_Runner(qaa_args).run()
-			if qaa_run:
-				run_result = qc_eval_main([args.input, args.output_dir])
-				if run_result:
-					args.input = os.path.join(args.output_dir, "..", "samplesheet.qc_pass.tsv")
-					qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000)
-					qaa_args.input_stream = makeQAASheet(qaa_args)
-					qaa_run = QAA_Runner(qaa_args).run()
+		if args.report_only:
+			run_result = qc_eval_main([args.input, args.output_dir])
+		else:
+			run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+			if run_result:
+				qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
+				# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000)
+				# qaa_args.input_stream = makeQAASheet(qaa_args)
+				# qaa_run = QAA_Runner(qaa_args).run()
+				if qaa_run:
+					run_result = qc_eval_main([args.input, args.output_dir])
+					if run_result:
+						args.input = os.path.join(args.output_dir, "..", "samplesheet.qc_pass.tsv")
+						# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000)
+						# qaa_args.input_stream = makeQAASheet(qaa_args)
+						qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
 
 	elif run_mode == PipelineStep.ASSEMBLY:
-		run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-		if run_result:
-			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000)
-			qaa_args.input_stream = makeQAASheet(qaa_args)
-			qaa_run = QAA_Runner(qaa_args).run()		
-			if qaa_run:
-				run_result = asm_report_main([args.output_dir, args.enterobase_groups])
+		if args.report_only:
+			run_result = asm_report_main([args.output_dir, args.enterobase_groups])
+		else:
+			run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+			if run_result:
+				# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000)
+				# qaa_args.input_stream = makeQAASheet(qaa_args)
+				qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()		
+				if qaa_run:
+					run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 				
 	elif run_mode == PipelineStep.ANNOTATION:
-		if args.annotation in ("prokka", "both"):
-			print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan fails).")
-		
-		run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-                
-		if run_result:
-			qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
-			qaa_args.input_stream = makeQAASheet(qaa_args)
-			qaa_run = QAA_Runner(qaa_args).run()
-
+		if args.report_only:
+			run_result = False
 			if args.annotation in ("ratt", "both"):
-				ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
+				run_result = ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
+		else:
+			if args.annotation in ("prokka", "both"):
+				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan fails).")
+			run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+                
+			if run_result:
+			# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
+			# qaa_args.input_stream = makeQAASheet(qaa_args)
+				qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann", make_input_stream=True, busco_db="bacteria_odb9").run()
+
+				if qaa_run and args.annotation in ("ratt", "both"):
+					ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
 		
 	elif run_mode == PipelineStep.FINALIZE:
 		if not args.fin_report_only:

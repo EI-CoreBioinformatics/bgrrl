@@ -7,6 +7,11 @@ tools:
 resources:
   bb_adapters: "/tgac/software/testing/bbmap/37.24/bbmap/resources/adapters.fa"
 
+params:
+  # before 2018-02-21: ktrim=r k=21 mink=11 hdist=2 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo
+  bbduk: "ktrim=r k=21 mink=7 hdist=1 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo"
+  bbnorm: "target=100 min=2 prefilter"
+
 
 load:
   fastqc: "source fastqc-0.11.5"

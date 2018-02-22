@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import sys
 import os
+from os.path import exists, join, basename, dirname
 import glob
 import re
 import csv
 import argparse
+import pathlib 
 
 from collections import Counter, namedtuple
 
@@ -21,12 +23,20 @@ def test_fastqc_readcount(sample, min_reads=1000):
                             return int(line.strip().split("\t")[-1])
         except FileNotFoundError:
             return 0
+    def checkReadFile(_file):
+        return os.stat(_file).st_size if exists(_file) else "NA"
 
     test = "FASTQC:READCOUNT"
-    fastqc_dir = os.path.join(QCDIR, "fastqc", "bbnorm", sample)
-    fastqc_r1 = os.path.join(fastqc_dir, sample + "_R1.bbnorm_fastqc", "fastqc_data.txt")
-    fastqc_r2 = os.path.join(fastqc_dir, sample + "_R2.bbnorm_fastqc", "fastqc_data.txt")   
-    if not (os.path.exists(fastqc_r1) and os.path.exists(fastqc_r2)):
+    fastqc_dir = join(QCDIR, "fastqc", "bbnorm", sample)
+    fastqc_r1 = join(fastqc_dir, sample + "_R1.bbnorm_fastqc", "fastqc_data.txt")
+    fastqc_r2 = join(fastqc_dir, sample + "_R2.bbnorm_fastqc", "fastqc_data.txt")
+    bbnorm_dir = join(QCDIR, "bbnorm", sample)
+    if not (exists(fastqc_r1) and exists(fastqc_r2)):
+        # print(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"), file=sys.stderr)
+        R1_size = checkReadFile(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"))
+        R2_size = checkReadFile(join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz"))
+        if R1_size > 20 or R2_size > 20:
+            print("WARNING: One or both FASTQC-report(s) missing for sample {}, but read files seem not to be empty: R1_fastqc={},R1_read_file_size={} R2_fastqc={},R2_read_file_size={}.".format(sample, exists(fastqc_r1), R1_size, exists(fastqc_r2), R2_size), file=sys.stderr)
         return TestResult(test, "FAIL", "MISSING", (0, 0)) 
     n1, n2 = map(extractReadCount, (fastqc_r1, fastqc_r2))
     if n1 != n2: 
@@ -37,10 +47,10 @@ def test_fastqc_readcount(sample, min_reads=1000):
 
 def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
     test = "KAT:PEAKS"
-    kat_log = os.path.join(QCDIR, "kat", sample, sample + ".kat")
+    kat_log = join(QCDIR, "kat", sample, sample + ".kat")
     status, errmsg, data = "PASS", "", tuple()
     kmer_peaks, gc_peaks, gsize, unit, kmer_freq, mean_gc = None, None, None, None, None, None
-    if not os.path.exists(kat_log) or os.stat(kat_log).st_size == 0:
+    if not exists(kat_log) or os.stat(kat_log).st_size == 0:
         stats, errmsg = "FAIL", "MISSING"
     else:
         with open(kat_log) as _in:
@@ -107,9 +117,9 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
     data = (kmer_peaks, max_peak[6], max_peak[6] / total_volume if (max_peak[6] is not None and total_volume) else None,  gc_peaks, gsize, unit, kmer_freq, mean_gc)
 
     if data[0] is None:
-        status, errmsg = "FAIL", "MISSING"
+        status, errmsg = "PASS", "MISSING"
     elif data[0] < 1:
-        status, errmsg = "FAIL", "NOPEAK"
+        status, errmsg = "PASS", "NOPEAK"
     elif data[0] > 1:
         if max_peak[6] / total_volume < max_peak_volume_threshold:
             status, errmsg = "PASS", "MULTI_MODAL"
@@ -148,10 +158,10 @@ def test_tadpole_size(sample, min_size=1e6):
                 return int(row[1])
         return 0
     test = "TADPOLE:SIZE"
-    quast_report = os.path.join(QADIR, "quast", sample, "report.tsv")
+    quast_report = join(QADIR, "quast", sample, "report.tsv")
 
     status, errmsg, assembly_size = "PASS", "", 0
-    if os.path.exists(quast_report):
+    if exists(quast_report):
         assembly_size = extractAssemblySize(open(quast_report))
         if assembly_size < min_size:
             status, errmsg = "FAIL", "TOO_SMALL"
@@ -167,33 +177,42 @@ TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount),
          ("TADPOLE:SIZE", test_tadpole_size)]
 
 
-def main(args_in=sys.argv):
+def main(args_in=sys.argv[1:]):
     ap = argparse.ArgumentParser()
     ap.add_argument("input", type=str)
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("--min_readcount", type=int, default=1000)
     ap.add_argument("--min_tadpolesize", type=int, default=1e6)
+    ap.add_argument("--report-dir", type=str, default="")
     args = ap.parse_args(args_in)
     
     print("Running qc:evaluation...", end="", flush=True)
+
+    if not args.report_dir:
+        report_dir = os.path.join(args.indir, "reports")
+    else:
+        report_dir = os.path.join(args.report_dir)
+    pathlib.Path(os.path.join(report_dir, "samplesheets")).mkdir(parents=True, exist_ok=True)
     
 
     INPUTFILES = dict(readSamplesheet(args.input))
     global QCDIR
-    # QCDIR  = os.path.join(args.indir, "Analysis", "qc")
-    QCDIR = os.path.join(args.indir, "qc")
+    # QCDIR  = join(args.indir, "Analysis", "qc")
+    QCDIR = join(args.indir, "qc")
     global QADIR
-    QADIR = os.path.join(args.indir, "qa", "survey")
+    QADIR = join(args.indir, "qa", "survey")
 
     #Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
     
-    qc_eval_outf, asm_samplesheet_f = os.path.join(args.indir, "..", "qc_eval.tsv"), os.path.join(args.indir, "..", "samplesheet.qc_pass.tsv")
+    qc_eval_outf, asm_samplesheet_f = join(report_dir, "qc_eval.tsv"), join(report_dir, "samplesheets", "samplesheet.qc_pass.tsv")
     with open(qc_eval_outf, "w") as qc_eval_out, open(asm_samplesheet_f, "w") as asm_samplesheet:
         print("SAMPLE", *tuple(test for test, testf in TESTS), sep="\t", file=qc_eval_out)
         for sample in sorted(INPUTFILES):
             results = list(testf(sample) for test, testf in TESTS)
             if all(result[1] == "PASS" for result in results):
                 print(*INPUTFILES[sample], sep=",", file=asm_samplesheet)
+            elif results[0][1] == "FAIL" and results[0][2] == "MISSING" and results[2][1] == "PASS":
+                print("WARNING: sample {} has missing fastqc report(s), but passes survey assembly.".format(sample), file=sys.stderr)
 
             # p_results = tuple(",".join(result) for result in results)
             # print(p_results)
