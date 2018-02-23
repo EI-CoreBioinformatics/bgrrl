@@ -2,6 +2,7 @@ import sys
 import csv
 import os
 from os.path import join, basename, dirname
+from collections import Counter
 
 from bgrrl.bgrrl import readSamplesheet
 from bgrrl import loadPreCmd, TIME_CMD
@@ -20,14 +21,18 @@ with open("ann-inputfiles.txt", "w") as input_out:
     print(*INPUTFILES.values(), sep="\n", file=input_out)
 
 TARGETS = list()
+REF_PREFIXES = dict()
 if config["run_prokka"]:
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".log"), INPUTFILES))
 if config["run_ratt"]:
 	for d in next(os.walk(config["ratt_reference"]))[1]:     
 		TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
-		for f in next(os.walk(join(config["ratt_reference"], d)))[2]:
-			if f.endswith(".embl"):
-				TARGETS.append(join(config["ratt_reference"], d, "gff", f.replace(".embl", ".gff")))
+		REF_PREFIXES[d] = list(f.strip(".embl").split(".")[-1] for f in next(os.walk(join(config["ratt_reference"], d)))[2] if f.endswith(".embl"))
+		#for f in next(os.walk(join(config["ratt_reference"], d)))[2]:
+		#	if f.endswith(".embl"):
+		#		REF_PREFIXES.append(basename(f))
+		#		TARGETS.append(join(config["ratt_reference"], d, "gff", f.replace(".embl", ".gff")))
+		TARGETS.append(join(config["ratt_reference"], d, "gff", d + ".gff"))
 
 CWD = os.getcwd()
 
@@ -36,6 +41,17 @@ print(config)
 
 with open("ann-targets.txt", "w") as targets_out:
 	print(*TARGETS, sep="\n", file=targets_out)
+
+def get_ref_index(wc):
+	return REF_PREFIXES.get(wc.ref_ann)
+
+
+def get_ref(wc):
+	if len(REF_PREFIXES[wc.ref_ann]) > 1:
+		return [join(config["ratt_reference"], wc.ref_ann, "gff", "{}.{}.parts_gff".format(wc.ref_ann, index)) for index in REF_PREFIXES[wc.ref_ann]]
+	else:
+		return [join(config["ratt_reference"], wc.ref_ann, "gff", "{}.parts_gff".format(wc.ref_ann))]
+
 
 localrules: all
 
@@ -77,7 +93,7 @@ if config["run_ratt"]:
 			input:
 				embl_ref = join(config["ratt_reference"], "{ref_ann}", "{prefix}.embl")
 			output:
-				join(config["ratt_reference"], "{ref_ann}", "gff", "{prefix}.gff")
+				join(config["ratt_reference"], "{ref_ann}", "gff", "{prefix}.parts_gff")
 			log:
 				join(config["cwd"], ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_prepref.log")
 			params:
@@ -90,7 +106,24 @@ if config["run_ratt"]:
 				" cd {params.refdir}" + \
 				" && seqret -sequence {input.embl_ref} -outseq $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff -offormat gff -feature" + \
 				" && rm $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff" + \
-				" && mkdir -p gff && mv $(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff gff/$(basename {input.embl_ref} .embl | sed 's/_x_/./g').gff && cd " + CWD 
+				" && mkdir -p gff && mv $(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff gff/$(basename {input.embl_ref} .embl | sed 's/_x_/./g').parts_gff && cd " + CWD 
+
+
+		rule ann_ratt_mergegff:
+			input:
+				# gff = expand(join(config["ratt_reference"], "{ref_ann}", "gff", "{ref_ann}.{index}.parts_gff"), ref_ann=next(os.walk(config["ratt_reference"]))[1], index=get_ref_index)
+				gff = get_ref
+			output:
+				join(config["ratt_reference"], "{ref_ann}", "gff", "{ref_ann}.gff")
+			log:
+				join(config["cwd"], ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_mergegff.log")
+			params:
+				gffdir = join(config["cwd"], config["ratt_reference"], "{ref_ann}", "gff")
+			threads:
+				1
+			shell:
+				# "cd {params.gffdir}" + \
+				"cat {input.gff} > {output}"
 
 	rule ann_ratt:
 		input:
