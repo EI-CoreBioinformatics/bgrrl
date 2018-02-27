@@ -168,13 +168,14 @@ def test_tadpole_size(sample, min_size=1e6):
     else:
         status, errmsg = "FAIL", "NOT_ASSEMBLED"
             
-    return TestResult(test, status, errmsg, str(assembly_size))
+    return TestResult(test, status, errmsg, (str(assembly_size),))
+    
 
-TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount),
-         ("KAT:PEAKS", test_kat_peaks),
+TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount, ("Status", "Description", "#R1_reads", "#R2_reads")),
+         ("KAT:PEAKS", test_kat_peaks, ("Status", "Description", "#K-mer_peaks", "Max_Peak_Volume", "Max_Peak_Volume/total", "GC_peaks", "Genome_size", "Genome_size_unit", "K-mer_freq", "mean_gc")),
          # ("KAT:HIST", test_kat_hist),
          # ("KAT:GCP", test_kat_gcp),
-         ("TADPOLE:SIZE", test_tadpole_size)]
+         ("TADPOLE:SIZE", test_tadpole_size, ("Status", "Description", "Assembly_size"))]
 
 
 def main(args_in=sys.argv[1:]):
@@ -206,9 +207,20 @@ def main(args_in=sys.argv[1:]):
     
     qc_eval_outf, asm_samplesheet_f = join(report_dir, "qc_eval.tsv"), join(report_dir, "samplesheets", "samplesheet.qc_pass.tsv")
     with open(qc_eval_outf, "w") as qc_eval_out, open(asm_samplesheet_f, "w") as asm_samplesheet:
-        print("SAMPLE", *tuple(test for test, testf in TESTS), sep="\t", file=qc_eval_out)
+        # print("SAMPLE", *tuple(test for test, testf, tdata in TESTS), sep="\t", file=qc_eval_out)
+
+        header = ["SAMPLE"]
+        header2 = [""]
+        # print("SAMPLE", end="\t", file=qc_eval_out)
+        for test, testf, tdata in TESTS:
+            header.extend([test] + [""]*(len(tdata)-1))   
+            header2.extend(tdata)
+            # print(*((test,) + tuple([""]*len(tdata)) for test, testf, tdata in TESTS), sep="\t", file=qc_eval_out)
+        print(*header, sep="\t", file=qc_eval_out)
+        print(*header2, sep="\t", file=qc_eval_out)
+
         for sample in sorted(INPUTFILES):
-            results = list(testf(sample) for test, testf in TESTS)
+            results = list(testf(sample) for test, testf, tdata in TESTS)
             if all(result[1] == "PASS" for result in results):
                 print(*INPUTFILES[sample], sep=",", file=asm_samplesheet)
             elif results[0][1] == "FAIL" and results[0][2] == "MISSING" and results[2][1] == "PASS":
@@ -216,10 +228,13 @@ def main(args_in=sys.argv[1:]):
 
             # p_results = tuple(",".join(result) for result in results)
             # print(p_results)
+            row = [sample]
+            for result in results:
+                row.extend(result[1:3] + result[3])
+            print(*row, sep="\t", file=qc_eval_out)
+            # p_result = tuple("\t".join(map(str, result[1:])) for result in results)          
 
-            p_result = tuple(",".join(map(str, result[1:])) for result in results)
-          
-            print(sample, *p_result, sep="\t", file=qc_eval_out)
+            # print(sample, *p_result, sep="\t", file=qc_eval_out)
 
 
     print(" Done.\n Generated qc_eval report in {} and asm-samplesheet in {}.".format(qc_eval_outf, asm_samplesheet_f))

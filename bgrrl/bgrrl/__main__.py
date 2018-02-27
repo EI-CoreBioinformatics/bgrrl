@@ -152,23 +152,38 @@ def main():
 
 	print()
 	print(args.mode.upper())
+
+	qaa_args = {
+		"config": qaa_config_file,
+		"make_input_stream": True,
+		"no_blobtools": False,
+		"blobtools_no_bwa": False,
+		"quast_mincontiglen": 1000,
+		"busco_db": "bacteria_odb9",
+		"qaa_mode": "genome"
+	}
+
+
 	if run_mode == PipelineStep.READ_QC:
 		if args.report_only:
 			run_result = qc_eval_main([args.input, args.output_dir])
 		else:
 			run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 			if run_result:
-				qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
-				# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000)
-				# qaa_args.input_stream = makeQAASheet(qaa_args)
-				# qaa_run = QAA_Runner(qaa_args).run()
+				qaa_args["survey_assembly"] = True
+				qaa_args["runmode"] = "survey"
+				qaa_args["no_blobtools"] = True
+				qaa_args["no_busco"] = True
+				qaa_run = QAA_Runner(args, **qaa_args).run()					
+				# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
 				if qaa_run:
 					run_result = qc_eval_main([args.input, args.output_dir])
 					if run_result:
 						args.input = os.path.join(args.output_dir, "..", "samplesheet.qc_pass.tsv")
-						# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000)
-						# qaa_args.input_stream = makeQAASheet(qaa_args)
-						qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
+						qaa_args["no_blobtools"] = False
+						qaa_args["no_busco"] = False
+						qaa_run = QAA_Runner(args, **qaa_args).run()						
+						# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
 
 	elif run_mode == PipelineStep.ASSEMBLY:
 		if args.report_only:
@@ -176,9 +191,10 @@ def main():
 		else:
 			run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 			if run_result:
-				# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000)
-				# qaa_args.input_stream = makeQAASheet(qaa_args)
-				qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()		
+				qaa_args["survey_assembly"] = False
+				qaa_args["runmode"] = "asm"
+				qaa_run = QAA_Runner(args, **qaa_args).run()
+				# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()		
 				if qaa_run:
 					run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 				
@@ -193,9 +209,11 @@ def main():
 			run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
                 
 			if run_result:
-			# qaa_args = makeQAAArgs(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann")
-			# qaa_args.input_stream = makeQAASheet(qaa_args)
-				qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann", make_input_stream=True, busco_db="bacteria_odb9").run()
+				qaa_args["survey_assembly"] = False
+				qaa_args["qaa_mode"] = "transcriptome,proteome"
+				qaa_args["runmode"] = "ann"
+				qaa_run = QAA_Runner(args, **qaa_args)
+				# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann", make_input_stream=True, busco_db="bacteria_odb9").run()
 
 				if qaa_run and args.annotation in ("ratt", "both"):
 					ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
