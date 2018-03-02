@@ -21,32 +21,20 @@ def readDatasum(dfile):
     return data, header
 
 
-def writeDatasum(data, header, dfile, qc_pass=set()):
-    """
-    import xlwt
-    book = xlwt.Workbook()
-    sheet1 = book.add_sheet("Sheet1")
-    # sheet1 = book.get_sheet(0)
-    row = sheet1.row(0)
-    for j, col in enumerate(header):
-        row.write(j, col)
-
-    for i, k in enumerate(sorted(data), 1):
-        row = sheet1.row(i)
-        for j, col in enumerate(header):
-            row.write(j, data[k][col])
-
-    book.save(dfile)
-    """
+def writeDatasum(data, header, dfile, qc_pass=set(), asm_report=dict()):
     def write_row(sheet, row_index, data, header):
         for j, col in enumerate(header):
             sheet.write(row_index, j, data[col])
 
     in_pool_cheader = header[-1]
-    # print(in_pool_cheader)
     ip_header, nip_header = list(header[:-1]), list(header[:-1])
     ip_header.append("status")
-    # print(in_pool_cheader)
+
+    asm_header = asm_report.get("Assembly", list())
+    # print("ASM", asm_header)
+    # print(asm_report)
+    # print(asm_report.keys())
+    ip_header.extend(asm_header[1:])
 
     import xlsxwriter
     book = xlsxwriter.Workbook(dfile)
@@ -59,11 +47,9 @@ def writeDatasum(data, header, dfile, qc_pass=set()):
 
     row_index_ip, row_index_nip = 1, 1
     for i, k in enumerate(sorted(data), 1):
-        # print(i, k, in_pool_cheader)
         if data[k][in_pool_cheader]:
-            # data[k]["status"] = "" if data[k].get("Sample_ID", data[k].get("SampleID", k.strip("_R1"))) in qc_pass else "failed Bioinf_QC"
+            data[k].update(dict(zip(asm_header[1:], asm_report.get(k, [""]*len(asm_header))[1:])))
             data[k]["status"] = "" if k in qc_pass else "failed Bioinf_QC"
-            # print(k, data[k]["status"], list(qc_pass)[:5])
             write_row(sheet_ip, row_index_ip, data[k], ip_header)
             row_index_ip += 1
         else:
@@ -81,14 +67,14 @@ def main():
     data, header = readDatasum(args.datasum_file)
 
     with open(os.path.join(args.indir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")) as qc_in:
-        qc_pass = set(row[0] for i, row in enumerate(csv.reader(qc_in, delimiter=",")) if i > 0)
-        # print(qc_pass)
-        # print(list(data.keys()))
+        qc_pass = set(row[0] for i, row in enumerate(csv.reader(qc_in, delimiter=",")))
+    with open(os.path.join(args.indir, "reports", "quast_report.tsv")) as quast_in:
+        quast_data = dict((row[0], row) for i, row in enumerate(csv.reader(quast_in, delimiter="\t")))
 
 
     # for k in data:
     #    print(data[k])
 
-    writeDatasum(data, header, args.datasum_file.replace(".xlsx", ".bgsum.xlsx"), qc_pass=qc_pass)
+    writeDatasum(data, header, args.datasum_file.replace(".xlsx", ".bgsum.xlsx"), qc_pass=qc_pass, asm_report=quast_data)
 
     pass
