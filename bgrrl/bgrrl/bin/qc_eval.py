@@ -35,9 +35,12 @@ def test_fastqc_readcount(sample, min_reads=1000):
         # print(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"), file=sys.stderr)
         R1_size = checkReadFile(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"))
         R2_size = checkReadFile(join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz"))
+        if R1_size == "NA" or R2_size == "NA":
+            print("WARNING: Missing readfiles {}/{}.".format(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"), join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz")), file=sys.stderr)           
+            return(test, "FAIL", "MISSING!", (0, 0))
         if R1_size > 20 or R2_size > 20:
             print("WARNING: One or both FASTQC-report(s) missing for sample {}, but read files seem not to be empty: R1_fastqc={},R1_read_file_size={} R2_fastqc={},R2_read_file_size={}.".format(sample, exists(fastqc_r1), R1_size, exists(fastqc_r2), R2_size), file=sys.stderr)
-        return TestResult(test, "FAIL", "MISSING", (0, 0)) 
+        return TestResult(test, "FAIL", "MISSING?", (0, 0)) 
     n1, n2 = map(extractReadCount, (fastqc_r1, fastqc_r2))
     if n1 != n2: 
         return TestResult(test, "FAIL", "INCONSISTENT", (n1, n2))
@@ -48,10 +51,10 @@ def test_fastqc_readcount(sample, min_reads=1000):
 def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
     test = "KAT:PEAKS"
     kat_log = join(QCDIR, "kat", sample, sample + ".kat")
-    status, errmsg, data = "PASS", "", tuple()
+    status, errmsg, data = "PASS", "", tuple([None]*8)
     kmer_peaks, gc_peaks, gsize, unit, kmer_freq, mean_gc = None, None, None, None, None, None
     if not exists(kat_log) or os.stat(kat_log).st_size == 0:
-        stats, errmsg = "FAIL", "MISSING"
+        stats, errmsg = "PASS", "MISSING"
     else:
         with open(kat_log) as _in:
             kmer_peak_table, state, read_table = list(), "", False
@@ -105,24 +108,24 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
 
     
 
-    try:
-        max_peak = sorted(kmer_peak_table, key=lambda x:x[6])[-1]
-    except: 
-        max_peak = [None]*7
-    try:
-        total_volume = sum(row[6] for row in kmer_peak_table)
-    except:
-        print(kmer_peak_table, file=sys.stderr)
-        total_volume = 0
-    data = (kmer_peaks, max_peak[6], max_peak[6] / total_volume if (max_peak[6] is not None and total_volume) else None,  gc_peaks, gsize, unit, kmer_freq, mean_gc)
+            try:
+                max_peak = sorted(kmer_peak_table, key=lambda x:x[6])[-1]
+            except: 
+                max_peak = [None]*7
+            try:
+                total_volume = sum(row[6] for row in kmer_peak_table)
+            except:
+                print(kmer_peak_table, file=sys.stderr)
+            total_volume = 0
+            data = (kmer_peaks, max_peak[6], max_peak[6] / total_volume if (max_peak[6] is not None and total_volume) else None,  gc_peaks, gsize, unit, kmer_freq, mean_gc)
 
-    if data[0] is None:
-        status, errmsg = "PASS", "MISSING"
-    elif data[0] < 1:
-        status, errmsg = "PASS", "NOPEAK"
-    elif data[0] > 1:
-        if max_peak[6] / total_volume < max_peak_volume_threshold:
-            status, errmsg = "PASS", "MULTI_MODAL"
+            if data[0] is None:
+                status, errmsg = "PASS", "MISSING"
+            elif data[0] < 1:
+                status, errmsg = "PASS", "NOPEAK"
+            elif data[0] > 1:
+                if max_peak[6] / total_volume < max_peak_volume_threshold:
+                    status, errmsg = "PASS", "MULTI_MODAL"
 
     return TestResult(test, status, errmsg, data)
 
