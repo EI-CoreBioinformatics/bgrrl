@@ -179,7 +179,7 @@ def main():
 				if qaa_run:
 					run_result = qc_eval_main([args.input, args.output_dir])
 					if run_result:
-						args.input = os.path.join(args.output_dir, "..", "samplesheet.qc_pass.tsv")
+						args.input = os.path.join(args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args["no_blobtools"] = False
 						qaa_args["no_busco"] = False
 						qaa_run = QAA_Runner(args, **qaa_args).run()						

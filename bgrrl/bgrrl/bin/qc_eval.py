@@ -59,13 +59,20 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
         with open(kat_log) as _in:
             kmer_peak_table, state, read_table = list(), "", False
             for line in _in:
+                if line.startswith("ERROR"):
+                    stats, errmsg = "PASS", "ERROR"
+                    break
                 if line.startswith("K-mer frequency spectra statistics"):
                     state = "kmer_freq"
                     try:
-                        [next(_in), next(_in), next(_in), next(_in)]
+                        [next(_in), next(_in)]
                     except:
                         print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
                         sys.exit(1)
+                    #     [next(_in), next(_in)] #, next(_in), next(_in)]
+                    # except:
+                    #     print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
+                    #     sys.exit(1)
                     read_table = True
                 elif line.startswith("Calculating genome statistics"):
                     state = "genome_stats"
@@ -80,8 +87,15 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
                                 kmer_peaks = None
                         elif line.startswith("Overall mean k-mer frequency: "):
                             kmer_freq = line.replace("Overall mean k-mer frequency: ", "").strip()
-                        elif not line.strip() or line.startswith("K-value used: "):
+                            try:
+                                [next(_in), next(_in), next(_in)]
+                            except:
+                                print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
+                                sys.exit(1)
+                        elif not line.strip(): #  or line.startswith("K-value used: "):
                             read_table = False
+                        elif line.startswith("Global"):
+                            continue
                         elif read_table:
                             try:
                                 kmer_peak_table.append(list(map(float, re.sub(" +", " ", line.strip()).split(" "))))
@@ -115,17 +129,20 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
             try:
                 total_volume = sum(row[6] for row in kmer_peak_table)
             except:
+                total_volume = 0
                 print(kmer_peak_table, file=sys.stderr)
-            total_volume = 0
             data = (kmer_peaks, max_peak[6], max_peak[6] / total_volume if (max_peak[6] is not None and total_volume) else None,  gc_peaks, gsize, unit, kmer_freq, mean_gc)
+            if total_volume:
 
-            if data[0] is None:
-                status, errmsg = "PASS", "MISSING"
-            elif data[0] < 1:
-                status, errmsg = "PASS", "NOPEAK"
-            elif data[0] > 1:
-                if max_peak[6] / total_volume < max_peak_volume_threshold:
-                    status, errmsg = "PASS", "MULTI_MODAL"
+                if data[0] is None:
+                    status, errmsg = "PASS", "MISSING"
+                elif data[0] < 1:
+                    status, errmsg = "PASS", "NOPEAK"
+                elif data[0] > 1:
+                    if max_peak[6] / total_volume < max_peak_volume_threshold:
+                        status, errmsg = "PASS", "MULTI_MODAL"
+            else:
+                status, errmsg = "PASS", "TABLE_EMPTY"
 
     return TestResult(test, status, errmsg, data)
 

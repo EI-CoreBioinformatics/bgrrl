@@ -79,9 +79,9 @@ rule qc_fastqc_bbduk:
 	threads:
 		2
 	shell:
-		"{params.load} " + TIME_CMD + " {params.fastqc}" + \
+		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
 		" --extract --threads={threads} --outdir={params.outdir} {input} " + \
-		" || mkdir -p {params.outdir} && touch {output.fqc} &> {log}"
+		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_bbnorm:
 	input:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+from os.path import join, basename
 import glob
 import re
 import csv
@@ -12,6 +13,8 @@ from collections import Counter, namedtuple, OrderedDict
 from bgrrl.bgrrl import readSamplesheet, Sample
 
 ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
+BlobSample = namedtuple("BlobSample", "sample ncontigs dom_org dom_org_ncontigs dom_org_perc dom_org_span subdom_org subdom_org_ncontigs subdom_org_perc subdom_org_span".split(" "))
+
 # https://bitbucket.org/enterobase/enterobase-web/wiki/EnteroBase%20Backend%20Pipeline%3A%20QA%20evaluation
 ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 0.7),
                     "Escherichia": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
@@ -30,7 +33,7 @@ ASSEMBLY_STAGES = OrderedDict([("asm_main_ucn", "Main,Unicycler,normalized"),
 def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
     asm_tag_ctr = Counter()
     for cdir, dirs, files in os.walk(asm_dir):
-        sample = os.path.basename(cdir)
+        sample = basename(cdir)
         if sample != "log" and os.path.dirname(cdir) == asm_dir:
             asm_tag = ([f for f in files if f.startswith("asm_")] + ["NA"])[0]
             asm_tag_ctr[asm_tag] += 1 # .setdefault(asm_tag, list()).append(cdir)
@@ -46,7 +49,7 @@ def compileQUASTReport(quast_dir, out=sys.stdout):
     header = ""
     for cdir, dirs, files in os.walk(quast_dir):
         if "transposed_report.tsv" in files:
-            with open(os.path.join(cdir, "transposed_report.tsv")) as qin:
+            with open(join(cdir, "transposed_report.tsv")) as qin:
                 r = csv.reader(qin, delimiter="\t")
                 first = next(r)
                 if not header:
@@ -59,24 +62,43 @@ def compileQUASTReport(quast_dir, out=sys.stdout):
 
 def ENTERO_FILTER(_in, organism="Salmonella", out=sys.stdout):
     header = ""
+    header_written = False
     crit = ENTERO_CRITERIA.get(organism, None)
     print("Running ENTERO_FILTER for organism: {}".format(organism), crit)
     # for row in csv.reader(_in, delimiter="\t"):
     for row in _in:
         if not header:
-            header = row
-            print(*header, sep="\t", file=out)
+            header = list(row)
+            if crit is not None:
+                header.extend(["Meets Enterobase criteria?", "Genome Size check", "Contig amount", "N50 check", "N content"])
+            # print(*header, sep="\t", file=out)
         elif crit is None:
+            if not header_written:
+                header_written = True
+                print(*header, sep="\t", file=out)
             print(*row, sep="\t", file=out)
             yield row[0]
         else:
+            genome_size_ok = crit.minsize <= int(row[8]) <= crit.maxsize
+            contig_amt_ok = int(row[2]) < crit.ncontigs
+            n50_ok = int(row[17]) > crit.n50
+            ncontent_ok = float(row[21]) < crit.ncount
+            meets_criteria = all((genome_size_ok, contig_amt_ok, n50_ok, ncontent_ok))
+            if not header_written:
+                header_written = True
+                print(*header, sep="\t", file=out)
+            print(*row, meets_criteria, genome_size_ok, contig_amt_ok, n50_ok, ncontent_ok, sep="\t", file=out)
+            if meets_criteria:
+                yield row[0]
+
+            #checks_ok = genome_size_ok << 3 | contig_amt_ok << 2 | n50_ok << 1 | ncontent_ok
             # print(row)
-            if crit.minsize <= int(row[8]) <= crit.maxsize:
-                if int(row[2]) < crit.ncontigs:
-                    if int(row[17]) > crit.n50:
-                        if float(row[21]) < crit.ncount:
-                            print(*row, sep="\t", file=out)
-                            yield row[0]
+            # if crit.minsize <= int(row[8]) <= crit.maxsize:
+            #    if int(row[2]) < crit.ncontigs:
+            #        if int(row[17]) > crit.n50:
+            #            if float(row[21]) < crit.ncount:
+            #                print(*row, sep="\t", file=out)
+            #                yield row[0]
 
 
 """
@@ -91,6 +113,52 @@ awk -v FS="\t" -v OFS="\t" '/^Assembly/ {print $0; next;} {if (4000000 <= $9 && 
 check blobtools tables for taxonomic classification
 """
 
+def BLOBREPORT(blob_dir, out=sys.stdout):    
+    print("Running BLOBREPORT... " + blob_dir)
+    print("Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)[bp]", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)[bp]", sep="\t", file=out)
+    for cdir, dirs, files in os.walk(blob_dir):
+        blobtable = list(filter(lambda s:s.endswith(".blobDB.table.txt"), files))
+        if blobtable:
+            sample = blobtable[0].split(".")[0]
+            taxcounter, spancounter, taxmap = Counter(), Counter(), dict()
+            with open(join(cdir, blobtable[0])) as tin:
+                for row in csv.reader(tin, delimiter="\t"):
+                    if not row[0].startswith("#"):
+                        genus = row[5].split(" ")[0]
+                        taxcounter[genus] += 1
+                        spancounter[genus] += int(row[1])
+                        taxmap.setdefault(genus, Counter())[row[5]] += 1
+            orgs = sorted(taxcounter.items(), key=lambda x:x[1], reverse=True)
+            ncontigs = sum(taxcounter.values())
+            dom_org, vdom_org = orgs.pop(0), (None, 0)
+            if orgs:
+                vdom_org = orgs.pop(0)
+            blob_data = BlobSample(sample, ncontigs, dom_org[0], dom_org[1], dom_org[1]/ncontigs if ncontigs else None, spancounter[dom_org[0]], vdom_org[0], vdom_org[1], vdom_org[1]/ncontigs if ncontigs else None, spancounter[vdom_org[0]])
+            print(*blob_data, sep="\t", file=out)
+            yield blob_data
+
+def TAX_FILTER(blob_data, organism="Salmonella", out=sys.stdout):
+    crit = ENTERO_CRITERIA.get(organism, None)
+    print("Running TAX_FILTER for organism: {}".format(organism), crit)
+    lastCol = "MeetsEnterobaseCriteria? (%predom. >= {:.3f})".format(crit.spcount) if crit is not None else ""
+    header = False
+    # print("Sample", "Organism", "nC=nContigs", "nCO=nContigs[Organism]", "fO=nCO/nC", lastCol, sep="\t", file=out)
+    for sample in blob_data:
+        if sample.dom_org != organism:
+            continue
+        meets_enterobase = crit is None or (sample.dom_org_perc is not None and sample.dom_org_perc >= crit.spcount)
+        lastCol = int(meets_enterobase) if crit is not None else ""
+
+        if meets_enterobase:
+            if not header:
+                print("Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)", lastCol, sep="\t", file=out)
+                header = True
+            print(*sample, lastCol, sep="\t", file=out)
+            yield sample.sample
+
+# BlobSample = namedtuple("BlobSample", "sample ncontigs dom_org dom_org_ncontigs dom_org_perc dom_org_span subdom_org subdom_org_ncontigs subdom_org_perc subdom_org_span".split(" "))
+
+"""
 def TAX_FILTER(blob_dir, organism="Salmonella", out=sys.stdout):
     crit = ENTERO_CRITERIA.get(organism, None)
     print("Running TAX_FILTER for organism: {}".format(organism), crit)
@@ -99,12 +167,24 @@ def TAX_FILTER(blob_dir, organism="Salmonella", out=sys.stdout):
     for cdir, dirs, files in os.walk(blob_dir):
         blobtable = list(filter(lambda s:s.endswith(".blobDB.table.txt"), files))
         if blobtable:
-            taxcounter = Counter()
-            with open(os.path.join(cdir, blobtable[0])) as tin:
+            sample = blobtable[0].split(".")[0]
+            taxcounter, spancounter, taxmap = Counter(), Counter(), dict()
+            with open(join(cdir, blobtable[0])) as tin:
                 for row in csv.reader(tin, delimiter="\t"):
                     if not row[0].startswith("#"):
-                        taxcounter[row[5].split(" ")[0]] += 1
-            sample = blobtable[0].split(".")[0]
+                        genus = row[5].split(" ")[0]
+                        taxcounter[genus] += 1
+                        spancounter[genus] += int(row[1])
+                        taxmap.setdefault(genus, Counter())[row[5]] += 1
+            
+            orgfrac = taxcounter[organism] / sum(taxcounter.values()) if taxcounter else None
+            meets_enterobase = crit is None or (orgfrag is not None and orgfrac >= crit.spcount)
+            orgs = sorted(taxcounter.items(), key=lambda x:x[1])
+            dom_org, vdom_org = orgs[-1], orgs[-2] 
+            lastCol = int(meets_enterobase) if crit is not None else ""
+            print(sample, dom_org[0], dom_org[1], vdom_org[0], vdom_org[1], "{:.3f}".format(orgfrac), lastCol, spancounter[dom_org[0]], spancounter[vdom_org[0]])
+
+
             orgcount = sum(taxcounter[org] for org in taxcounter if org.startswith(organism))
             orgfrac = orgcount/sum(taxcounter.values())
             meets_enterobase = crit is None or orgfrac >= crit.spcount
@@ -114,30 +194,31 @@ def TAX_FILTER(blob_dir, organism="Salmonella", out=sys.stdout):
                 print(sample, dominant_org, sum(taxcounter.values()), orgcount, "{:.3f}".format(orgfrac), lastCol, sep="\t", file=out)
             if meets_enterobase:
                 yield sample
-
+"""
 
 def main(args_in=sys.argv[1:]):
     ap = argparse.ArgumentParser()
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("enterobase_groups", type=str, default="")
     ap.add_argument("--report-dir", type=str, default="")
+    ap.add_argument("--mode", "-m", type=str, default="asm") # asm/survey
     args = ap.parse_args(args_in)
  
     
     print("Running asm:report generation...") #, end="", flush=True)
     if not args.report_dir:
-        report_dir = os.path.join(args.indir, "reports")
+        report_dir = join(args.indir, "reports")
     else:
-        report_dir = os.path.join(args.report_dir)
+        report_dir = join(args.report_dir)
     pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
 
     print("Gathering assembly stage information...")
-    with open(os.path.join(report_dir, "assembly_stage_summary.tsv"), "w") as asm_stage_summary, open(os.path.join(report_dir, "assembly_stages.tsv"), "w") as asm_stages:
-        compileASMInfo(os.path.join(args.indir, "assembly"), out=asm_stages, asm_stat_out=asm_stage_summary)
+    with open(join(report_dir, "assembly_stage_summary.tsv"), "w") as asm_stage_summary, open(join(report_dir, "assembly_stages.tsv"), "w") as asm_stages:
+        compileASMInfo(join(args.indir, "assembly"), out=asm_stages, asm_stat_out=asm_stage_summary)
 
     print("Reading global QUAST report...", end="", flush=True)
     try:
-        with open(os.path.join(report_dir, "quast_report.tsv")) as quast_in:
+        with open(join(report_dir, "quast_report.tsv")) as quast_in:
             quast_report = list(row for row in csv.reader(quast_in, delimiter="\t"))
     except:
         print()
@@ -169,15 +250,16 @@ def main(args_in=sys.argv[1:]):
         print(" DEFAULT")
         valid_sample_groups = list()
     
-    blob_path = os.path.join(args.indir, "qa", "blobtools", "blob")
+    blob_path = join(args.indir, "qa", args.mode, "blobtools", "blob")
 
     if not valid_sample_groups:
         print("No Enterobase groups specified. Proceeding without checking Enterobase criteria.")
-        with open(os.path.join(report_dir, "all_samples.txt"), "w") as samples_out:
+        with open(join(report_dir, "all_samples.txt"), "w") as samples_out:
             print(quast_report)
             print(*sorted(line[0] for line in quast_report[1:]), sep="\n", file=samples_out)
-        with open(os.path.join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
-            list(TAX_FILTER(blob_path, organism="", out=tax_out))
+        with open(join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
+            # list(TAX_FILTER(blob_path, organism="", out=tax_out))
+            list(BLOBREPORT(blob_path, out=tax_out))
             """try:
             except:
                 print("Error: No BLOBTOOLS data found at {}. Exiting.".format(blob_path))
@@ -186,17 +268,29 @@ def main(args_in=sys.argv[1:]):
             """
     else:
         print("Checking Enterobase groups...") 
+        with open(join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
+            blob_report = list(BLOBREPORT(blob_path, out=tax_out))
+        sample_tax_map = dict()
+        
         for sgroup in valid_sample_groups:
             print(sgroup)
-            with open(os.path.join(report_dir, "eb_{}_quast_report.tsv".format(sgroup)), "w") as eb_asm_out, open(os.path.join(report_dir, "eb_{}_taxonomy_report.tsv".format(sgroup)), "w") as eb_tax_out, open(os.path.join(report_dir, "eb_{}_samples.txt".format(sgroup)), "w") as eb_samples_out:
-                eb_pass_assembly = set(ENTERO_FILTER(quast_report, organism=sgroup, out=eb_asm_out))
-                try:
-                    eb_pass_taxonomy = set(TAX_FILTER(blob_path, organism=sgroup, out=eb_tax_out))
-                except:
-                    print("Error: No BLOBTOOLS data found at {}. Exiting.".format(blob_path))
-                    sys.exit(1)
-                    pass
-                print(*sorted(eb_pass_assembly.intersection(eb_pass_taxonomy)), sep="\n", file=eb_samples_out)
+            eb_asm_out_fn = join(report_dir, "eb_{}_quast_report.tsv".format(sgroup))
+            eb_samples_out_fn = join(report_dir, "eb_{}_samples.txt".format(sgroup))
+            eb_tax_out_fn = join(report_dir, "eb_{}_taxonomy_report.tsv".format(sgroup))
+            with open(eb_asm_out_fn, "w") as eb_asm_out, open(eb_samples_out_fn, "w") as eb_samples_out, open(eb_tax_out_fn, "w") as eb_tax_out:
+
+                eb_pass_taxonomy = set(TAX_FILTER(blob_report, organism=sgroup, out=eb_tax_out))
+                quast_stream = list(filter(lambda x:x[0] in eb_pass_taxonomy or x[0].startswith("Assembly"), quast_report))
+                eb_pass_assembly = set(ENTERO_FILTER(quast_stream, organism=sgroup, out=eb_asm_out))
+                # try:
+                #    eb_pass_taxonomy = set(TAX_FILTER(blob_path, organism=sgroup, out=eb_tax_out))
+                #except:
+                #    print("Error: No BLOBTOOLS data found at {}. Exiting.".format(blob_path))
+                #    sys.exit(1)
+                #    pass
+                all_passed = eb_pass_assembly.intersection(eb_pass_taxonomy)
+                if all_passed:
+                    print(*sorted(all_passed), sep="\n", file=eb_samples_out)
 
     print(" Done.\n Generated asm reports in {}.".format(report_dir))
     return True
