@@ -21,7 +21,7 @@ def readDatasum(dfile):
     return data, header
 
 
-def writeDatasum(data, header, dfile, qc_pass=set(), asm_report=dict()):
+def writeDatasum(data, header, dfile, qc_pass=set(), asm_report=dict(), tax_report=dict(), tax_eb_report=dict(), asm_eb_report=dict()):
     def write_row(sheet, row_index, data, header):
         for j, col in enumerate(header):
             sheet.write(row_index, j, data[col])
@@ -31,10 +31,11 @@ def writeDatasum(data, header, dfile, qc_pass=set(), asm_report=dict()):
     ip_header.append("status")
 
     asm_header = asm_report.get("Assembly", list())
-    # print("ASM", asm_header)
-    # print(asm_report)
-    # print(asm_report.keys())
-    ip_header.extend(asm_header[1:])
+    asm_eb_header = asm_eb_report.get("Assembly", list())
+    tax_header = tax_report.get("Sample", list())
+    eb_header = tax_eb_report.get("Sample", "")
+    ip_header.extend(asm_header[1:] + asm_eb_header[-6:] + tax_header[2:] + [eb_header])
+
 
     import xlsxwriter
     book = xlsxwriter.Workbook(dfile)
@@ -49,7 +50,13 @@ def writeDatasum(data, header, dfile, qc_pass=set(), asm_report=dict()):
     for i, k in enumerate(sorted(data), 1):
         if data[k][in_pool_cheader]:
             data[k].update(dict(zip(asm_header[1:], asm_report.get(k, [""]*len(asm_header))[1:])))
-            data[k]["status"] = "" if k in qc_pass else "failed Bioinf_QC"
+            data[k].update(dict(zip(asm_eb_header[-6:], asm_eb_report.get(k, [""]*len(asm_eb_header))[-6:])))
+            data[k].update(dict(zip(tax_header[2:], tax_report.get(k, [""]*len(tax_header))[2:])))
+            data[k].update(dict(zip([eb_header], [tax_eb_report.get(k, "")])))
+            
+
+
+            data[k]["status"] = "assembled" if k in qc_pass else "failed Bioinf_QC"
             write_row(sheet_ip, row_index_ip, data[k], ip_header)
             row_index_ip += 1
         else:
@@ -70,11 +77,13 @@ def main():
         qc_pass = set(row[0] for i, row in enumerate(csv.reader(qc_in, delimiter=",")))
     with open(os.path.join(args.indir, "reports", "quast_report.tsv")) as quast_in:
         quast_data = dict((row[0], row) for i, row in enumerate(csv.reader(quast_in, delimiter="\t")))
+    with open(os.path.join(args.indir, "reports", "all_taxonomy_report.tsv")) as tax_in:
+        tax_report = dict((row[0], row) for i, row in enumerate(csv.reader(tax_in, delimiter="\t")))
+    with open(os.path.join(args.indir, "reports", "eb_taxonomy_report.tsv")) as eb_in:
+        tax_eb_report = dict((row[0], row[-1]) for row in csv.reader(eb_in, delimiter="\t"))
+    with open(os.path.join(args.indir, "reports", "all_quast_taxonomy_report.tsv")) as asm_eb_in:
+        asm_eb_report = dict((row[0], row[-6:]) for row in csv.reader(asm_eb_in, delimiter="\t"))
 
-
-    # for k in data:
-    #    print(data[k])
-
-    writeDatasum(data, header, args.datasum_file.replace(".xlsx", ".bgsum.xlsx"), qc_pass=qc_pass, asm_report=quast_data)
+    writeDatasum(data, header, args.datasum_file.replace(".xlsx", ".bgsum.xlsx"), qc_pass=qc_pass, asm_report=quast_data, tax_report=tax_report, tax_eb_report=tax_eb_report, asm_eb_report=asm_eb_report)
 
     pass
