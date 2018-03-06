@@ -30,6 +30,7 @@ ASSEMBLY_STAGES = OrderedDict([("asm_main_ucn", "Main,Unicycler,normalized"),
                                ("asm_main_ven", "Main,Velvet,normalized"),
                                ("NA", "not_assembled")])
 
+"""
 def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
     asm_tag_ctr = Counter()
     for cdir, dirs, files in os.walk(asm_dir):
@@ -43,8 +44,9 @@ def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
         if asm_tag_ctr[asm_tag] > 0:
             print(ASSEMBLY_STAGES[asm_tag], asm_tag_ctr[asm_tag], asm_tag_ctr[asm_tag]/sum(asm_tag_ctr.values()), sep="\t", file=asm_stat_out)
     print("Total", "", "", sum(asm_tag_ctr.values()), sep="\t", file=asm_stat_out)
+"""
 
-
+"""
 def compileQUASTReport(quast_dir, out=sys.stdout):
     header = ""
     for cdir, dirs, files in os.walk(quast_dir):
@@ -52,13 +54,14 @@ def compileQUASTReport(quast_dir, out=sys.stdout):
             with open(join(cdir, "transposed_report.tsv")) as qin:
                 r = csv.reader(qin, delimiter="\t")
                 first = next(r)
-                if not header:
+                pif not header:
                     header = first
                     print(*header, file=out, sep="\t")
                     yield header
                 for row in r:
                     print(*row, sep="\t", file=out)
                     yield row
+"""
 
 def ENTERO_FILTER(_in, organism="Salmonella", out=sys.stdout, full_out=None):
     header = ""
@@ -122,29 +125,29 @@ awk -v FS="\t" -v OFS="\t" '/^Assembly/ {print $0; next;} {if (4000000 <= $9 && 
 check blobtools tables for taxonomic classification
 """
 
-def BLOBREPORT(blob_dir, out=sys.stdout):    
-    print("Running BLOBREPORT... " + blob_dir)
-    print("Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)[bp]", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)[bp]", sep="\t", file=out)
-    for cdir, dirs, files in os.walk(blob_dir):
-        blobtable = list(filter(lambda s:s.endswith(".blobDB.table.txt"), files))
-        if blobtable:
-            sample = blobtable[0].split(".")[0]
-            taxcounter, spancounter, taxmap = Counter(), Counter(), dict()
-            with open(join(cdir, blobtable[0])) as tin:
-                for row in csv.reader(tin, delimiter="\t"):
-                    if not row[0].startswith("#"):
-                        genus = row[5].split(" ")[0]
-                        taxcounter[genus] += 1
-                        spancounter[genus] += int(row[1])
-                        taxmap.setdefault(genus, Counter())[row[5]] += 1
-            orgs = sorted(taxcounter.items(), key=lambda x:x[1], reverse=True)
-            ncontigs = sum(taxcounter.values())
-            dom_org, vdom_org = orgs.pop(0), (None, 0)
-            if orgs:
-                vdom_org = orgs.pop(0)
-            blob_data = BlobSample(sample, ncontigs, dom_org[0], dom_org[1], dom_org[1]/ncontigs if ncontigs else None, spancounter[dom_org[0]], vdom_org[0], vdom_org[1], vdom_org[1]/ncontigs if ncontigs else None, spancounter[vdom_org[0]])
-            print(*blob_data, sep="\t", file=out)
-            yield blob_data
+# def BLOBREPORT(blob_dir, out=sys.stdout):    
+#     print("Running BLOBREPORT... " + blob_dir)
+#     print("Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)[bp]", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)[bp]", sep="\t", file=out)
+#     for cdir, dirs, files in os.walk(blob_dir):
+#         blobtable = list(filter(lambda s:s.endswith(".blobDB.table.txt"), files))
+#         if blobtable:
+#             sample = blobtable[0].split(".")[0]
+#             taxcounter, spancounter, taxmap = Counter(), Counter(), dict()
+#             with open(join(cdir, blobtable[0])) as tin:
+#                 for row in csv.reader(tin, delimiter="\t"):
+#                     if not row[0].startswith("#"):
+#                         genus = row[5].split(" ")[0]
+#                         taxcounter[genus] += 1
+#                         spancounter[genus] += int(row[1])
+#                         taxmap.setdefault(genus, Counter())[row[5]] += 1
+#             orgs = sorted(taxcounter.items(), key=lambda x:x[1], reverse=True)
+#             ncontigs = sum(taxcounter.values())
+#             dom_org, vdom_org = orgs.pop(0), (None, 0)
+#             if orgs:
+#                 vdom_org = orgs.pop(0)
+#             blob_data = BlobSample(sample, ncontigs, dom_org[0], dom_org[1], dom_org[1]/ncontigs if ncontigs else None, spancounter[dom_org[0]], vdom_org[0], vdom_org[1], vdom_org[1]/ncontigs if ncontigs else None, spancounter[vdom_org[0]])
+#             print(*blob_data, sep="\t", file=out)
+#             yield blob_data
 
 def TAX_FILTER(blob_data, organism="Salmonella", out=sys.stdout, full_out=None):
     crit = ENTERO_CRITERIA.get(organism, None)
@@ -189,9 +192,11 @@ def main(args_in=sys.argv[1:]):
         report_dir = join(args.report_dir)
     pathlib.Path(report_dir).mkdir(parents=True, exist_ok=True)
 
+    """
     print("Gathering assembly stage information...")
     with open(join(report_dir, "assembly_stage_summary.tsv"), "w") as asm_stage_summary, open(join(report_dir, "assembly_stages.tsv"), "w") as asm_stages:
         compileASMInfo(join(args.indir, "assembly"), out=asm_stages, asm_stat_out=asm_stage_summary)
+    """
 
     print("Reading global QUAST report...", end="", flush=True)
     try:
@@ -202,7 +207,17 @@ def main(args_in=sys.argv[1:]):
         print("Error: No QUAST report found at {}. Exiting.".format(report_dir))
         sys.exit(1)
         pass
-    print(" Done")        
+    print(" Done")       
+
+    print("Reading global Blobtools report...", end="", flush=True)
+    try:
+        with open(join(report_dir, "blobtools_report.tsv")) as blob_in:
+            blob_report = list(BlobSample(row) for row in csv.reader(blob_in, delimiter="\t"))
+    except:
+        print()
+        print("Error: No Blobtools report found at {}. Exiting.".format(report_dir))
+        sys.exit(1)
+    print(" Done")
 
     print("Determining downstream processing mode...", end="", flush=True)
     if args.enterobase_groups:
@@ -227,26 +242,26 @@ def main(args_in=sys.argv[1:]):
         print(" DEFAULT")
         valid_sample_groups = list()
     
-    blob_path = join(args.indir, "qa", args.mode, "blobtools", "blob")
+    # blob_path = join(args.indir, "qa", args.mode, "blobtools", "blob")
 
     if not valid_sample_groups:
         print("No Enterobase groups specified. Proceeding without checking Enterobase criteria.")
         with open(join(report_dir, "all_samples.txt"), "w") as samples_out:
             print(quast_report)
             print(*sorted(line[0] for line in quast_report[1:]), sep="\n", file=samples_out)
-        with open(join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
-            # list(TAX_FILTER(blob_path, organism="", out=tax_out))
-            list(BLOBREPORT(blob_path, out=tax_out))
-            """try:
-            except:
-                print("Error: No BLOBTOOLS data found at {}. Exiting.".format(blob_path))
-                sys.exit(1)
-                pass
-            """
+        # with open(join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
+        #    # list(TAX_FILTER(blob_path, organism="", out=tax_out))
+        #    list(BLOBREPORT(blob_path, out=tax_out))
+        #    """try:
+        #    except:
+        #        print("Error: No BLOBTOOLS data found at {}. Exiting.".format(blob_path))
+        #        sys.exit(1)
+        #        pass
+        #    """
     else:
         print("Checking Enterobase groups...") 
-        with open(join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
-            blob_report = list(BLOBREPORT(blob_path, out=tax_out))
+        #with open(join(report_dir, "all_taxonomy_report.tsv"), "w") as tax_out:
+        #    blob_report = list(BLOBREPORT(blob_path, out=tax_out))
         
 
         with open(join(report_dir, "all_quast_taxonomy_report.tsv"), "w") as full_out, open(join(report_dir, "eb_taxonomy_report.tsv"), "w") as full_tax_out:

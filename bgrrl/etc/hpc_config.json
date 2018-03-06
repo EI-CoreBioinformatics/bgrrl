@@ -1,6 +1,6 @@
 {
   "__default__": {
-    "partition": "ei-medium",
+    "partition": "ei-long",
     "memory": "8000",
     "c": "8",
     "J": "bggrl",
@@ -10,7 +10,8 @@
   "ann_ratt": {
     "J": "bg-ann",
     "memory": 4000,
-    "c": 1
+    "c": 1,
+    "time": "10:00"
   },
   "ann_ratt_prepref": {
     "partition": "ei-short",

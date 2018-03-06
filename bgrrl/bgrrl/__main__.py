@@ -14,10 +14,11 @@ import copy
 from snakemake.utils import min_version
 
 from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
-from bgrrl.bgrrl import run_qc, run_asm, compileQUASTReport, ENTERO_FILTER, TAX_FILTER, run_fin, run_ann
+from bgrrl.bgrrl import run_qc, run_asm, run_fin, run_ann
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
+from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 
 from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 from qaa.reporting.busco_report import compileBUSCOReport
@@ -163,7 +164,6 @@ def main():
 		"qaa_mode": "genome"
 	}
 
-
 	if run_mode == PipelineStep.READ_QC:
 		if args.report_only:
 			run_result = qc_eval_main([args.input, args.output_dir])
@@ -175,7 +175,6 @@ def main():
 				qaa_args["no_blobtools"] = True
 				qaa_args["no_busco"] = True
 				qaa_run = QAA_Runner(args, **qaa_args).run()					
-				# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", no_blobtools=True, quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
 				if qaa_run:
 					run_result = qc_eval_main([args.input, args.output_dir])
 					if run_result:
@@ -183,20 +182,22 @@ def main():
 						qaa_args["no_blobtools"] = False
 						qaa_args["no_busco"] = False
 						qaa_run = QAA_Runner(args, **qaa_args).run()						
-						# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=True, qaa_mode="genome", blobtools_no_bwa=False, runmode="survey", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()
 
 	elif run_mode == PipelineStep.ASSEMBLY:
 		if args.report_only:
-			run_result = asm_report_main([args.output_dir, args.enterobase_groups])
+			run_result = asm_stage_report_main([args.output_dir, os.path.join(args.output_dir, "reports")])
+			if args.enterobase_groups: # needs validation?
+				run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 		else:
 			run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 			if run_result:
 				qaa_args["survey_assembly"] = False
 				qaa_args["runmode"] = "asm"
 				qaa_run = QAA_Runner(args, **qaa_args).run()
-				# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="genome", blobtools_no_bwa=False, runmode="asm", quast_mincontiglen=1000, make_input_stream=True, busco_db="bacteria_odb9").run()		
 				if qaa_run:
-					run_result = asm_report_main([args.output_dir, args.enterobase_groups])
+					run_result = asm_stage_report_main([args.output_dir, os.path.join(args.output_dir, "reports")])
+					if args.enterobase_groups:
+						run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		if args.report_only:
@@ -205,7 +206,7 @@ def main():
 				run_result = ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
 		else:
 			if args.annotation in ("prokka", "both"):
-				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan fails).")
+				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
 			run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
                 
 			if run_result:
@@ -213,7 +214,6 @@ def main():
 				qaa_args["qaa_mode"] = "transcriptome,proteome"
 				qaa_args["runmode"] = "ann"
 				qaa_run = QAA_Runner(args, **qaa_args)
-				# qaa_run = QAA_Runner(args, config=qaa_config_file, survey_assembly=False, qaa_mode="transcriptome,proteome", blobtools_no_bwa=False, runmode="ann", make_input_stream=True, busco_db="bacteria_odb9").run()
 
 				if qaa_run and args.annotation in ("ratt", "both"):
 					ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])

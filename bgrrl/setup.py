@@ -77,7 +77,8 @@ setup(
                                           "qc_eval=bgrrl.bin.qc_eval:main",
                                           "asm_report=bgrrl.bin.asm_report:main",
                                           "ann_report=bgrrl.bin.ann_report:main",
-                                          "bg_datasum=bgrrl.bin.bg_datasum:main"]},
+                                          "bg_datasum=bgrrl.bin.bg_datasum:main",
+                                          "asm_stage_report=bgrrl.bin.asm_stage_report:main"]},
 	test_suite = "nose.collector",
 	install_requires=install_requires,
 	tests_require = [

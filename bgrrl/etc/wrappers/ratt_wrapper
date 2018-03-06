@@ -19,9 +19,9 @@ echo $(pwd) &&
 # if [[ $is_debug == 0 ]]; then 
 echo $RATT_HOME/start.ratt.sh $refname $contigs $prefix Strain && 
 /usr/bin/time -v $RATT_HOME/start.ratt.sh $refname $contigs $prefix Strain && 
-cd .. &&
-tar czf $(basename $outdir).tar.gz $(basename $outdir) &&
-cd - &&
+# cd .. &&
+# tar czf $(basename $outdir).tar.gz $(basename $outdir) &&
+# cd - &&
 mkdir -p nucmer && 
 mv nucmer.* nucmer/ && 
 rm -rf DONUCMER.log Sequences query.* Reference.*.fasta && 
