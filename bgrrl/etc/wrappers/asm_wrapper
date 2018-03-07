@@ -48,8 +48,11 @@ then
 # spades.py running in --careful mode
 MIN_POLISH_SIZE=1000
 
+spades_params="--careful --cov-cutoff auto"
+unicycler_params="--min_polish_size ${MIN_POLISH_SIZE}"
+
  # /usr/bin/time -v
- ((unicycler -1 $r1 -2 $r2 -t $threads -o $outdir --min_polish_size $MIN_POLISH_SIZE && touch $outdir/asm_main_ucn) || (rm -rf $outdir && unicycler -1 $ur1 -2 $ur2 -t $threads -o $outdir --min_polish_size $MIN_POLISH_SIZE && touch $outdir/asm_fb1_uct) || (rm -rf $outdir && spades.py -1 $r1 -2 $r2 -t $threads -o $outdir -m 64 --careful && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb2_spn) || (rm -rf $outdir && spades.py -1 $ur1 -2 $ur2 -t $threads -o $outdir -m 64 --careful && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb3_spt)) &> $log
+ ((unicycler -1 $r1 -2 $r2 -t $threads -o $outdir $unicycler_params && touch $outdir/asm_main_ucn) || (rm -rf $outdir && unicycler -1 $ur1 -2 $ur2 -t $threads -o $outdir $unicycler_params && touch $outdir/asm_fb1_uct) || (rm -rf $outdir && spades.py -1 $r1 -2 $r2 -t $threads -o $outdir -m 64 $spades_params && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb2_spn) || (rm -rf $outdir && spades.py -1 $ur1 -2 $ur2 -t $threads -o $outdir -m 64 $spades_params  && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb3_spt)) &> $log
 
 elif [[ "$assembler" == "velvet" ]]
 then
