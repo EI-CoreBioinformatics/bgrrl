@@ -1,10 +1,10 @@
 {
   "__default__": {
-    "partition": "ei-short",
+    "partition": "ei-medium",
     "memory": "8000",
     "c": "8",
     "J": "bggrl",
-    "time": "00:44:00",
+    "time": "24:00:00",
     "exclude": "t128n19,t256n0,t256n1,t128n11,t128n15,t128n50,t128n51,t128n54,t128n73,t128n76,t128n83,t128n9,t128n90,t128n94,t128n95,t128n10,t128n16"
   },
   "ann_ratt": {
@@ -118,7 +118,6 @@
   "qa_blob_blast": {
     "J": "bg-qa",
     "memory": "32000",
-    "time": "00:44:00"
   },
   "qa_blobtools": {
     "J": "bg-qa",
@@ -132,7 +131,6 @@
   "blob_blast": {
     "J": "bg-qa",
     "memory": "32000",
-    "time": "00:44:00"
   },
   "blob_blobtools": {
     "J": "bg-qa",
