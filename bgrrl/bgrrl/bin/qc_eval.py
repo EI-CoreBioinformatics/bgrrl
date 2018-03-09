@@ -17,12 +17,22 @@ TestResult = namedtuple("TestResult", "test status errmsg data".split(" "))
 def test_fastqc_readcount(sample, min_reads=1000):
     def extractReadCount(fn):
         try:
-                with open(fn) as fi:
-                    for line in fi:
-                        if line.startswith("Total Sequences"):
-                            return int(line.strip().split("\t")[-1])
+            with open(fn) as fi:
+                for line in fi:
+                    if line.startswith("Total Sequences"):
+                        return int(line.strip().split("\t")[-1])
         except FileNotFoundError:
             return 0
+        return 0
+    def extractReadLength(fn):
+        try:
+            with open(fn) as fi:
+                for line in fi:
+                    if line.startswith("Sequence length "):
+                        return int(line.strip("Sequence length ").split("-")[-1])
+        except FileNotFoundError:
+            return 0
+        return 0
     def checkReadFile(_file):
         return os.stat(_file).st_size if exists(_file) else "NA"
 
@@ -37,16 +47,17 @@ def test_fastqc_readcount(sample, min_reads=1000):
         R2_size = checkReadFile(join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz"))
         if R1_size == "NA" or R2_size == "NA":
             print("WARNING: Missing readfiles {}/{}.".format(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"), join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz")), file=sys.stderr)           
-            return(test, "FAIL", "MISSING!", (0, 0))
+            return(test, "FAIL", "MISSING!", (0, 0, 0))
         if R1_size > 20 or R2_size > 20:
             print("WARNING: One or both FASTQC-report(s) missing for sample {}, but read files seem not to be empty: R1_fastqc={},R1_read_file_size={} R2_fastqc={},R2_read_file_size={}.".format(sample, exists(fastqc_r1), R1_size, exists(fastqc_r2), R2_size), file=sys.stderr)
-        return TestResult(test, "FAIL", "MISSING?", (0, 0)) 
+        return TestResult(test, "FAIL", "MISSING?", (0, 0, 0)) 
     n1, n2 = map(extractReadCount, (fastqc_r1, fastqc_r2))
+    readlen = max(map(extractReadLength, (fastqc_r1, fastqc_r2)))
     if n1 != n2: 
-        return TestResult(test, "FAIL", "INCONSISTENT", (n1, n2))
+        return TestResult(test, "FAIL", "INCONSISTENT", (n1, n2, readlen))
     if n1 < min_reads:
-        return TestResult(test, "FAIL", "LOW", (n1, n2))
-    return TestResult(test, "PASS", "", (n1, n2)) 
+        return TestResult(test, "FAIL", "LOW", (n1, n2, readlen))
+    return TestResult(test, "PASS", "", (n1, n2, readlen)) 
 
 def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
     test = "KAT:PEAKS"
@@ -59,6 +70,7 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
         with open(kat_log) as _in:
             kmer_peak_table, state, read_table = list(), "", False
             for line in _in:
+                # print("LINE=", line, "STATE=", state)
                 if line.startswith("ERROR"):
                     stats, errmsg = "PASS", "ERROR"
                     break
@@ -69,10 +81,6 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
                     except:
                         print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
                         sys.exit(1)
-                    #     [next(_in), next(_in)] #, next(_in), next(_in)]
-                    # except:
-                    #     print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
-                    #     sys.exit(1)
                     read_table = True
                 elif line.startswith("Calculating genome statistics"):
                     state = "genome_stats"
@@ -87,38 +95,34 @@ def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
                                 kmer_peaks = None
                         elif line.startswith("Overall mean k-mer frequency: "):
                             kmer_freq = line.replace("Overall mean k-mer frequency: ", "").strip()
-                            try:
-                                [next(_in), next(_in), next(_in)]
-                            except:
-                                print("PROBLEM:", kat_log, "truncated in K-mer frequency section", file=sys.stderr)
-                                sys.exit(1)
+                            state = ""
                         elif not line.strip(): #  or line.startswith("K-value used: "):
                             read_table = False
-                        elif line.startswith("Global"):
+                        elif line.startswith("Global") or line.strip().startswith("Index") or line.startswith("--"):
                             continue
                         elif read_table:
                             try:
                                 kmer_peak_table.append(list(map(float, re.sub(" +", " ", line.strip()).split(" "))))
                             except:
                                 kmer_peak_table.append(list(map(float, re.sub(" +", " ", line.strip()).split(" ")[:-1])))
-                                # print("Error with kmer_peak_table in", kat_log, file=sys.stderr)
-                                # sys.exit(1)
-                                # volume_col = 6
                     elif state == "gc_dist":
-                        try:
-                            gc_peaks = int(line.replace("Peaks in analysis: ", "").strip())
-                        except:
-                            gc_peaks = None
-                    elif state == "genome_stats" and line.startswith("Estimated genome size: "):
-                        line = line.replace("Estimated genome size: ", "").strip()
-                        try:
-                            gsize, unit = line.split(" ")
-                        except:
-                            print("XXX", file=sys.stderr)
-                            gsize, unit = line, "bp"
-                        gsize = float(gsize)
-                    elif state == "gc_dist" and line.startswith("Mean GC: "):
-                        mean_gc = line.replace("Mean GC: ", "").strip()
+                        if line.startswith("Peaks in analysis: "):
+                            try:
+                                gc_peaks = int(line.replace("Peaks in analysis: ", "").strip())
+                            except:
+                                gc_peaks = None
+                        elif line.startswith("Mean GC: "):
+                                mean_gc = line.replace("Mean GC: ", "").strip()
+                    elif state == "genome_stats":
+                        # print("PLONK", line)
+                        if line.startswith("Estimated genome size: "):
+                            line = line.replace("Estimated genome size: ", "").strip()
+                            try:
+                                gsize, unit = line.split(" ")
+                            except:
+                                print("XXX", file=sys.stderr)
+                                gsize, unit = line, "bp"
+                            gsize = float(gsize)
 
     
 
@@ -191,7 +195,7 @@ def test_tadpole_size(sample, min_size=1e6):
     return TestResult(test, status, errmsg, (str(assembly_size),))
     
 
-TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount, ("Status", "Description", "#R1_reads", "#R2_reads")),
+TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount, ("Status", "Description", "#R1_reads", "#R2_reads", "Read_Length")),
          ("KAT:PEAKS", test_kat_peaks, ("Status", "Description", "#K-mer_peaks", "Max_Peak_Volume", "Max_Peak_Volume/total", "GC_peaks", "Genome_size", "Genome_size_unit", "K-mer_freq", "mean_gc")),
          # ("KAT:HIST", test_kat_hist),
          # ("KAT:GCP", test_kat_gcp),
@@ -229,8 +233,8 @@ def main(args_in=sys.argv[1:]):
     with open(qc_eval_outf, "w") as qc_eval_out, open(asm_samplesheet_f, "w") as asm_samplesheet:
         # print("SAMPLE", *tuple(test for test, testf, tdata in TESTS), sep="\t", file=qc_eval_out)
 
-        header = ["SAMPLE"]
-        header2 = [""]
+        header = ["Sample", "Status"]
+        header2 = ["", ""]
         # print("SAMPLE", end="\t", file=qc_eval_out)
         for test, testf, tdata in TESTS:
             header.extend([test] + [""]*(len(tdata)-1))   
@@ -241,14 +245,15 @@ def main(args_in=sys.argv[1:]):
 
         for sample in sorted(INPUTFILES):
             results = list(testf(sample) for test, testf, tdata in TESTS)
-            if all(result[1] == "PASS" for result in results):
+            passed = all(result[1] == "PASS" for result in results)
+            if passed:
                 print(*INPUTFILES[sample], sep=",", file=asm_samplesheet)
             elif results[0][1] == "FAIL" and results[0][2] == "MISSING" and results[2][1] == "PASS":
                 print("WARNING: sample {} has missing fastqc report(s), but passes survey assembly.".format(sample), file=sys.stderr)
 
             # p_results = tuple(",".join(result) for result in results)
             # print(p_results)
-            row = [sample]
+            row = [sample, "PASS" if passed else "FAIL"]
             for result in results:
                 row.extend(result[1:3] + result[3])
             print(*row, sep="\t", file=qc_eval_out)

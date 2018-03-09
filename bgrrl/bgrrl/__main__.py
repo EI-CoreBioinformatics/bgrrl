@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+from os.path import join
 import csv
 import sys
 import shutil
@@ -40,15 +41,15 @@ def makeQAASheet(args):
 	asm_path = ""
 	for row in csv.reader(open(args.input), delimiter=","):
 		if args.runmode == "asm":
-			asm_path = os.path.join(args.output_dir, "assembly", row[0], row[0] + ".assembly.fasta")
+			asm_path = join(args.output_dir, "assembly", row[0], row[0] + ".assembly.fasta")
 		elif args.runmode == "survey":
-			asm_path = os.path.join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")	
+			asm_path = join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")	
 		new_row = [row[0], asm_path, "", row[2], row[3], "bacteria_odb9"]
 		if args.runmode == "ann":
 			if args.annotation in ("both", "prokka"):				
-				new_row.extend([os.path.join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".faa")])
+				new_row.extend([join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".ffn"), join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".faa")])
 			else:
-				new_row.extend([os.path.join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".ffn"), os.path.join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".faa")])
+				new_row.extend([join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".ffn"), join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".faa")])
 				
 		sheet.append(new_row)
 	return sheet
@@ -112,7 +113,7 @@ def main():
 
 	# Establish a valid cluster configuration... may throw if invalid
 	print("Configuring execution environment ... ", end="", flush=True)
-	exe_env = ExecutionEnvironment(args, NOW, job_suffix=args.input + "_" + args.output_dir, log_dir=os.path.join(args.output_dir, "hpc_logs"))
+	exe_env = ExecutionEnvironment(args, NOW, job_suffix=args.input + "_" + args.output_dir, log_dir=join(args.output_dir, "hpc_logs"))
 	print("done.")
 	print(str(exe_env))
 	print()
@@ -145,7 +146,7 @@ def main():
 		os.makedirs(args.output_dir)
 		print("done.")
 
-	logs_dir = os.path.join(args.output_dir, "hpc_logs")
+	logs_dir = join(args.output_dir, "hpc_logs")
 	if not os.path.exists(logs_dir) and exe_env.use_scheduler:
 		print("HPC log dir doesn't exist.  Creating " + logs_dir + " now ... ", end="", flush=True)
 		os.makedirs(logs_dir)
@@ -161,7 +162,9 @@ def main():
 		"blobtools_no_bwa": False,
 		"quast_mincontiglen": 1000,
 		"busco_db": "bacteria_odb9",
-		"qaa_mode": "genome"
+		"qaa_mode": "genome",
+		"no_multiqc": True,
+		"project_prefix": args.project_prefix
 	}
 
 	if run_mode == PipelineStep.READ_QC:
@@ -178,14 +181,16 @@ def main():
 				if qaa_run:
 					run_result = qc_eval_main([args.input, args.output_dir])
 					if run_result:
-						args.input = os.path.join(args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
+						args.input = join(args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args["no_blobtools"] = False
 						qaa_args["no_busco"] = False
-						qaa_run = QAA_Runner(args, **qaa_args).run()						
+						qaa_args["no_multiqc"] = False
+						qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "qc") 	
+						qaa_run = QAA_Runner(args, **qaa_args).run()
 
 	elif run_mode == PipelineStep.ASSEMBLY:
 		if args.report_only:
-			run_result = asm_stage_report_main([args.output_dir, os.path.join(args.output_dir, "reports")])
+			run_result = asm_stage_report_main([args.output_dir, join(args.output_dir, "reports")])
 			if args.enterobase_groups: # needs validation?
 				run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 		else:
@@ -193,9 +198,11 @@ def main():
 			if run_result:
 				qaa_args["survey_assembly"] = False
 				qaa_args["runmode"] = "asm"
+				qaa_args["no_multiqc"] = False
+				qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "asm")
 				qaa_run = QAA_Runner(args, **qaa_args).run()
 				if qaa_run:
-					run_result = asm_stage_report_main([args.output_dir, os.path.join(args.output_dir, "reports")])
+					run_result = asm_stage_report_main([args.output_dir, join(args.output_dir, "reports")])
 					if args.enterobase_groups:
 						run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 				
@@ -203,7 +210,7 @@ def main():
 		if args.report_only:
 			run_result = False
 			if args.annotation in ("ratt", "both"):
-				run_result = ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
+				run_result = ann_report_main(["--ref-dir", args.ratt_reference_dir, join(args.output_dir, "annotation", "ratt")])
 		else:
 			if args.annotation in ("prokka", "both"):
 				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
@@ -216,7 +223,7 @@ def main():
 				qaa_run = QAA_Runner(args, **qaa_args)
 
 				if qaa_run and args.annotation in ("ratt", "both"):
-					ann_report_main(["--ref-dir", args.ratt_reference_dir, os.path.join(args.output_dir, "annotation", "ratt")])
+					ann_report_main(["--ref-dir", args.ratt_reference_dir, join(args.output_dir, "annotation", "ratt")])
 		
 	elif run_mode == PipelineStep.FINALIZE:
 		if not args.fin_report_only:

@@ -128,10 +128,21 @@ elif startswith "--partition="; then
     partition=${element_val}
 fi
 
+if contains "--dependency"; then
+    get_next "--dependency"
+    dependency=${element_val}
+elif startswith "--dependency="; then
+    dependency=${element_val}
+fi
+
 slurm_jobname=$app_cmd
 # slurm_jobname="${app}_${output_dir}"
 
 slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.analysis${resume_str}.out.log -e ${app_cmd}.${output_dir}.analysis${resume_str}.err.log --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
+
+if [[ -n "$dependency" ]]; then 
+    slurm_opts="${slurm_opts} --dependency $dependency"
+fi
 
 echo "Running submission command: sbatch ${slurm_opts} --wrap=\"$app $@\""
 
