@@ -113,4 +113,10 @@ table_columns_visible:
         percent_fails: False
         total_sequences: True
 
+quast_config:
+   total_number_contigs_multiplier: 1.0
+   total_number_contigs_suffix: '#contigs' 
+
+
+
 

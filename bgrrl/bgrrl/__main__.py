@@ -195,6 +195,7 @@ def main():
 				run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 		else:
 			run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+			print("XXX XXX XXX")
 			if run_result:
 				qaa_args["survey_assembly"] = False
 				qaa_args["runmode"] = "asm"

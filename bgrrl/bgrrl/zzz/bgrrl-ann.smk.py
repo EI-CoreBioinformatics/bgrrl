@@ -80,10 +80,10 @@ if config["run_prokka"]:
 			" && echo $(pwd)" + \
 			" && cp -v " + join(config["cwd"], "{input.contigs}") + " prokka_contigs.fasta" + \
 			" && ls -l" + \
-			" && {params.load} " + TIME_CMD + \				
+			" && {params.load} (" + TIME_CMD + \				
 			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force" + \
 			" && rm prokka_contigs.fasta" + \
-			" && cd " + CWD + " &> {log}"
+			" && cd " + CWD + ") &> {log}"
 
 if config["run_ratt"]:
 

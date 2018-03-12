@@ -1,5 +1,6 @@
 import sys
 import os
+from os.path import join, basename, dirname
 import argparse
 
 from collections import Counter, OrderedDict
@@ -33,7 +34,7 @@ def main(args):
     ap = argparse.ArgumentParser()
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("report_dir", type=str, default=".")
-    args = ap.parse_args(args_in)
+    args = ap.parse_args(args)
 
     print("Gathering assembly stage information...")
     with open(join(args.report_dir, "assembly_stage_summary.tsv"), "w") as asm_stage_summary, open(join(args.report_dir, "assembly_stages.tsv"), "w") as asm_stages:
