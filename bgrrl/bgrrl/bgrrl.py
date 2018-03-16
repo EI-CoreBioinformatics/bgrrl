@@ -14,6 +14,35 @@ from bgrrl import run_snakemake
 
 Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
 
+def validateEnterobaseInput(eb_input_str, eb_criteria):
+    print("Determining downstream processing mode...", end="", flush=True)
+    if not eb_input_str:
+        print(" DEFAULT")
+        valid_sample_groups = list()
+    else:
+        if eb_input_str == "all":
+            print(" EB:all")
+            check_sample_groups = list(eb_criteria.keys())
+        else:
+            check_sample_groups = eb_input_str.strip().split(",")
+       
+        valid_sample_groups = list(filter(lambda g:g in eb_criteria, check_sample_groups))
+        invalid_sample_groups = set(check_sample_groups).difference(valid_sample_groups)
+
+        if not valid_sample_groups:
+            print(" DEFAULT:FALLBACK")
+            print("No valid Enterobase groups found. Proceeding without checking Enterobase criteria.")
+            pass
+        elif not eb_input_str == "all":
+            print(" EB")
+            print("Moving forward with Enterobase groups: {}.".format(",".join(sorted(valid_sample_groups))))
+        if invalid_sample_groups:
+            print("Found invalid Enterobase groups: {}.".format(",".join(sorted(invalid_sample_groups))))
+
+    return valid_sample_groups
+
+
+
 def compileBUSCO(busco_dir, out=sys.stdout):
     print("Sample", "Mode", "Complete BUSCOs (C)", "Complete and single-copy BUSCOs (S)", "Complete and duplicated BUSCOs (D)", "Fragmented BUSCOs (F)", "Missing BUSCOs (M)", "Total BUSCO groups searched", "C%", "S%", "D%", "F%", "M%", sep="\t", file=out)
     for cdir, dirs, files in os.walk(busco_dir):
@@ -137,6 +166,12 @@ def run_fin(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     config["package_dir"] = os.path.join(os.path.dirname(out_dir), "Data_Package")
     config["project_prefix"] = args.project_prefix
 
+    config["enterobase_groups"] = validateEnterobaseInput(args.enterobase_groups, ENTERO_CRITERIA) if "enterobase_groups" in args else list()
+
+    if "fin_mode" in args:
+        config["finalize_mode"] = args.fin_mode
+
+
     config_file = os.path.join(out_dir, "bg-fin.conf.xml")
     with open(config_file, "w") as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
@@ -152,6 +187,7 @@ def run_qc(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     if verifySamplesheet(samplesheet):
         config["samplesheet"] = samplesheet
     config["out_dir"] = out_dir
+    config["no_normalization"] = args.no_normalization
     
     config_file = os.path.join(out_dir, "bg-qc.conf.xml")
     with open(config_file, "w") as outfile:
@@ -179,7 +215,8 @@ def run_asm(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
     config["assembler"] = args.assembler
     config["reapr_correction"] = False
     # print(args)
-    
+    config["no_normalization"] = args.no_normalization 
+
     if args.contig_minlen:
         config["use_asm_lengthfilter"] = True
         config["asm_lengthfilter_contig_minlen"] = args.contig_minlen
