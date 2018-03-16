@@ -14,7 +14,21 @@ from bgrrl.bgrrl import readSamplesheet, Sample
 
 TestResult = namedtuple("TestResult", "test status errmsg data".split(" "))
 
-def test_fastqc_readcount(sample, min_reads=1000):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def test_fastqc_readcount(sample, min_reads=1000, readtype="bbnorm", **kwargs):
     def extractReadCount(fn):
         try:
             with open(fn) as fi:
@@ -37,16 +51,15 @@ def test_fastqc_readcount(sample, min_reads=1000):
         return os.stat(_file).st_size if exists(_file) else "NA"
 
     test = "FASTQC:READCOUNT"
-    fastqc_dir = join(QCDIR, "fastqc", "bbnorm", sample)
-    fastqc_r1 = join(fastqc_dir, sample + "_R1.bbnorm_fastqc", "fastqc_data.txt")
-    fastqc_r2 = join(fastqc_dir, sample + "_R2.bbnorm_fastqc", "fastqc_data.txt")
-    bbnorm_dir = join(QCDIR, "bbnorm", sample)
+    fastqc_dir = join(QCDIR, "fastqc", readtype, sample)
+    fastqc_r1 = join(fastqc_dir, sample + "_R1.{}_fastqc".format(readtype), "fastqc_data.txt")
+    fastqc_r2 = join(fastqc_dir, sample + "_R2.{}_fastqc".format(readtype), "fastqc_data.txt")
+    read_dir = join(QCDIR, readtype, sample)
     if not (exists(fastqc_r1) and exists(fastqc_r2)):
-        # print(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"), file=sys.stderr)
-        R1_size = checkReadFile(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"))
-        R2_size = checkReadFile(join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz"))
+        R1_size = checkReadFile(join(read_dir, sample + "_R1.{}.fastq.gz".format(readtype)))
+        R2_size = checkReadFile(join(read_dir, sample + "_R2.{}.fastq.gz".format(readtype)))
         if R1_size == "NA" or R2_size == "NA":
-            print("WARNING: Missing readfiles {}/{}.".format(join(bbnorm_dir, sample + "_R1.bbnorm.fastq.gz"), join(bbnorm_dir, sample + "_R2.bbnorm.fastq.gz")), file=sys.stderr)           
+            print("WARNING: Missing readfiles {}/{}.".format(join(read_dir, sample + "_R1.{}.fastq.gz".format(readtype)), join(read_dir, sample + "_R2.{}.fastq.gz".format(readtype))), file=sys.stderr)
             return(test, "FAIL", "MISSING!", (0, 0, 0))
         if R1_size > 20 or R2_size > 20:
             print("WARNING: One or both FASTQC-report(s) missing for sample {}, but read files seem not to be empty: R1_fastqc={},R1_read_file_size={} R2_fastqc={},R2_read_file_size={}.".format(sample, exists(fastqc_r1), R1_size, exists(fastqc_r2), R2_size), file=sys.stderr)
@@ -59,7 +72,69 @@ def test_fastqc_readcount(sample, min_reads=1000):
         return TestResult(test, "FAIL", "LOW", (n1, n2, readlen))
     return TestResult(test, "PASS", "", (n1, n2, readlen)) 
 
-def test_kat_peaks(sample, max_peak_volume_threshold=0.9):
+def test_kat_peaks(sample, max_peak_volume_threshold=0.9, **kwargs):
+    test = "KAT:PEAKS"
+    kat_log = join(QCDIR, "kat", sample, sample + ".dist_analysis.json")
+    status, errmsg, data = "PASS", "", tuple([None]*8)
+    kmer_peaks, gc_peaks, gsize, unit, kmer_freq, mean_gc = None, None, None, None, None, None
+    kmer_peak_table = list()
+    if not exists(kat_log) or os.stat(kat_log).st_size == 0:
+        return TestResult(test, "PASS", "MISSING", data)
+    else:
+        import json
+        try:
+            with open(kat_log) as _in:
+                kat_data = json.load(_in)
+        except:
+            return(test, "PASS", "JSON_ERROR", data)
+
+        print(sample, kat_data)
+
+        cov_data = kat_data.get("coverage", dict())
+        kmer_peaks = cov_data.get("nb_peaks", None)
+        kmer_freq = cov_data.get("mean_freq", None)
+        gsize = cov_data.get("est_genome_size", None)
+        unit = "bp"
+        if gsize is not None:
+            unit = "Mbp"
+            gsize /= 1e6
+        gc_peaks = kat_data.get("gc", dict()).get("nb_peaks", None)
+        mean_gc = kat_data.get("gc", dict()).get("mean_gc%", None)
+
+        keys = ("mean_freq", "stddev", "count", "volume")
+        kmer_peak_table = list([peak[k] for k in keys] for peak in cov_data.get("peaks", dict(zip(keys, [None]*4))))
+
+
+        print(sample, kmer_peak_table)
+
+        VOLUME_INDEX = 3
+
+        try:
+            max_peak = sorted(kmer_peak_table, key=lambda x:x[VOLUME_INDEX])[-1]
+        except: 
+            max_peak = [None]*(VOLUME_INDEX + 1)
+        try:
+            total_volume = sum(row[VOLUME_INDEX] for row in kmer_peak_table)
+        except:
+            total_volume = 0
+            print(kmer_peak_table, file=sys.stderr)
+
+        data = (kmer_peaks, max_peak[VOLUME_INDEX], max_peak[VOLUME_INDEX] / total_volume if (max_peak[VOLUME_INDEX] is not None and total_volume) else None,  gc_peaks, gsize, unit, kmer_freq, mean_gc)
+        if total_volume:
+            if data[0] is None:
+                status, errmsg = "PASS", "MISSING"
+            elif data[0] < 1:
+                status, errmsg = "PASS", "NOPEAK"
+            elif data[0] > 1:
+                if max_peak[VOLUME_INDEX] / total_volume < max_peak_volume_threshold:
+                    status, errmsg = "PASS", "MULTI_MODAL"
+        else:
+            status, errmsg = "PASS", "TABLE_EMPTY"
+
+    return TestResult(test, status, errmsg, data)
+
+
+def test_kat_peaks_old(sample, max_peak_volume_threshold=0.9, **kwargs):
     test = "KAT:PEAKS"
     kat_log = join(QCDIR, "kat", sample, sample + ".kat")
     status, errmsg, data = "PASS", "", tuple([None]*8)
@@ -175,7 +250,7 @@ L75	472
 # N's per 100 kbp	0.00
 """
  
-def test_tadpole_size(sample, min_size=1e6):
+def test_tadpole_size(sample, min_size=1e6, **kwargs):
     def extractAssemblySize(qreport_in):
         for row in csv.reader(qreport_in, delimiter="\t"):
             if row[0].startswith("Total length"):
@@ -194,12 +269,24 @@ def test_tadpole_size(sample, min_size=1e6):
             
     return TestResult(test, status, errmsg, (str(assembly_size),))
     
+TESTS = [("FASTQC:READCOUNT", 
+          test_fastqc_readcount,  
+          ("Status", "Description", "#R1_reads", "#R2_reads", "Read_Length"), 
+          {"min_reads": 1000, "readtype": "bbnorm"}),
+         ("KAT:PEAKS", 
+           test_kat_peaks, 
+           ("Status", "Description", "#K-mer_peaks", "Max_Peak_Volume", "Max_Peak_Volume/total", "GC_peaks", "Genome_size", "Genome_size_unit", "K-mer_freq", "mean_gc"), 
+           {"max_peak_volume_threshold": 0.9}),
+         ("TADPOLE:SIZE", 
+          test_tadpole_size, 
+          ("Status", "Description", "Assembly_size"), 
+          {"min_size": 1e6})]
 
-TESTS = [("FASTQC:READCOUNT", test_fastqc_readcount, ("Status", "Description", "#R1_reads", "#R2_reads", "Read_Length")),
-         ("KAT:PEAKS", test_kat_peaks, ("Status", "Description", "#K-mer_peaks", "Max_Peak_Volume", "Max_Peak_Volume/total", "GC_peaks", "Genome_size", "Genome_size_unit", "K-mer_freq", "mean_gc")),
-         # ("KAT:HIST", test_kat_hist),
-         # ("KAT:GCP", test_kat_gcp),
-         ("TADPOLE:SIZE", test_tadpole_size, ("Status", "Description", "Assembly_size"))]
+
+
+
+
+
 
 
 def main(args_in=sys.argv[1:]):
@@ -208,6 +295,7 @@ def main(args_in=sys.argv[1:]):
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("--min_readcount", type=int, default=1000)
     ap.add_argument("--min_tadpolesize", type=int, default=1e6)
+    ap.add_argument("--readtype", type=str, choices=["bbnorm", "bbduk"], default="bbnorm")
     ap.add_argument("--report-dir", type=str, default="")
     args = ap.parse_args(args_in)
     
@@ -236,7 +324,7 @@ def main(args_in=sys.argv[1:]):
         header = ["Sample", "Status"]
         header2 = ["", ""]
         # print("SAMPLE", end="\t", file=qc_eval_out)
-        for test, testf, tdata in TESTS:
+        for test, testf, tdata, _ in TESTS:
             header.extend([test] + [""]*(len(tdata)-1))   
             header2.extend(tdata)
             # print(*((test,) + tuple([""]*len(tdata)) for test, testf, tdata in TESTS), sep="\t", file=qc_eval_out)
@@ -244,7 +332,12 @@ def main(args_in=sys.argv[1:]):
         print(*header2, sep="\t", file=qc_eval_out)
 
         for sample in sorted(INPUTFILES):
-            results = list(testf(sample) for test, testf, tdata in TESTS)
+            results = list()
+            for test, testf, tdata, kwargs in TESTS:
+                if test == "FASTQC:READCOUNT":
+                    kwargs["readtype"] = args.readtype
+                results.append(testf(sample, **kwargs))
+            # results = list(testf(sample, **kwargs) for test, testf, tdata, kwargs in TESTS)
             passed = all(result[1] == "PASS" for result in results)
             if passed:
                 print(*INPUTFILES[sample], sep=",", file=asm_samplesheet)
