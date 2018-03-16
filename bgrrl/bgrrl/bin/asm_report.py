@@ -10,7 +10,7 @@ import pathlib
 
 from collections import Counter, namedtuple, OrderedDict
 
-from bgrrl.bgrrl import readSamplesheet, Sample
+from bgrrl.bgrrl import readSamplesheet, Sample, validateEnterobaseInput
 
 ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
 BlobSample = namedtuple("BlobSample", "sample ncontigs dom_org dom_org_ncontigs dom_org_perc dom_org_span subdom_org subdom_org_ncontigs subdom_org_perc subdom_org_span".split(" "))
@@ -162,7 +162,7 @@ def TAX_FILTER(blob_data, organism="Salmonella", out=sys.stdout, full_out=None):
         if full_out is not None:                
             if not full_header:
                 full_header = True
-                print("Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)", lastColH, sep="\t", file=full_out)
+                print("Sample", "#contigs", "Predominant taxon", "#contigs(Predominant taxon)", "%(Predominant taxon)", "span(Predominant taxon)", "Subdominant taxon", "#contigs(Subdominant taxon)", "%(Subdominant taxon)", "span(Subdominant taxon)", lastColH, sep="\t", file=full_out)
             print(*sample, lastCol, sep="\t", file=full_out)
             
 
@@ -170,7 +170,7 @@ def TAX_FILTER(blob_data, organism="Salmonella", out=sys.stdout, full_out=None):
         if meets_enterobase:
             if not header:
                 header = True
-                print("Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)", lastColH, sep="\t", file=out)
+                print("Sample", "#contigs", "Predominant taxon", "#contigs(Predominant taxon)", "%(Predominant taxon)", "span(Predominant taxon)", "Subdominant taxon", "#contigs(Subdominant taxon)", "%(Subdominant taxon)", "span(Subdominant taxon)", lastColH, sep="\t", file=out)
                 
             print(*sample, lastCol, sep="\t", file=out)
             yield sample.sample
@@ -219,30 +219,31 @@ def main(args_in=sys.argv[1:]):
         sys.exit(1)
     print(" Done")
 
-    print("Determining downstream processing mode...", end="", flush=True)
-    if args.enterobase_groups:
-        if args.enterobase_groups == "all":
-            print(" EB:all")
-            check_sample_groups = list(ENTERO_CRITERIA.keys())
-        else:
-            check_sample_groups = args.enterobase_groups.split(",")
-        valid_sample_groups = list(filter(lambda g:g in ENTERO_CRITERIA, check_sample_groups))        
-        invalid_sample_groups = set(check_sample_groups).difference(valid_sample_groups)
-        if not valid_sample_groups:
-            print(" DEFAULT:FALLBACK")
-            print("No valid Enterobase groups found. Proceeding without checking Enterobase criteria.")
-            pass
-        elif valid_sample_groups:
-            if not args.enterobase_groups == "all":
-                print(" EB")
-            print("Moving forward with Enterobase groups: {}.".format(",".join(sorted(valid_sample_groups))))
-        if invalid_sample_groups:
-            print("Found invalid Enterobase groups: {}.".format(",".join(sorted(invalid_sample_groups)))) 
-    else:
-        print(" DEFAULT")
-        valid_sample_groups = list()
+    # print("Determining downstream processing mode...", end="", flush=True)
+    # if args.enterobase_groups:
+    #     if args.enterobase_groups == "all":
+    #        print(" EB:all")
+    #        check_sample_groups = list(ENTERO_CRITERIA.keys())
+    #    else:
+    #        check_sample_groups = args.enterobase_groups.split(",")
+    #    valid_sample_groups = list(filter(lambda g:g in ENTERO_CRITERIA, check_sample_groups))        
+    #    invalid_sample_groups = set(check_sample_groups).difference(valid_sample_groups)
+    #    if not valid_sample_groups:
+    #        print(" DEFAULT:FALLBACK")
+    #        print("No valid Enterobase groups found. Proceeding without checking Enterobase criteria.")
+    #        pass
+    #    elif valid_sample_groups:
+    #        if not args.enterobase_groups == "all":
+    #            print(" EB")
+    #        print("Moving forward with Enterobase groups: {}.".format(",".join(sorted(valid_sample_groups))))
+    #    if invalid_sample_groups:
+    #        print("Found invalid Enterobase groups: {}.".format(",".join(sorted(invalid_sample_groups)))) 
+    #else:
+    #    print(" DEFAULT")
+    #    valid_sample_groups = list()
     
     # blob_path = join(args.indir, "qa", args.mode, "blobtools", "blob")
+    valid_sample_groups = validateEnterobaseInput(args.enterobase_groups, ENTERO_CRITERIA)
 
     if not valid_sample_groups:
         print("No Enterobase groups specified. Proceeding without checking Enterobase criteria.")
