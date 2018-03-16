@@ -86,11 +86,17 @@ def main():
         qc_pass = dict((row[0], row) for row in csv.reader(qc_in, delimiter="\t"))
 
     if args.mode == "asm":
-        quast_report, tax_report = "quast_report.tsv", "all_taxonomy_report.tsv"
-        with open(join(report_dir, "eb_taxonomy_report.tsv")) as eb_in:
-            tax_eb_report = dict((row[0], row[-1]) for row in csv.reader(eb_in, delimiter="\t"))
-        with open(join(report_dir, "all_quast_taxonomy_report.tsv")) as asm_eb_in:
-            asm_eb_report = dict((row[0], row[-6:]) for row in csv.reader(asm_eb_in, delimiter="\t"))
+        quast_report, tax_report = "quast_report.tsv", "blobtools_report.tsv"
+        try:
+            with open(join(report_dir, "eb_taxonomy_report.tsv")) as eb_in:
+                tax_eb_report = dict((row[0], row[-1]) for row in csv.reader(eb_in, delimiter="\t"))
+        except:
+                tax_eb_report = dict() 
+        try:
+            with open(join(report_dir, "all_quast_taxonomy_report.tsv")) as asm_eb_in:
+                asm_eb_report = dict((row[0], row[-6:]) for row in csv.reader(asm_eb_in, delimiter="\t"))
+        except:
+                asm_eb_report = dict()
     else:
         quast_report, tax_report = "quast_survey_report", "blobtools_survey_report.tsv"
         tax_eb_report, asm_eb_report = dict(), dict()
