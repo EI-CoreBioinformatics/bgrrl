@@ -34,7 +34,7 @@ def makeQAAArgs(args, **kwargs):
 	from copy import copy
 	qaa_args = copy(args)
 	for k in kwargs:
-       		setattr(qaa_args, k, kwargs[k])
+		setattr(qaa_args, k, kwargs[k])
 	return qaa_args
 def makeQAASheet(args):
 	sheet = list()
@@ -94,6 +94,7 @@ def main():
 	parser.add_argument("--annotation", type=str, choices=["prokka","ratt","both"], help="Annotation software to use for genome annotation. Valid options: {} [prokka]".format(",".join(VALID_ANNOTATERS)), default="prokka")
 	parser.add_argument("--ratt-reference-dir", type=str, help="Path to reference data for ratt", default="")
 	parser.add_argument("--report-only", action="store_true", help="Only runs reporting modules, no snakemake pipelines [False]")
+	parser.add_argument("--no-normalization", action="store_true", help="Use non-normalized reads in asm module (kills fallback-mode!) [False]")
 
 	"""
 	hpc_group = parser.add_argument_group("HPC Options",
@@ -164,12 +165,11 @@ def main():
 		"busco_db": "bacteria_odb9",
 		"qaa_mode": "genome",
 		"no_multiqc": True,
-		"project_prefix": args.project_prefix
-	}
+		"project_prefix": args.project_prefix}
 
 	if run_mode == PipelineStep.READ_QC:
 		if args.report_only:
-			run_result = qc_eval_main([args.input, args.output_dir])
+			run_result = qc_eval_main([args.input, args.output_dir, "--readtype=" + "bbduk" if args.no_normalization else "bbnorm"])
 		else:
 			run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 			if run_result:
@@ -177,9 +177,10 @@ def main():
 				qaa_args["runmode"] = "survey"
 				qaa_args["no_blobtools"] = True
 				qaa_args["no_busco"] = True
+				qaa_args["normalized"] = not args.no_normalization
 				qaa_run = QAA_Runner(args, **qaa_args).run()					
 				if qaa_run:
-					run_result = qc_eval_main([args.input, args.output_dir])
+					run_result = qc_eval_main([args.input, args.output_dir, "--readtype=" + "bbduk" if args.no_normalization else "bbnorm"])
 					if run_result:
 						args.input = join(args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args["no_blobtools"] = False
@@ -195,17 +196,20 @@ def main():
 				run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 		else:
 			run_result = run_asm(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-			print("XXX XXX XXX")
 			if run_result:
-				qaa_args["survey_assembly"] = False
-				qaa_args["runmode"] = "asm"
-				qaa_args["no_multiqc"] = False
-				qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "asm")
-				qaa_run = QAA_Runner(args, **qaa_args).run()
-				if qaa_run:
-					run_result = asm_stage_report_main([args.output_dir, join(args.output_dir, "reports")])
-					if args.enterobase_groups:
-						run_result = asm_report_main([args.output_dir, args.enterobase_groups])
+				run_result = asm_stage_report_main([args.output_dir, join(args.output_dir, "reports")])
+				if run_result:
+					qaa_args["survey_assembly"] = False
+					qaa_args["runmode"] = "asm"
+					qaa_args["no_multiqc"] = False
+					qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "asm")
+					qaa_run = QAA_Runner(args, **qaa_args).run()
+					if qaa_run:
+						args.fin_mode = "asm"
+						if args.enterobase_groups:
+							run_result = asm_report_main([args.output_dir, args.enterobase_groups])
+						if run_result:
+							run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 				
 	elif run_mode == PipelineStep.ANNOTATION:
 		if args.report_only:
@@ -216,7 +220,6 @@ def main():
 			if args.annotation in ("prokka", "both"):
 				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
 			run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-                
 			if run_result:
 				qaa_args["survey_assembly"] = False
 				qaa_args["qaa_mode"] = "transcriptome,proteome"
