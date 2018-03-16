@@ -14,7 +14,7 @@ ASSEMBLY_STAGES = OrderedDict([("asm_main_ucn", "Main,Unicycler,normalized"),
                                ("NA", "not_assembled")])
 
 
-def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
+def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout, asm_samplesheet=sys.stdout):
     asm_tag_ctr = Counter()
     for cdir, dirs, files in os.walk(asm_dir):
         sample = basename(cdir)
@@ -22,6 +22,7 @@ def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
             asm_tag = ([f for f in files if f.startswith("asm_")] + ["NA"])[0]
             asm_tag_ctr[asm_tag] += 1 # .setdefault(asm_tag, list()).append(cdir)
             print(sample, asm_tag, sep="\t", file=out)
+            print(sample, sample, join(cdir, sample + ".assembly.fasta"), sep=",")
     print(asm_tag_ctr)
     for asm_tag in ASSEMBLY_STAGES:
         if asm_tag_ctr[asm_tag] > 0:
@@ -39,6 +40,7 @@ def main(args):
     print("Gathering assembly stage information...")
     with open(join(args.report_dir, "assembly_stage_summary.tsv"), "w") as asm_stage_summary, open(join(args.report_dir, "assembly_stages.tsv"), "w") as asm_stages:
         compileASMInfo(join(args.indir, "assembly"), out=asm_stages, asm_stat_out=asm_stage_summary)
+    return True
 
     
 
