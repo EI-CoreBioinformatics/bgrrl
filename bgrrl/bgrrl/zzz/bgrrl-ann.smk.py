@@ -16,9 +16,10 @@ RATT_DIR = join(ANNOTATION_DIR, "ratt")
 PROKKA_WRAPPER = join(config["etc"], "wrappers", "prokka_wrapper")
 RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
 
-INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
-with open("ann-inputfiles.txt", "w") as input_out:
-    print(*INPUTFILES.values(), sep="\n", file=input_out)
+# INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
+# with open("ann-inputfiles.txt", "w") as input_out:
+#     print(*INPUTFILES.values(), sep="\n", file=input_out)
+INPUTFILES = set(row[0] for row in csv.reader(open(config["samplesheet"]), delimiter=","))
 
 TARGETS = list()
 REF_PREFIXES = dict()
