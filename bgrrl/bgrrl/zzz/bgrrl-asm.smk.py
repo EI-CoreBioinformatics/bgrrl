@@ -19,6 +19,18 @@ QC_OUTDIR = os.path.join(OUTPUTDIR, "qc")
 BBDUK_DIR = os.path.join(QC_OUTDIR, "bbduk")
 BBNORM_DIR = os.path.join(QC_OUTDIR, "bbnorm")
 
+if not config.get("no_normalization", False):
+	PRIMARY_READDIR = BBNORM_DIR
+	SECONDARY_READDIR = BBDUK_DIR
+	PRIMARY_READ_ID = "bbnorm"
+	SECONDARY_READ_ID = "bbduk"
+else:
+	PRIMARY_READDIR = BBDUK_DIR
+	SECONDARY_READDIR = BBDUK_DIR
+	PRIMARY_READ_ID = "bbduk"
+	SECONDARY_READ_ID = "bbduk"
+
+
 INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 TARGETS = list()
 TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
@@ -38,10 +50,14 @@ rule all:
 
 rule asm_assembly:
 	input:
-		r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-		r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
-		ur1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
-		ur2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
+		# r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+		# r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
+		# ur1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
+		# ur2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
+		r1 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(PRIMARY_READ_ID)),
+		r2 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(PRIMARY_READ_ID)),
+		ur1 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(SECONDARY_READ_ID)),
+		ur2 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(SECONDARY_READ_ID)),
 	output:
 		join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
 	log:
