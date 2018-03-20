@@ -24,10 +24,12 @@ INPUTFILES = set(row[0] for row in csv.reader(open(config["samplesheet"]), delim
 TARGETS = list()
 REF_PREFIXES = dict()
 if config["run_prokka"]:
-	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".log"), INPUTFILES))
+	# TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".log"), INPUTFILES))
+	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".prokka.gff"), INPUTFILES))
 if config["run_ratt"]:
 	for d in next(os.walk(config["ratt_reference"]))[1]:     
-		TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
+		# TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
+		TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.final.gff".format(s, d)), INPUTFILES))
 		REF_PREFIXES[d] = list(f.strip(".embl").split(".")[-1] for f in next(os.walk(join(config["ratt_reference"], d)))[2] if f.endswith(".embl"))
 		#for f in next(os.walk(join(config["ratt_reference"], d)))[2]:
 		#	if f.endswith(".embl"):
@@ -54,7 +56,7 @@ def get_ref(wc):
 		return [join(config["ratt_reference"], wc.ref_ann, "gff", "{}.parts_gff".format(wc.ref_ann))]
 
 
-localrules: all
+localrules: all, ann_prokka_gffconvert
 
 rule all:
 	input: TARGETS
@@ -66,7 +68,8 @@ if config["run_prokka"]:
 		output:
 			log = join(PROKKA_DIR, "{sample}", "{sample}.log"),
 			faa = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.faa"),
-			ffn = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.ffn")
+			ffn = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.ffn"),
+			gff = join(PROKKA_DIR, "{sample}", "{sample}.gff")
 		log:
 			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_ann_prokka.log")
 		params:
@@ -85,6 +88,19 @@ if config["run_prokka"]:
 			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force" + \
 			" && rm prokka_contigs.fasta" + \
 			" && cd " + CWD + ") &> {log}"
+
+	rule ann_prokka_gffconvert:
+		input:
+			gff = join(PROKKA_DIR, "{sample}", "{sample}.gff")
+		output:
+			gff = join(PROKKA_DIR, "{sample}", "{sample}.prokka.gff")
+		shell:
+			"awk -v OFS=\"\t\" -v FS=\"\t\"" + \
+			" 'BEGIN {{ print \"##gff-version 3\"; }}" + \
+			" /^[^#]/ {{ $1=gensub(\"[^>_]+_\", \"\", \"g\", $1); }}" + \
+			" {{ if (NF > 1) print $0; }}' {input.gff} > {output.gff}"
+
+
 
 if config["run_ratt"]:
 
@@ -131,17 +147,19 @@ if config["run_ratt"]:
 			contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta"),
 			reference = join(config["ratt_reference"], "{ref_ann}")
 		output:
-			done = join(RATT_DIR, "{sample}", "{ref_ann}", "{sample}_{ref_ann}.done")
+			# done = join(RATT_DIR, "{sample}", "{ref_ann}", "{sample}_{ref_ann}.done")
+			done = join(RATT_DIR, "{sample}", "{ref_ann}", "{sample}_{ref_ann}.final.gff")
 		log:
 			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_{ref_ann}.ann_ratt.log")
 		params:	
 			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann),
 			load = loadPreCmd(config["load"]["ratt"]),
+			done = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann, wildcards.sample + "_" + wildcards.ref_ann + ".done")
 		threads:
 			1
 		shell:
 			RATT_WRAPPER + " {params.outdir} " + join(config["cwd"], "{input.contigs}") + \
-			" {input.reference} {output.done} &> {log}"
+			" {input.reference} {params.done} &> {log}"
 			# " touch " + join(config["cwd"], "{output.done}") + ")" 
 			# " && extractfeat -sequence *.final.embl -outseq {params.prefix}.fasta -type CDS" + \
 			# " && transeq -sequence {params.prefix}.fasta {params.prefix}.pep.fasta" + \
