@@ -4,12 +4,34 @@ import csv
 import glob
 import argparse
 
-from collections import Counter
+from collections import Counter, namedtuple, OrderedDict
 
-FEATURES = ["gene", "CDS", "tRNA", "rRNA", "tmRNA", "ncRNA"]
+# FEATURES = ["gene", "CDS", "tRNA", "rRNA", "tmRNA", "ncRNA"]
+FEATURES = ["gene", "tRNA", "rRNA", "tmRNA", "ncRNA"]
+ANN_REPORT_HEADER = ["Reference"]
+ANN_REPORT_HEADER.extend(map(lambda x:x+"[ref]", FEATURES))
+ANN_REPORT_HEADER.extend(map(lambda x:x+"[transferred]", FEATURES))
+ANN_REPORT_HEADER.extend(map(lambda x:x+"[%]", FEATURES))
+ANN_REPORT_HEADER.extend(["Total[ref]", "Total[transferred]", "Total[%]"])
+
+GFFeature = namedtuple("GFFeature", "seqname source feature start end score strand frame attribute".split(" "))
+
+
+
 
 def countGFFFeatures(_in):
-    return Counter(row[2] for row in csv.reader(_in, delimiter="\t") if row and not row[0].startswith("#"))
+    fcounter = dict((feature, set()) for feature in FEATURES)
+    # return Counter(row[2] for row in csv.reader(_in, delimiter="\t") if row and not row[0].startswith("#"))
+    for row in csv.reader(_in, delimiter="\t"):
+        if row and not row[0].startswith("#"):
+            attr = OrderedDict((item.split("=")[0], item.split("=")[1]) for item in row[8].split(";"))
+            ltag = attr.get("locus_tag", None)
+            if ltag is not None and row[2] != "CDS":
+                fcounter.setdefault(row[2], set()).add(ltag)
+    return dict((k, len(fcounter[k])) for k in fcounter)
+            
+        
+ 
 
 
 def main(args_in=sys.argv[1:]):
@@ -54,11 +76,12 @@ def main(args_in=sys.argv[1:]):
                 print("SAMPLE=", sample, "REF=", ref)
                 row = [ref]
                 if not header:
-                    header = ["Reference"]
-                    header.extend(map(lambda x:x+"[ref]", FEATURES))
-                    header.extend(map(lambda x:x+"[transferred]", FEATURES))
-                    header.extend(map(lambda x:x+"[%]", FEATURES))
-                    header.extend(["Total[ref]", "Total[transferred]", "Total[%]"])
+                    header = ANN_REPORT_HEADER
+                    #header = ["Reference"]
+                    #header.extend(map(lambda x:x+"[ref]", FEATURES))
+                    #header.extend(map(lambda x:x+"[transferred]", FEATURES))
+                    #header.extend(map(lambda x:x+"[%]", FEATURES))
+                    #header.extend(["Total[ref]", "Total[transferred]", "Total[%]"])
                     print(*header, sep="\t", file=ratt_out)
                      
                 row.extend([refcounts.get(ref, Counter())[feature] for feature in FEATURES])
