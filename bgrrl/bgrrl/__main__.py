@@ -20,6 +20,7 @@ from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
 from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
+from bgrrl.bin.annocmp import main as annocmp_main
 
 from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 from qaa.reporting.busco_report import compileBUSCOReport
@@ -228,6 +229,11 @@ def main():
 
 				if qaa_run and args.annotation in ("ratt", "both"):
 					ann_report_main(["--ref-dir", args.ratt_reference_dir, join(args.output_dir, "annotation", "ratt")])
+					annocmp_main([join(args.output_dir, "annotation", "prokka"), join(args.output_dir, "annotation", "ratt"), join(args.output_dir, "reports")])
+					# annocmp_main([
+					# ap.add_argument("prokka_gff", type=str)
+					# ap.add_argument("ratt_tsv", type=str)
+					# ap.add_argument("output_gff", type=str)
 		
 	elif run_mode == PipelineStep.FINALIZE:
 		if not args.fin_report_only:
