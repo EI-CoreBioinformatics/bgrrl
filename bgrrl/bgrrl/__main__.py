@@ -217,15 +217,18 @@ def main():
 			run_result = False
 			if args.annotation in ("ratt", "both"):
 				run_result = ann_report_main(["--ref-dir", args.ratt_reference_dir, join(args.output_dir, "annotation", "ratt")])
+				annocmp_main([join(args.output_dir, "annotation", "prokka"), join(args.output_dir, "annotation", "ratt"), join(args.output_dir, "reports")])
 		else:
 			if args.annotation in ("prokka", "both"):
 				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
 			run_result = run_ann(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+			if not run_result:
+				print("ANNOTATION RUN FAILED?")
 			if run_result:
 				qaa_args["survey_assembly"] = False
 				qaa_args["qaa_mode"] = "transcriptome,proteome"
 				qaa_args["runmode"] = "ann"
-				qaa_run = QAA_Runner(args, **qaa_args)
+				qaa_run = QAA_Runner(args, **qaa_args).run()
 
 				if qaa_run and args.annotation in ("ratt", "both"):
 					ann_report_main(["--ref-dir", args.ratt_reference_dir, join(args.output_dir, "annotation", "ratt")])
@@ -234,6 +237,9 @@ def main():
 					# ap.add_argument("prokka_gff", type=str)
 					# ap.add_argument("ratt_tsv", type=str)
 					# ap.add_argument("output_gff", type=str)
+				if qaa_run:
+					args.fin_mode = "ann"
+					run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		
 	elif run_mode == PipelineStep.FINALIZE:
 		if not args.fin_report_only:
