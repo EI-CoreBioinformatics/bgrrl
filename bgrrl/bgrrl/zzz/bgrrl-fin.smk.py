@@ -13,7 +13,10 @@ OUTPUTDIR = config["package_dir"]
 INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 
 TARGETS = list()
-TARGETS.append(join(OUTPUTDIR, "ASSEMBLY_PKG_DONE"))
+if config["finalize_mode"] == "asm":
+	TARGETS.append(join(OUTPUTDIR, "ASSEMBLY_PKG_DONE"))
+if config["finalize_mode"] == "ann":
+	TARGETS.append(join(OUTPUTDIR, "ANNOTATION_PKG_DONE"))
 
 localrules: all
 
@@ -30,7 +33,7 @@ if EB_ORGANISMS:
 		#	expand(join(OUTPUTDIR, "{organism}_RESULTS_PKG_DONE"), organism=EB_ORGANISMS),
 		#	expand(join(OUTPUTDIR, config["project_prefix"] + "_{organism}_multiqc_report.html"), organism=EB_ORGANISMS)
 		# TARGETS
-else:
+elif config["finalize_mode"] == "asm":
 	rule all:
 		input: 
 			join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
@@ -48,6 +51,30 @@ else:
 			" (for s in $(tail -n +2 {input.samples} | cut -f 1 | grep -v _broken); do" + \
 			" ln -s ../../Analysis/assembly/$s/$s.assembly.fasta {params.outdir}/$s.assembly.fasta;" + \
 			" done)" + \
+			" && cd $(dirname {params.outdir})" + \
+			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+			" && md5sum $(basename {params.outdir}).tar.gz > $(basename {params.outdir}).tar.gz.md5" + \
+			" && cd -" + \
+			" && touch {output.done}"
+
+elif config["finalize_mode"] == "ann":
+	rule all:
+		input:
+			join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+
+	rule fin_package_annotation:
+		input:
+			samples = join(INPUTDIR, "reports", "annotation_report.tsv")
+		output:
+			done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+		params:
+			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
+			prefix = config["project_prefix"]
+		shell:
+			"mkdir -p {params.outdir}" + \
+			" && ln -s ../../Analysis/annotation/ratt/ {params.outdir}/ratt" + \
+			" && ln -s ../../Analysis/annotation/prokka/ {params.outdir}/prokka" + \
+			" && ln -s ../../Analysis/annotation/delta/ {params.outdir}/delta" + \
 			" && cd $(dirname {params.outdir})" + \
 			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
 			" && md5sum $(basename {params.outdir}).tar.gz > $(basename {params.outdir}).tar.gz.md5" + \
