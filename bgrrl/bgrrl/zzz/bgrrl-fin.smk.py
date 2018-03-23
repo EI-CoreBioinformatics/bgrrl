@@ -58,29 +58,71 @@ elif config["finalize_mode"] == "asm":
 			" && touch {output.done}"
 
 elif config["finalize_mode"] == "ann":
+	from math import ceil
+	NUM_BATCHES = ceil((len(list(row for row in csv.reader(open(join(INPUTDIR, "reports", "annotation_report.tsv")), delimiter="\t"))) - 1)/30)
+
 	rule all:
 		input:
-			join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+			join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
+			expand(join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
 
 	rule fin_package_annotation:
 		input:
 			samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 		output:
-			done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+			done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
 		params:
 			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
 			prefix = config["project_prefix"]
 		shell:
-			"mkdir -p {params.outdir}" + \
-			" && ln -s ../../Analysis/annotation/ratt/ {params.outdir}/ratt" + \
+			"mkdir -p {params.outdir}/ratt/{{reports,gff}}" + \
 			" && ln -s ../../Analysis/annotation/prokka/ {params.outdir}/prokka" + \
 			" && ln -s ../../Analysis/annotation/delta/ {params.outdir}/delta" + \
-			" && cd $(dirname {params.outdir})" + \
+			" && cd {params.outdir}/ratt/reports" + \
+			" && find ../../../../Analysis/annotation/ratt -name '*.ratt_report.tsv' -exec ln -s {{}} \;" + \
+			" && cd - && cd {params.outdir}/ratt/gff" + \
+			" && find ../../../../Analysis/annotation/ratt -name '*.final.gff' -exec ln -s {{}} \;" + \
+			" && cd - && cd $(dirname {params.outdir})" + \
 			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+			" && echo TARBALL_DONE" + \
 			" && md5sum $(basename {params.outdir}).tar.gz > $(basename {params.outdir}).tar.gz.md5" + \
 			" && cd -" + \
 			" && touch {output.done}"
 
+	rule fin_package_annotation_make_ratt_batches:
+		input:
+			samples = join(INPUTDIR, "reports", "annotation_report.tsv")
+		output:
+			batches = expand(join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}"), batch_id=list(range(1, NUM_BATCHES + 1)))
+		params:
+			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
+			prefix = config["project_prefix"]
+		run:
+			import pathlib
+			batchid = 0
+			for i, row in enumerate(csv.reader(open(input.samples), delimiter="\t"), start=-1):
+				if i > -1:
+					bid = i % 30
+					if bid == 0:
+						batchid += 1
+						bdir = params.outdir + "_batch.{}".format(batchid)
+						pathlib.Path(bdir).mkdir(parents=True, exist_ok=True)
+					os.symlink(join("..", "..", "Analysis", "annotation", "ratt", row[0]), join(bdir, row[0]))
+
+	rule fin_package_annotation_ratt_tarballs:
+		input:
+			indir = join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}")
+		output:
+			tarball = join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}.tar.gz")
+		params:
+                        outdir = OUTPUTDIR, 
+                        prefix = config["project_prefix"]
+		shell:
+			"""
+			cd {params.outdir} &&
+			tar chvzf $(basename {output.tarball}) $(basename {input.indir}) &&
+                        md5sum $(basename {output.tarball}) > $(basename {output.tarball}).md5
+			"""
 
 #rule fin_compile_assembly:
 #	input:
