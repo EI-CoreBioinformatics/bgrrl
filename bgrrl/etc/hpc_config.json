@@ -137,10 +137,12 @@
     "c": 1,
     "memory": "4000"
   },
+  "fin_package_annotation_ratt_tarballs": {"J": "bg-pack", "c": "1", "memory": "4000"},
+  "fin_package_annotation_make_ratt_batches": {"J": "bg-pack", "c": "1", "memory": "4000"},
   "fin_package_assembly": {"J": "bg-pack", "c": 1, "memory": "4000"},
   "fin_package_annotation": {"J": "bg-pack", "c": 1, "memory": "4000"},
   "fin_compile_assembly": { "J": "bg-fin", "c": 1, "memory": "2000"}, 
   "fin_compile_reads": { "J": "bg-fin", "c": 1, "memory": "2000"}, 
   "fin_multiqc": { "J": "bg-fin", "c": 1, "memory": "8000"}, 
-  "fin_compile_qa": { "J": "bg-fin", "c": 1, "memory": 2000}
+  "fin_compile_qa": { "J": "bg-fin", "c": 1, "memory": "2000"}
 }
