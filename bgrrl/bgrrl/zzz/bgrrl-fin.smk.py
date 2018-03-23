@@ -5,7 +5,8 @@ import glob
 from os.path import join, basename
 
 from bgrrl.bgrrl import readSamplesheet
-from bgrrl import loadPreCmd, TIME_CMD
+from bgrrl import TIME_CMD
+from eicore.external_process.snakemake_helper import loadPreCmd
 
 INPUTDIR = config["out_dir"]
 OUTPUTDIR = config["package_dir"]

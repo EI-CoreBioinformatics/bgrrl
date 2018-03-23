@@ -13,8 +13,12 @@ from textwrap import dedent
 import copy
 
 from snakemake.utils import min_version
+min_version("4.0")
 
-from . import NOW, DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, RunMode, __version__, ExecutionEnvironment, make_exeenv_arg_group
+from eicore import NOW
+from eicore.external_process.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment 
+from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__
+
 from bgrrl.bgrrl import run_qc, run_asm, run_fin, run_ann
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
@@ -22,41 +26,16 @@ from bgrrl.bin.ann_report import main as ann_report_main
 from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
 
-from qaa import TIME_CMD as tcmd, QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
-from qaa.reporting.busco_report import compileBUSCOReport
-print("QAA_TIME_CMD="+tcmd) 
+from qaa import QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 print("QAA_ID="+QAA_ID)
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
 VALID_ANNOTATERS = ["prokka", "ratt", "both"]
-# min_version("4.0")
 
-def makeQAAArgs(args, **kwargs):
-	from copy import copy
-	qaa_args = copy(args)
-	for k in kwargs:
-		setattr(qaa_args, k, kwargs[k])
-	return qaa_args
-def makeQAASheet(args):
-	sheet = list()
-	asm_path = ""
-	for row in csv.reader(open(args.input), delimiter=","):
-		if args.runmode == "asm":
-			asm_path = join(args.output_dir, "assembly", row[0], row[0] + ".assembly.fasta")
-		elif args.runmode == "survey":
-			asm_path = join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")	
-		new_row = [row[0], asm_path, "", row[2], row[3], "bacteria_odb9"]
-		if args.runmode == "ann":
-			if args.annotation in ("both", "prokka"):				
-				new_row.extend([join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".ffn"), join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".faa")])
-			else:
-				new_row.extend([join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".ffn"), join(args.output_dir, "annotation", "ratt", row[0], row[0] + ".faa")])
-				
-		sheet.append(new_row)
-	return sheet
+
 		
 def main():
-	print("Starting EI BGRRL V" + __version__)
+	print("Starting EI BGRRL V " + __version__)
 	print()
 
 	# bgrrl_config = yaml.load(open(DEFAULT_BGRRL_CONFIG_FILE))
@@ -74,7 +53,7 @@ def main():
 
 	parser.add_argument("-f", "--force", action="store_true", help="Force overwriting existing output directory, causes pipeline to be restarted.")
 
-	parser.add_argument("-m", "--mode", choices=[ps.name.lower() for ps in PipelineStep], default="read_qc",
+	parser.add_argument("-m", "--module", choices=[ps.name.lower() for ps in PipelineStep], default="read_qc",
 						help=dedent("""This option controls which part of the pipeline to run. Due to the task at hand being highly dependent on input data quality,
 						it is recommended to run the 4 major steps of EI-BGRRL manually, with data checks, and/or additional manual data manipulation, in between.
 						\"read_qc\" - This step preprocesses the read sets and assesses the assemblability of individual samples. It will produce an input-samplesheet for the assembly-step.
@@ -85,8 +64,6 @@ def main():
 						"""))
 	parser.add_argument("--fin-report-only", action="store_true", help="If finalize-module is called with this parameter, then it will only generate reports instead of generating data packages. [False]")
 
-	parser.add_argument("--unlock", action='store_true', default=False,
-	                    help="If snakemake is not running because it is reporting that the directory is locked, then you can unlock it using this option.  Please make sure that there are no other snakemake jobs running in this directory before using this option!")
 	parser.add_argument("--bgrrl-config", help="Configuration file for BGRRL. This file specifies details for accessing services and commands to be executed prior to running each pipeline tool.  Default config file is: " + DEFAULT_BGRRL_CONFIG_FILE)
 
 	parser.add_argument("--contig-minlen", type=int, default=0, help="Minimum length [bp] of contigs retained in filtering step [0].")
@@ -112,7 +89,7 @@ def main():
 	assert args.assembler in VALID_ASSEMBLERS
 
 	# Set run mode
-	run_mode = PipelineStep[args.mode.upper()]
+	run_mode = PipelineStep[args.module.upper()]
 
 	# Establish a valid cluster configuration... may throw if invalid
 	print("Configuring execution environment ... ", end="", flush=True)
@@ -156,7 +133,7 @@ def main():
 		print("done.")
 
 	print()
-	print(args.mode.upper())
+	print(args.module.upper())
 
 	qaa_args = {
 		"config": qaa_config_file,

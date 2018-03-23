@@ -5,7 +5,8 @@ from os.path import join, basename, dirname
 from collections import Counter
 
 from bgrrl.bgrrl import readSamplesheet
-from bgrrl import loadPreCmd, TIME_CMD
+from bgrrl import TIME_CMD
+from eicore.external_process.snakemake_helper import loadPreCmd
 
 OUTPUTDIR = config["out_dir"]
 ASSEMBLY_DIR = join(OUTPUTDIR, "assembly")

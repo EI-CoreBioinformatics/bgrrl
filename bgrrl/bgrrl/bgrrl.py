@@ -10,7 +10,7 @@ import yaml
 # https://stackoverflow.com/a/600612
 import pathlib
 
-from bgrrl import run_snakemake
+from eicore.external_process.snakemake_helper import run_snakemake
 
 Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
 
