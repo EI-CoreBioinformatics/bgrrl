@@ -13,7 +13,7 @@ from bgrrl.bin.ann_report import ANN_REPORT_HEADER
 GFFeature = namedtuple("GFFeature", "seqname source feature start end score strand frame attribute".split(" "))
 
 PROKKA_FEATURES = ["CDS", "rRNA", "tRNA", "tmRNA"]
-BEDTOOLS_CMD = "source bedtools-2.26.0_github20170207; bedtools subtract -a {} -b {}"
+BEDTOOLS_CMD = "source bedtools-2.26.0_github20170207; bedtools subtract -sorted -a <(sort -k1,1 -k4,4g {}) -b <(sort -k1,1 -k4,4g {})"
 
 HEADER = ["Sample", "Best ratt reference"] 
 HEADER.extend(ANN_REPORT_HEADER[1:])
@@ -35,8 +35,8 @@ def readProkkaGFF(_in):
 
 def _process_prokka_ratt_delta(prokka_gff, ratt_gff, prokka_full, output_gff):         
     feat_count = Counter()
-
-    pr = subprocess.Popen(BEDTOOLS_CMD.format(prokka_gff, ratt_gff), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)    
+    # https://stackoverflow.com/questions/39797234/process-substitution-not-allowed-by-pythons-subprocess-with-shell-true
+    pr = subprocess.Popen(BEDTOOLS_CMD.format(prokka_gff, ratt_gff), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, executable="/bin/bash")    
     po, pe = pr.communicate()
     prokka_sub = readProkkaGFF(po.decode().strip().split("\n"))
 
@@ -70,7 +70,7 @@ def _process_prokka_ratt_delta(prokka_gff, ratt_gff, prokka_full, output_gff):
 def _process_ratt_prokka_delta(prokka_gff, ratt_gff, ratt_full, output_gff):
     feat_count = Counter()
 
-    pr = subprocess.Popen(BEDTOOLS_CMD.format(ratt_gff, prokka_gff), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pr = subprocess.Popen(BEDTOOLS_CMD.format(ratt_gff, prokka_gff), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, executable="/bin/bash")
     po, pe = pr.communicate()
     ratt_sub = readProkkaGFF(po.decode().strip().split("\n"))
 
@@ -144,14 +144,31 @@ def main(args=sys.argv[1:]):
     samples = next(os.walk(args.prokka_dir))[1]
 
     try:
-        with open(join(report_dir, "blobtools_report.tsv")) as _in:
+        with open(join(args.report_dir, "blobtools_report.tsv")) as _in:
             tax_report = dict((row[0], row) for i, row in enumerate(csv.reader(_in, delimiter="\t")))
-            HEADER.extend(tax_report.get("Sample", list())[1:])
-            # "Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)[bp]", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)[bp]"
+            
     except:
             tax_report = dict()
 
+    try:
+        with open(join(args.report_dir, "quast_report.tsv")) as _in:
+            asm_report = dict((row[0], row) for i, row in enumerate(csv.reader(_in, delimiter="\t")))
+    except:
+        asm_report = dict()
+
+    tax_header = tax_report.get("Sample", list())
+    # "Sample", "#contigs", "Predominant genus", "#contigs(Predominant genus)", "%(Predominant genus)", "span(Predominant genus)[bp]", "Subdominant genus", "#contigs(Subdominant genus)", "%(Subdominant genus)", "span(Subdominant genus)[bp]"
+    asm_header = asm_report.get("Assembly", list())
+    # Assembly        # contigs (>= 0 bp)     # contigs (>= 1000 bp)  # contigs (>= 5000 bp)  # contigs (>= 10000 bp) # contigs (>= 25000 bp) # contigs (>= 50000 bp) Total length (>= 0 bp)  Total length (>= 1000 bp)       Total length (>= 5000 bp)       Total length (>= 10000 bp)      Total length (>= 25000 bp)      Total length (>= 50000 bp)      # contigs       Largest contig  Total length    GC (%)  N50     N75     L50     L75     # N's per 100 kbp
+    HEADER.extend(tax_header[1:2]) # #contigs
+    HEADER.extend(asm_header[15:16]) # Total length
+    HEADER.extend(tax_header[2:6] + (["%span(Predominant genus)[bp]"] if tax_header else list()))
+    HEADER.extend(tax_header[6:] + (["%span(Subdominant genus)[bp]"] if tax_header else list()))
     
+    # HEADER.extend(tax_report.get("Sample", list())[1:])
+
+    print("TAX_REPORT:", tax_report, sep="\n")   
+    print("ASM_REPORT:", asm_report, sep="\n") 
 
     with open(join(args.report_dir, "annotation_report.tsv"), "w") as delta_out:
         print(*HEADER, sep="\t", file=delta_out)
@@ -164,6 +181,10 @@ def main(args=sys.argv[1:]):
             prokka_ratt_delta, ratt_prokka_delta, best_ratt_ref, prokka_fcount = compareGFFs(prokka_gff, ratt_tsv, prokka_ratt_delta_gff, ratt_prokka_delta_gff)
 
             row = [sample]
+            if float(best_ratt_ref[4]) == 0:
+                best_ratt_ref = ["NA"]*len(best_ratt_ref)
+                
+
             row.extend(best_ratt_ref)
             row.extend(prokka_fcount[feature] for feature in PROKKA_FEATURES)            
             row.extend([prokka_ratt_delta["novel"], 
@@ -173,7 +194,20 @@ def main(args=sys.argv[1:]):
                         prokka_ratt_delta[("hypothetical protein", "partial")], 
                         prokka_ratt_delta["partial"] - prokka_ratt_delta[("hypothetical protein", "partial")],
                         ratt_prokka_delta["unpredicted"]])
-            row.extend(tax_report.get(sample, list())[1:])            
+            # row.extend(tax_report.get(sample, list())[1:])            
+            row.extend(tax_report.get(sample, list())[1:2])            
+            row.extend(asm_report.get(sample, list())[7:8])
+            row.extend(tax_report.get(sample, list())[2:6])
+            try:
+                row.append(float(tax_report.get(sample, list())[5]) / float(asm_report.get(sample, list())[7]))
+            except:
+                pass
+            row.extend(tax_report.get(sample, list())[6:])            
+            try:
+                row.append(float(tax_report.get(sample, list())[-1]) / float(asm_report.get(sample, list())[7]))
+            except:
+                pass
+
 
             print(*row, sep="\t", file=delta_out)
 
