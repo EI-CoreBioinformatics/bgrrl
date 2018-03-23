@@ -96,6 +96,7 @@ def main():
 	parser.add_argument("--ratt-reference-dir", type=str, help="Path to reference data for ratt", default="")
 	parser.add_argument("--report-only", action="store_true", help="Only runs reporting modules, no snakemake pipelines [False]")
 	parser.add_argument("--no-normalization", action="store_true", help="Use non-normalized reads in asm module (kills fallback-mode!) [False]")
+	parser.add_argument("--finalize-mode", choices=["ann", "asm"])
 
 	"""
 	hpc_group = parser.add_argument_group("HPC Options",
@@ -206,7 +207,7 @@ def main():
 					qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "asm")
 					qaa_run = QAA_Runner(args, **qaa_args).run()
 					if qaa_run:
-						args.fin_mode = "asm"
+						args.finalize_mode = "asm"
 						if args.enterobase_groups:
 							run_result = asm_report_main([args.output_dir, args.enterobase_groups])
 						if run_result:
@@ -238,14 +239,18 @@ def main():
 					# ap.add_argument("ratt_tsv", type=str)
 					# ap.add_argument("output_gff", type=str)
 				if qaa_run:
-					args.fin_mode = "ann"
+					args.finalize_mode = "ann"
 					run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		
 	elif run_mode == PipelineStep.FINALIZE:
+		"""
 		if not args.fin_report_only:
 			run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 		else:
 			run_result = True
+		"""
+		# args.finalize_mode 
+		run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 	else:
 		print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", run_mode)
 		exit(1)
