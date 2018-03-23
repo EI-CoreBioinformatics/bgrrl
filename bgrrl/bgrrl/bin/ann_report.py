@@ -9,7 +9,7 @@ from collections import Counter, namedtuple, OrderedDict
 # FEATURES = ["gene", "CDS", "tRNA", "rRNA", "tmRNA", "ncRNA"]
 FEATURES = ["gene", "tRNA", "rRNA", "tmRNA", "ncRNA"]
 ANN_REPORT_HEADER = ["Reference"]
-ANN_REPORT_HEADER.extend(["Transfer coordinate issue?"])
+ANN_REPORT_HEADER.extend(["Transfer coordinate correction?"])
 ANN_REPORT_HEADER.extend(["#Features[ref]", "#Features[transferred]", "Transferred[%]"])
 ANN_REPORT_HEADER.extend(map(lambda x:x+"[ref]", FEATURES))
 ANN_REPORT_HEADER.extend(map(lambda x:x+"[transferred]", FEATURES))
@@ -121,7 +121,7 @@ def main(args_in=sys.argv[1:]):
                 row.extend([rtotal, ttotal, ttotal/rtotal if rtotal > 0 else "NA"])
                 rows.append(row)
 
-            for row in sorted(rows, key=lambda x:x[-1] if x[-1] != "NA" else -1, reverse=True):            
+            for row in sorted(rows, key=lambda x:(x[-2], x[-1]) if (x[-2] != "NA" and x[-1] != "NA") else -1, reverse=True):            
                 print(*row, sep="\t", file=ratt_out)
 
     return True  
