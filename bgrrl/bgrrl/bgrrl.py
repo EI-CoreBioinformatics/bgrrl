@@ -168,8 +168,8 @@ def run_fin(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
 
     config["enterobase_groups"] = validateEnterobaseInput(args.enterobase_groups, ENTERO_CRITERIA) if "enterobase_groups" in args else list()
 
-    if "fin_mode" in args:
-        config["finalize_mode"] = args.fin_mode
+    if "finalize_mode" in args:
+        config["finalize_mode"] = args.finalize_mode
 
 
     config_file = os.path.join(out_dir, "bg-fin.conf.xml")
