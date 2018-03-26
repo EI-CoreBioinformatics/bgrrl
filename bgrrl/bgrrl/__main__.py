@@ -147,8 +147,10 @@ def main():
 		"project_prefix": args.project_prefix}
 
 	if run_mode == PipelineStep.READ_QC:
+		readtype = "bbduk" if args.no_normalization else "bbnorm"
+
 		if args.report_only:
-			run_result = qc_eval_main([args.input, args.output_dir, "--readtype=" + "bbduk" if args.no_normalization else "bbnorm"])
+			run_result = qc_eval_main(["--readtype", readtype, args.input, args.output_dir])
 		else:
 			run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 			if run_result:
@@ -159,7 +161,7 @@ def main():
 				qaa_args["normalized"] = not args.no_normalization
 				qaa_run = QAA_Runner(args, **qaa_args).run()					
 				if qaa_run:
-					run_result = qc_eval_main([args.input, args.output_dir, "--readtype=" + "bbduk" if args.no_normalization else "bbnorm"])
+					run_result = qc_eval_main(["--readtype", readtype, args.input, args.output_dir])
 					if run_result:
 						args.input = join(args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args["no_blobtools"] = False

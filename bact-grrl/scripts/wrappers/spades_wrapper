@@ -1,4 +1,0 @@
-#!/bin/bash
-source spades-3.8.1
-
-/usr/bin/time -v spades.py $@
