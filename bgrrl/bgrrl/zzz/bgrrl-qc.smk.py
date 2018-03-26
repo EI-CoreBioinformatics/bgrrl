@@ -22,17 +22,17 @@ INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 
 TARGETS = list()
 if not config.get("no_normalization", False):
-        PRIMARY_READDIR = BBNORM_DIR
-        SECONDARY_READDIR = BBDUK_DIR
-        PRIMARY_READ_ID = "bbnorm"
-        SECONDARY_READ_ID = "bbduk"
+	PRIMARY_READDIR = BBNORM_DIR
+	SECONDARY_READDIR = BBDUK_DIR
+	PRIMARY_READ_ID = "bbnorm"
+	SECONDARY_READ_ID = "bbduk"
 	TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R1.bbnorm_fastqc.html"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R2.bbnorm_fastqc.html"), INPUTFILES))
 else:
-        PRIMARY_READDIR = BBDUK_DIR
-        SECONDARY_READDIR = BBDUK_DIR
-        PRIMARY_READ_ID = "bbduk"
-        SECONDARY_READ_ID = "bbduk"
+	PRIMARY_READDIR = BBDUK_DIR
+	SECONDARY_READDIR = BBDUK_DIR
+	PRIMARY_READ_ID = "bbduk"
+	SECONDARY_READ_ID = "bbduk"
 
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R1.bbduk_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.html"), INPUTFILES))
