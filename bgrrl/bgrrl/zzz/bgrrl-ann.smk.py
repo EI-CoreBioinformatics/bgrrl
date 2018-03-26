@@ -56,7 +56,6 @@ def get_ref(wc):
 	else:
 		return [join(config["ratt_reference"], wc.ref_ann, "gff", "{}.parts_gff".format(wc.ref_ann))]
 
-
 localrules: all, ann_prokka_gffconvert
 
 rule all:
