@@ -8,7 +8,7 @@ from setuptools import setup, find_packages, Command
 from subprocess import check_call
 
 name = "bgrrl"
-version = "dev_eicore"
+version = "0.2"
 release = version + ".0"
 
 
