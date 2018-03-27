@@ -38,7 +38,7 @@ class InstallAll(Command):
             env["PYTHONPATH"] = pythonpath
             mqc_cmd.append("--prefix=" + self.prefix)
 
-        if os.path.exists(".git"):
+        if os.path.exists(".git") or os.path.exists("../.git"):
             print()
             print("Updating git submodules")
             check_call(["git", "submodule", "init"])
