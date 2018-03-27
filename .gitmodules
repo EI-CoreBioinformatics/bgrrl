@@ -1,6 +1,6 @@
 [submodule "bgrrl/deps/qaa"]
 	path = bgrrl/deps/qaa
-	url = https://github.com/cschu/qaa
+	url = https://github.com/cschu/qaa.git
 [submodule "bgrrl/deps/eicore"]
 	path = bgrrl/deps/eicore
 	url = https://github.com/maplesond/eicore.git
