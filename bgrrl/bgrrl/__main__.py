@@ -17,7 +17,7 @@ min_version("4.0")
 
 from eicore import NOW
 from eicore.external_process.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment 
-from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__, BGGRLModuleRunner
+from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__, BGRRLModuleRunner
 
 from bgrrl.bgrrl import validateEnterobaseInput, ENTERO_CRITERIA
 from bgrrl.bin.qc_eval import main as qc_eval_main
@@ -40,7 +40,7 @@ def main():
     # bgrrl_config = yaml.load(open(DEFAULT_BGRRL_CONFIG_FILE))
     bgrrl_config_file = DEFAULT_BGRRL_CONFIG_FILE
 
-    parser = ArgumentParser("The Earlham Institute Bacterial Genome Reconstruction & Recognition Pipeline (BGGR|)",
+    parser = ArgumentParser("The Earlham Institute Bacterial Genome Reconstruction & Recognition Pipeline (BGRR|)",
                             description="""This program controls the various Snakemake pipelines making up the EI-BGRR| pipeline.""")
 
     parser.add_argument("input", 
@@ -193,7 +193,7 @@ def main():
         if args.report_only:
             run_result = qc_eval_main(["--readtype", readtype, args.input, args.output_dir])
         else:
-            run_result = BGGRLModuleRunner("bgrrl-qc", args, exe_env, config=bgrrl_config).run()
+            run_result = BGRRLModuleRunner("bgrrl-qc", args, exe_env, config=bgrrl_config).run()
             # run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
             if run_result:
                 qaa_args["survey_assembly"] = True

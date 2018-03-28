@@ -86,7 +86,7 @@ def verifySamplesheet(fn, delimiter=","):
         return True
 
 
-class BGGRLModuleRunner(object):
+class BGRRLModuleRunner(object):
     def __init__(self, module, args, exe_env, config=dict()):
         print(config)
         self.config = dict(config)
