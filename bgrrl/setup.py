@@ -99,7 +99,7 @@ setup(
         ("etc", ["etc/bgrrl_config.yaml", "etc/busco-config.ini", "etc/hpc_config.json", "etc/multiqc_config.yaml"]), 
         ("etc/wrappers", ["etc/wrappers/unicycler_wrapper", "etc/wrappers/asm_wrapper", "etc/wrappers/prokka_wrapper", "etc/wrappers/ratt_wrapper"]), ("etc/util", ["etc/util/busco_init_dir"])
     ],
-    scripts=["bgrrl/bin/bgqc", "bgrrl/bin/bgasm", "bgrrl/bin/bgann", "bgrrl/bin/bgfin"],
+    scripts=["bgrrl/bin/bgqc", "bgrrl/bin/bgasm", "bgrrl/bin/bgann", "bgrrl/bin/bgfin", "bgrrl/bin/bginit"],
     cmdclass={
         'install_all': InstallAll
     }

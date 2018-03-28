@@ -1,0 +1,33 @@
+#!/bin/bash
+
+echo $BASH_SOURCE
+BINDIR=$(dirname $BASH_SOURCE)
+echo $BINDIR
+ETCDIR=$(find $BINDIR/../lib -name 'etc' -type d | grep bgrrl-)
+echo $ETCDIR
+ls $ETCDIR
+
+CONFIG_DIR=Analysis/config
+
+
+if [[ -d $CONFIG_DIR ]]; then 
+  echo "Config dir exists already."
+  if [[ $1 == "" ]]; then 
+    echo "If you are sure what you're about to do, you can use the -f option to overwrite the configuration files."
+  else
+    echo "-f option found, config files will be overwritten with fresh copies"
+  fi
+else
+  echo "Creating config dir..."
+  mkdir -p $CONFIG_DIR 
+fi
+
+echo "Copying configuration files into project directory..."
+
+for f in bgrrl_config.yaml hpc_config.json multiqc_config.yaml; do
+  if [[ ! -e $CONFIG_DIR/$f || $1 == "-f" ]]; then
+    cp -v $ETCDIR/$f $CONFIG_DIR/
+  else
+    echo "$f already exists, and -f is not specified. Skipping."
+  fi
+done
