@@ -60,7 +60,7 @@ def main():
     parser.add_argument("--bgrrl-config", 
                         help="""Configuration file for BGRRL. This file specifies details for accessing services and commands 
                                 to be executed prior to running each pipeline tool.  
-                                The default config file isl located at " + DEFAULT_BGRRL_CONFIG_FILE)""")
+                                The default config file is located at {}""".format(DEFAULT_BGRRL_CONFIG_FILE))
 
     parser.add_argument("-m", "--module", 
                         choices=[ps.name.lower() for ps in PipelineStep], 
@@ -185,7 +185,9 @@ def main():
         "busco_db": "bacteria_odb9",
         "qaa_mode": "genome",
         "no_multiqc": True,
-        "project_prefix": args.project_prefix}
+        "project_prefix": args.project_prefix,
+        "config": bgrrl_config_file,
+        "hpc_config": args.hpc_config}
 
     if run_mode == PipelineStep.READ_QC:
         readtype = "bbduk" if args.no_normalization else "bbnorm"
