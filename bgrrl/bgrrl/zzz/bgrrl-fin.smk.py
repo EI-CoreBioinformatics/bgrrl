@@ -45,8 +45,8 @@ elif config["finalize_mode"] == "asm":
 		output:
 			done = join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
 		params:
-			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_assemblies"),
-			prefix = config["project_prefix"]
+			outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_assemblies"),
+			prefix = config["misc"]["project"]
 		shell:
 			"mkdir -p {params.outdir} &&" + \
 			" (for s in $(tail -n +2 {input.samples} | cut -f 1 | grep -v _broken); do" + \
@@ -65,7 +65,7 @@ elif config["finalize_mode"] == "ann":
 	rule all:
 		input:
 			join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
-			expand(join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
+			expand(join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
 
 	rule fin_package_annotation:
 		input:
@@ -73,8 +73,8 @@ elif config["finalize_mode"] == "ann":
 		output:
 			done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
 		params:
-			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
-			prefix = config["project_prefix"]
+			outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+			prefix = config["misc"]["project"]
 		shell:
 			"mkdir -p {params.outdir}/ratt/{{reports,gff}}" + \
 			" && ln -s ../../Analysis/annotation/prokka/ {params.outdir}/prokka" + \
@@ -94,10 +94,10 @@ elif config["finalize_mode"] == "ann":
 		input:
 			samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 		output:
-			batches = expand(join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}"), batch_id=list(range(1, NUM_BATCHES + 1)))
+			batches = expand(join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}"), batch_id=list(range(1, NUM_BATCHES + 1)))
 		params:
-			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
-			prefix = config["project_prefix"]
+			outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+			prefix = config["misc"]["project"]
 		run:
 			import pathlib
 			batchid = 0
@@ -112,12 +112,12 @@ elif config["finalize_mode"] == "ann":
 
 	rule fin_package_annotation_ratt_tarballs:
 		input:
-			indir = join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}")
+			indir = join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}")
 		output:
-			tarball = join(OUTPUTDIR, config["project_prefix"] + "_annotation_batch.{batch_id}.tar.gz")
+			tarball = join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}.tar.gz")
 		params:
                         outdir = OUTPUTDIR, 
-                        prefix = config["project_prefix"]
+                        prefix = config["misc"]["project"]
 		shell:
 			"""
 			cd {params.outdir} &&
