@@ -76,7 +76,7 @@ if config["run_prokka"]:
 			outdir = lambda wildcards: join(PROKKA_DIR, wildcards.sample),
 			prefix = lambda wildcards: wildcards.sample,
 			load = loadPreCmd(config["load"]["prokka"]),
-			centre = config["seqcentre"]
+			centre = config["misc"]["seqcentre"]
 		threads:
 			8
 		shell:
