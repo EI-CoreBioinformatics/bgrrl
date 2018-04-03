@@ -164,7 +164,10 @@ def run_fin(samplesheet, out_dir, args, exe_env, bgrrl_config=dict()):
         config["samplesheet"] = samplesheet
     config["out_dir"] = out_dir
     config["package_dir"] = os.path.join(os.path.dirname(out_dir), "Data_Package")
-    config["project_prefix"] = args.project_prefix
+    try:
+        config["misc"]["project"] = args.project_prefix
+    except:
+        pass
 
     config["enterobase_groups"] = validateEnterobaseInput(args.enterobase_groups, ENTERO_CRITERIA) if "enterobase_groups" in args else list()
 
