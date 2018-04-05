@@ -157,7 +157,7 @@ def TAX_FILTER(blob_data, organism="Salmonella", out=sys.stdout, full_out=None):
     for sample in blob_data:
         if sample.dom_org != organism:
             continue
-        meets_enterobase = crit is None or (sample.dom_org_perc is not None and sample.dom_org_perc >= crit.spcount)
+        meets_enterobase = crit is None or (sample.dom_org_perc is not None and float(sample.dom_org_perc) >= crit.spcount)
         lastCol = int(meets_enterobase) if crit is not None else ""
         if full_out is not None:                
             if not full_header:
@@ -212,7 +212,7 @@ def main(args_in=sys.argv[1:]):
     print("Reading global Blobtools report...", end="", flush=True)
     try:
         with open(join(report_dir, "blobtools_report.tsv")) as blob_in:
-            blob_report = list(BlobSample(row) for row in csv.reader(blob_in, delimiter="\t"))
+            blob_report = list(BlobSample(*row) for row in csv.reader(blob_in, delimiter="\t"))
     except:
         print()
         print("Error: No Blobtools report found at {}. Exiting.".format(report_dir))
