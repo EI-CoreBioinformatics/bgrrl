@@ -17,8 +17,9 @@ min_version("4.0")
 
 from eicore import NOW
 from eicore.external_process.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment 
-from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__, BGRRLModuleRunner
+from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
 
+"""
 from bgrrl.bgrrl import validateEnterobaseInput, ENTERO_CRITERIA
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
@@ -26,8 +27,17 @@ from bgrrl.bin.ann_report import main as ann_report_main
 from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
 
-from qaa import QAA_Runner, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
+from qaa import QAA_Runner, QAA_ArgumentsAdapter as QAA_Args, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 print("QAA_ID="+QAA_ID)
+
+DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True, 
+                            no_blobtools=False, 
+                            blobtools_no_bwa=False, 
+                            qaa_mode="genome", 
+                            busco_db="bacteria_odb", 
+                            no_multiqc=True)
+"""
+
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
 VALID_ANNOTATERS = ["prokka", "ratt", "both"]
@@ -57,7 +67,7 @@ def main():
                         action="store_true", 
                         help="Force overwriting existing output directory, causes pipeline to be restarted. (disabled)")
 
-    parser.add_argument("--bgrrl-config", 
+    parser.add_argument("--bgrrl_config", 
                         help="""Configuration file for BGRRL. This file specifies details for accessing services and commands 
                                 to be executed prior to running each pipeline tool.  
                                 The default config file is located at {}""".format(DEFAULT_BGRRL_CONFIG_FILE))
@@ -129,6 +139,10 @@ def main():
     make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
     args = parser.parse_args()
 
+    bgrrl_runner = BGRRLRunner(args)
+    run_result = bgrrl_runner.run()
+
+"""
     # Set run mode
     run_mode = PipelineStep[args.module.upper()]
 
@@ -176,18 +190,23 @@ def main():
     print()
     print(args.module.upper())
 
-    qaa_args = {
-        "config": qaa_config_file,
-        "make_input_stream": True,
-        "no_blobtools": False,
-        "blobtools_no_bwa": False,
-        "quast_mincontiglen": 1000,
-        "busco_db": "bacteria_odb9",
-        "qaa_mode": "genome",
-        "no_multiqc": True,
-        "project_prefix": args.project_prefix,
-        "config": bgrrl_config_file,
-        "hpc_config": args.hpc_config}
+    #qaa_args = {
+    #    # "config": qaa_config_file,
+    #    "make_input_stream": True,
+    #    "no_blobtools": False,
+    #    "blobtools_no_bwa": False,
+    #    "quast_mincontiglen": 1000,
+    #    "busco_db": "bacteria_odb9",
+    #    "qaa_mode": "genome",
+    #    "no_multiqc": True,
+    #    "project_prefix": args.project_prefix,
+    #    "config": bgrrl_config_file,
+    #    "hpc_config": args.hpc_config}
+    qaa_args = DEFAULT_QAA_ARGS
+    qaa_args.update(quast_mincontiglen=1000, 
+                    project_prefix=args.project_prefix, 
+                    config=bgrrl_config_file, 
+                    hpc_onfig=args.hpc_config)
 
     if run_mode == PipelineStep.READ_QC:
         readtype = "bbduk" if args.no_normalization else "bbnorm"
@@ -198,35 +217,46 @@ def main():
             run_result = BGRRLModuleRunner("bgrrl-qc", args, exe_env, config=bgrrl_config).run()
             # run_result = run_qc(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
             if run_result:
-                qaa_args["survey_assembly"] = True
-                qaa_args["runmode"] = "survey"
-                qaa_args["no_blobtools"] = True
-                qaa_args["no_busco"] = True
-                qaa_args["normalized"] = not args.no_normalization
-                qaa_run = QAA_Runner(args, **qaa_args).run()					
+                qaa_args.update(**vars(args),
+                                survey_assembly=True, 
+                                runmode="survey", 
+                                no_blobtools=True, 
+                                no_busco=True, 
+                                normalized=not args.no_normalization)
+                # qaa_args["survey_assembly"] = True
+                # qaa_args["runmode"] = "survey"
+                # qaa_args["no_blobtools"] = True
+                # qaa_args["no_busco"] = True
+                # qaa_args["normalized"] = not args.no_normalization
+                qaa_run = QAA_Runner(qaa_args).run()					
                 if qaa_run:
                     run_result = qc_eval_main(["--readtype", readtype, args.input, args.output_dir])
                     if run_result:
                         args.input = join(args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
-                        qaa_args["no_blobtools"] = False
-                        qaa_args["no_busco"] = False
-                        qaa_args["no_multiqc"] = False
-                        qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "qc") 	
-                        qaa_run = QAA_Runner(args, **qaa_args).run()
+                        qaa_args.update(**vars(args),
+                                        no_blobtools=False, 
+                                        no_busco=False, 
+                                        no_multiqc=False, 
+                                        multiqc_dir=join(args.output_dir, "reports", "multiqc", "qc"))
+                        #qaa_args["no_blobtools"] = False
+                        #qaa_args["no_busco"] = False
+                        #qaa_args["no_multiqc"] = False
+                        #qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "qc") 	
+                        qaa_run = QAA_Runner(qaa_args).run()
 
     elif run_mode == PipelineStep.ASSEMBLY:
-        config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
-        config["cwd"] = os.getcwd()
+        bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+        bgrrl_config["cwd"] = os.getcwd()
         # config["assembler"] = args.assembler
-        config["reapr_correction"] = False
+        bgrrl_config["reapr_correction"] = False
         # config["no_normalization"] = args.no_normalization
     
         if args.contig_minlen:
-            config["use_asm_lengthfilter"] = True
-            config["asm_lengthfilter_contig_minlen"] = args.contig_minlen
+            bgrrl_config["use_asm_lengthfilter"] = True
+            bgrrl_config["asm_lengthfilter_contig_minlen"] = args.contig_minlen
         else:
-            config["use_asm_lengthfilter"] = False
-            config["asm_lengthfilter_contig_minlen"] = 0
+            bgrrl_config["use_asm_lengthfilter"] = False
+            bgrrl_config["asm_lengthfilter_contig_minlen"] = 0
 
         if args.report_only:
             run_result = asm_stage_report_main([args.output_dir, join(args.output_dir, "reports")])
@@ -238,11 +268,16 @@ def main():
             if run_result:
                 run_result = asm_stage_report_main([args.output_dir, join(args.output_dir, "reports")])
                 if run_result:
-                        qaa_args["survey_assembly"] = False
-                        qaa_args["runmode"] = "asm"
-                        qaa_args["no_multiqc"] = False
-                        qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "asm")
-                        qaa_run = QAA_Runner(args, **qaa_args).run()
+                        qaa_args.update(**vars(args),
+                                        survey_assembly=False,
+                                        runmode="asm",
+                                        no_multiqc=False,
+                                        multiqc_dir=join(args.output_dir, "reports", "multiqc", "asm"))
+                        # qaa_args["survey_assembly"] = False
+                        # qaa_args["runmode"] = "asm"
+                        # qaa_args["no_multiqc"] = False
+                        # qaa_args["multiqc_dir"] = join(args.output_dir, "reports", "multiqc", "asm")
+                        qaa_run = QAA_Runner(qaa_args).run()
                         if qaa_run:
                             args.finalize_mode = "asm"
                             if args.enterobase_groups:
@@ -251,14 +286,14 @@ def main():
                                 run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 
     elif run_mode == PipelineStep.ANNOTATION:
-        config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
-        config["cwd"] = os.getcwd()
+        bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+        bgrrl_config["cwd"] = os.getcwd()
     
-        config["run_ratt"] = args.annotation in ("both", "ratt")
-        config["run_prokka"] = args.annotation in ("both", "prokka")
-        config["ratt_reference"] = args.ratt_reference_dir
+        bgrrl_config["run_ratt"] = args.annotation in ("both", "ratt")
+        bgrrl_config["run_prokka"] = args.annotation in ("both", "prokka")
+        bgrrl_config["ratt_reference"] = args.ratt_reference_dir
 
-        assert not config["run_ratt"] or os.path.exists(config["ratt_reference"]), "Missing reference data for ratt. Please make sure to use the --ratt-reference-dir parameter."
+        assert not bgrrl_config["run_ratt"] or os.path.exists(bgrrl_config["ratt_reference"]), "Missing reference data for ratt. Please make sure to use the --ratt-reference-dir parameter."
 
         if args.report_only:
             run_result = False
@@ -273,10 +308,14 @@ def main():
                 if not run_result:
                     print("ANNOTATION RUN FAILED?")
                 if run_result:
-                    qaa_args["survey_assembly"] = False
-                    qaa_args["qaa_mode"] = "transcriptome,proteome"
-                    qaa_args["runmode"] = "ann"
-                    qaa_run = QAA_Runner(args, **qaa_args).run()
+                    qaa_args.update(**vars(args),
+                                    survey_assembly=False, 
+                                    qaa_mode="transcriptome,proteome", 
+                                    runmode="ann")
+                    # qaa_args["survey_assembly"] = False
+                    # qaa_args["qaa_mode"] = "transcriptome,proteome"
+                    # qaa_args["runmode"] = "ann"
+                    qaa_run = QAA_Runner(qaa_args).run()
     
                     if qaa_run and args.annotation in ("ratt", "both"):
                         ann_report_main(["--ref-dir", args.ratt_reference_dir, join(args.output_dir, "annotation", "ratt")])
@@ -286,19 +325,17 @@ def main():
                         run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
 
     elif run_mode == PipelineStep.FINALIZE:
-        config["package_dir"] = os.path.join(os.path.dirname(args.output_dir), "Data_Package")
+        bgrrl_config["package_dir"] = os.path.join(os.path.dirname(args.output_dir), "Data_Package")
         # config["project_prefix"] = args.project_prefix
-        config["enterobase_groups"] = validateEnterobaseInput(args.enterobase_groups, ENTERO_CRITERIA) if "enterobase_groups" in args else list()
+        bgrrl_config["enterobase_groups"] = validateEnterobaseInput(args.enterobase_groups, ENTERO_CRITERIA) if "enterobase_groups" in args else list()
 
         # if "finalize_mode" in args:
         #    config["finalize_mode"] = args.finalize_mode
 
-        """
-        if not args.fin_report_only:
-        run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
-        else:
-        run_result = True
-        """
+        #if not args.fin_report_only:
+        #run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
+        # else:
+        # run_result = True
         # args.finalize_mode 
         # run_result = run_fin(args.input, args.output_dir, args, exe_env, bgrrl_config=bgrrl_config)
         run_result = BGRRLModuleRunner("bgrrl-fin", args, exe_env, config=bgrrl_config).run()
@@ -312,6 +349,7 @@ def main():
     else:
         print("BGRRL failed.  Please consult logs to debug run.")
         exit(1)
+"""
 
 
 if __name__ == "__main__":
