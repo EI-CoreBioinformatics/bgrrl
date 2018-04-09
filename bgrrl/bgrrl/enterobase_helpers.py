@@ -7,8 +7,16 @@ import argparse
 from collections import namedtuple, Counter
 from os.path import exists
 import yaml
-# https://stackoverflow.com/a/600612
-import pathlib
+
+ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
+
+# https://bitbucket.org/enterobase/enterobase-web/wiki/EnteroBase%20Backend%20Pipeline%3A%20QA%20evaluation
+ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 0.7),
+                    "Escherichia": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
+                    "Shigella": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
+                    "Yersinia": ECriteria(3700000, 5500000, 15000, 600, 0.03, 0.65),
+                    "Moraxella": ECriteria(1800000, 2600000, 20000, 600, 0.03, 0.65)
+ }
 
 def validateEnterobaseInput(eb_input_str, eb_criteria):
     print("Determining downstream processing mode...", end="", flush=True)
@@ -37,26 +45,3 @@ def validateEnterobaseInput(eb_input_str, eb_criteria):
 
     return valid_sample_groups
 
-ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
-# https://bitbucket.org/enterobase/enterobase-web/wiki/EnteroBase%20Backend%20Pipeline%3A%20QA%20evaluation
-ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 0.7),
-                    "Escherichia": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
-                    "Shigella": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
-                    "Yersinia": ECriteria(3700000, 5500000, 15000, 600, 0.03, 0.65),
-                    "Moraxella": ECriteria(1800000, 2600000, 20000, 600, 0.03, 0.65)
- }
-
-
-
-
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument('samplesheet', type=str)
-
-    args = ap.parse_args()
-
-    assert args.samplesheet and os.path.exists(args.samplesheet)
-    samples = dict(readSamplesheet(args.samplesheet))
-
-    for sample in samples:
-        print(*samples[sample])
