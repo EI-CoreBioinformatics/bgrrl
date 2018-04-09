@@ -22,7 +22,7 @@ from copy import copy
 from eicore.external_process.snakemake_helper import *
 from eicore import NOW
 
-from bgrrl.bgrrl import validateEnterobaseInput, ENTERO_CRITERIA
+from bgrrl.enterobase_helpers import validateEnterobaseInput, ENTERO_CRITERIA
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
@@ -146,10 +146,10 @@ class BGRRLRunner(object):
             os.makedirs(args.output_dir)
             print("done.")
     
-        logs_dir = join(args.output_dir, "hpc_logs")
-        if not os.path.exists(logs_dir) and exe_env.use_scheduler:
-            print("HPC log dir doesn't exist.  Creating " + logs_dir + " now ... ", end="", flush=True)
-            os.makedirs(logs_dir)
+        self.logs_dir = join(args.output_dir, "hpc_logs")
+        if not os.path.exists(self.logs_dir) and self.exe_env.use_scheduler:
+            print("HPC log dir doesn't exist.  Creating " + self.logs_dir + " now ... ", end="", flush=True)
+            os.makedirs(self.logs_dir)
             print("done.")
     
         print()

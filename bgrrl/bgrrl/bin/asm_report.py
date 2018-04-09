@@ -10,7 +10,8 @@ import pathlib
 
 from collections import Counter, namedtuple, OrderedDict
 
-from bgrrl.bgrrl import readSamplesheet, Sample, validateEnterobaseInput
+from bgrrl import readSamplesheet, Sample
+from bgrrl.enterobase_helpers import validateEnterobaseInput
 
 ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
 BlobSample = namedtuple("BlobSample", "sample ncontigs dom_org dom_org_ncontigs dom_org_perc dom_org_span subdom_org subdom_org_ncontigs subdom_org_perc subdom_org_span".split(" "))
@@ -29,39 +30,6 @@ ASSEMBLY_STAGES = OrderedDict([("asm_main_ucn", "Main,Unicycler,normalized"),
                                ("asm_fb3_spt", "Fallback3,Spades,trimmed"),
                                ("asm_main_ven", "Main,Velvet,normalized"),
                                ("NA", "not_assembled")])
-
-"""
-def compileASMInfo(asm_dir, out=sys.stdout, asm_stat_out=sys.stdout):
-    asm_tag_ctr = Counter()
-    for cdir, dirs, files in os.walk(asm_dir):
-        sample = basename(cdir)
-        if sample != "log" and os.path.dirname(cdir) == asm_dir:
-            asm_tag = ([f for f in files if f.startswith("asm_")] + ["NA"])[0]
-            asm_tag_ctr[asm_tag] += 1 # .setdefault(asm_tag, list()).append(cdir)
-            print(sample, asm_tag, sep="\t", file=out)
-    print(asm_tag_ctr)
-    for asm_tag in ASSEMBLY_STAGES:
-        if asm_tag_ctr[asm_tag] > 0:
-            print(ASSEMBLY_STAGES[asm_tag], asm_tag_ctr[asm_tag], asm_tag_ctr[asm_tag]/sum(asm_tag_ctr.values()), sep="\t", file=asm_stat_out)
-    print("Total", "", "", sum(asm_tag_ctr.values()), sep="\t", file=asm_stat_out)
-"""
-
-"""
-def compileQUASTReport(quast_dir, out=sys.stdout):
-    header = ""
-    for cdir, dirs, files in os.walk(quast_dir):
-        if "transposed_report.tsv" in files:
-            with open(join(cdir, "transposed_report.tsv")) as qin:
-                r = csv.reader(qin, delimiter="\t")
-                first = next(r)
-                pif not header:
-                    header = first
-                    print(*header, file=out, sep="\t")
-                    yield header
-                for row in r:
-                    print(*row, sep="\t", file=out)
-                    yield row
-"""
 
 def ENTERO_FILTER(_in, organism="Salmonella", out=sys.stdout, full_out=None):
     header = ""

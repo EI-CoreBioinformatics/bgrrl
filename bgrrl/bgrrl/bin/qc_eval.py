@@ -10,23 +10,9 @@ import pathlib
 
 from collections import Counter, namedtuple
 
-from bgrrl.bgrrl import readSamplesheet, Sample
+from bgrrl import readSamplesheet, Sample
 
 TestResult = namedtuple("TestResult", "test status errmsg data".split(" "))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 def test_fastqc_readcount(sample, min_reads=1000, readtype="bbnorm", **kwargs):
     def extractReadCount(fn):
