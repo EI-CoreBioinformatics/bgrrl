@@ -10,7 +10,7 @@ import pathlib
 
 from collections import Counter, namedtuple
 
-from bgrrl import readSamplesheet, Sample
+from bgrrl.samplesheet import readSamplesheet, Sample
 
 TestResult = namedtuple("TestResult", "test status errmsg data".split(" "))
 

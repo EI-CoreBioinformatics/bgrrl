@@ -10,7 +10,7 @@ import pathlib
 
 from collections import Counter, namedtuple, OrderedDict
 
-from bgrrl import readSamplesheet, Sample
+from bgrrl.samplesheet import readSamplesheet, Sample
 from bgrrl.enterobase_helpers import validateEnterobaseInput, ECriteria, ENTERO_CRITERIA
 
 BlobSample = namedtuple("BlobSample", "sample ncontigs dom_org dom_org_ncontigs dom_org_perc dom_org_span subdom_org subdom_org_ncontigs subdom_org_perc subdom_org_span".split(" "))
