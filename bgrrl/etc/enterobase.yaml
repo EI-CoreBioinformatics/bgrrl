@@ -1,0 +1,35 @@
+# https://bitbucket.org/enterobase/enterobase-web/wiki/EnteroBase%20Backend%20Pipeline%3A%20QA%20evaluation
+Salmonella:
+  genome_size_range: (4000000, 5800000)
+  n50: 20000
+  ncontigs: 600
+  N_fraction: 0.03
+  genus_fraction: 0.7
+
+Escherichia:
+  genome_size_range: (3700000, 6400000)
+  n50: 20000
+  ncontigs: 600
+  N_fraction: 0.03
+  genus_fraction: 0.7
+
+Shigella:
+  genome_size_range: (3700000, 6400000)
+  n50: 20000
+  ncontigs: 600
+  N_fraction: 0.03
+  genus_fraction: 0.7
+
+Yersinia:
+  genome_size_range: (3700000, 5500000)
+  n50: 15000
+  ncontigs: 600
+  N_fraction: 0.03
+  genus_fraction: 0.65
+
+Moraxella:
+  genome_size_range: (1800000, 2600000)
+  n50: 20000
+  ncontigs: 600
+  N_fraction: 0.03
+  genus_fraction: 0.65

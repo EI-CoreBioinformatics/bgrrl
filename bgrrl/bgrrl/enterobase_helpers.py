@@ -10,13 +10,21 @@ import yaml
 
 ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
 
-# https://bitbucket.org/enterobase/enterobase-web/wiki/EnteroBase%20Backend%20Pipeline%3A%20QA%20evaluation
-ENTERO_CRITERIA = { "Salmonella": ECriteria(4000000, 5800000, 20000, 600, 0.03, 0.7),
-                    "Escherichia": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
-                    "Shigella": ECriteria(3700000, 6400000, 20000, 600, 0.03, 0.7),
-                    "Yersinia": ECriteria(3700000, 5500000, 15000, 600, 0.03, 0.65),
-                    "Moraxella": ECriteria(1800000, 2600000, 20000, 600, 0.03, 0.65)
- }
+def loadEnterobaseCriteria(criteria_file):
+    d = yaml.load(criteria_file)
+    eb_crit = dict()
+    for k in d:                
+        eb_crit[k] = ECriteria(int(d[k]["genome_size_range"][0]),
+                               int(d[k]["genome_size_range"][1]),
+                               int(d[k]["n50"]),
+                               int(d[k]["ncontigs"]),
+                               float(d[k]["N_fraction"]),
+                               float(d[k]["genus_fraction"]))
+    return eb_crit
+
+                     
+
+
 
 def validateEnterobaseInput(eb_input_str, eb_criteria):
     print("Determining downstream processing mode...", end="", flush=True)

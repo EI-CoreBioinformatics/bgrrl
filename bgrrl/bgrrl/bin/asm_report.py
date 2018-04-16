@@ -11,7 +11,9 @@ import pathlib
 from collections import Counter, namedtuple, OrderedDict
 
 from bgrrl.samplesheet import readSamplesheet, Sample
-from bgrrl.enterobase_helpers import validateEnterobaseInput, ECriteria, ENTERO_CRITERIA
+from bgrrl.enterobase_helpers import validateEnterobaseInput, ECriteria, loadEnterobaseCriteria
+
+ENTERO_CRITERIA = dict()
 
 BlobSample = namedtuple("BlobSample", "sample ncontigs dom_org dom_org_ncontigs dom_org_perc dom_org_span subdom_org subdom_org_ncontigs subdom_org_perc subdom_org_span".split(" "))
 
@@ -82,9 +84,14 @@ def main(args_in=sys.argv[1:]):
     ap = argparse.ArgumentParser()
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("enterobase_groups", type=str, default="")
+    ap.add_argument("entero_criteria", type=str, default="")
     ap.add_argument("--report-dir", type=str, default="")
     ap.add_argument("--mode", "-m", type=str, default="asm") # asm/survey
+    
     args = ap.parse_args(args_in)
+
+    global ENTERO_CRITERIA
+    ENTERO_CRITERIA = loadEnterobaseCriteria(args.entero_criteria)
     
     print("Running asm:report generation...") #, end="", flush=True)
     if not args.report_dir:

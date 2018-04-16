@@ -22,7 +22,7 @@ from copy import copy
 from eicore.external_process.snakemake_helper import *
 from eicore import NOW
 
-from bgrrl.enterobase_helpers import validateEnterobaseInput, ENTERO_CRITERIA
+from bgrrl.enterobase_helpers import validateEnterobaseInput, loadEnterobaseCriteria 
 from bgrrl.bin.qc_eval import main as qc_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
@@ -268,7 +268,11 @@ class BGRRLRunner(object):
 
     def _run_fin(self):
         self.bgrrl_config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
-        self.bgrrl_config["enterobase_groups"] = validateEnterobaseInput(self.args.enterobase_groups, ENTERO_CRITERIA) if "enterobase_groups" in self.args else list()
+        if "enterobase_groups" in self.args:        
+            eb_criteria = loadEnterobaseCriteria(self.bgrrl_config["enterobase_criteria"])
+            self.bgrrl_config["enterobase_groups"] = validateEnterobaseInput(self.args.enterobase_groups, eb_criteria)
+        else:
+            self.bgrrl_config["enterobase_groups"] = list()
         print("_FIN_CONFIG")
         print(self.bgrrl_config)
 

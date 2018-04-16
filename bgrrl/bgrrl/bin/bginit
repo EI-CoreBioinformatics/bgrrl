@@ -24,9 +24,13 @@ fi
 
 echo "Copying configuration files into project directory..."
 
-for f in bgrrl_config.yaml hpc_config.json multiqc_config.yaml; do
+for f in bgrrl_config.yaml hpc_config.json multiqc_config.yaml enterobase.yaml; do
   if [[ ! -e $CONFIG_DIR/$f || $1 == "-f" ]]; then
     cp -v $ETCDIR/$f $CONFIG_DIR/
+    if [[ $f == "bgrrl_config.yaml" ]]; then
+      echo "" >> $CONFIG_DIR/$f
+      echo "enterobase_criteria: \"$(pwd)/$CONFIG_DIR/enterobase.yaml\"" >> $CONFIG_DIR/$f
+    fi
   else
     echo "$f already exists, and -f is not specified. Skipping."
   fi
