@@ -6,8 +6,6 @@ import csv
 import sys
 import shutil
 import yaml
-# https://stackoverflow.com/a/600612
-import pathlib 
 from argparse import ArgumentParser
 from textwrap import dedent
 import copy
