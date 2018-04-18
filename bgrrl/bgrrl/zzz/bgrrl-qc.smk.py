@@ -3,7 +3,8 @@ import csv
 import os
 from os.path import join
 
-from bgrrl import TIME_CMD, readSamplesheet
+from bgrrl import TIME_CMD
+from bgrrl.samplesheet import readSamplesheet
 from eicore.external_process.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)

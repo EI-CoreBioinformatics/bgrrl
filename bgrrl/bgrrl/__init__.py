@@ -28,6 +28,7 @@ from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
 from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
+from bgrrl.samplesheet import verifySamplesheet
 
 from qaa import QAA_Runner, QAA_ArgumentsAdapter as QAA_Args, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 print("QAA_ID="+QAA_ID)
