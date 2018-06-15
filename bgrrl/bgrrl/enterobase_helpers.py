@@ -11,11 +11,12 @@ import yaml
 ECriteria = namedtuple("ECriteria", "minsize maxsize n50 ncontigs ncount spcount".split(" "))
 
 def loadEnterobaseCriteria(criteria_file):
-    d = yaml.load(criteria_file)
+    with open(criteria_file) as crit_in:
+        d = yaml.load(crit_in)
     eb_crit = dict()
     for k in d:                
-        eb_crit[k] = ECriteria(int(d[k]["genome_size_range"][0]),
-                               int(d[k]["genome_size_range"][1]),
+        eb_crit[k] = ECriteria(int(d[k]["min_genome_size"]),
+                               int(d[k]["max_genome_size"]),
                                int(d[k]["n50"]),
                                int(d[k]["ncontigs"]),
                                float(d[k]["N_fraction"]),
