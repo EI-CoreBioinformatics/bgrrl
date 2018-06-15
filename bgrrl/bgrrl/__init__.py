@@ -37,7 +37,7 @@ DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,
                             no_blobtools=False,
                             blobtools_no_bwa=False,
                             qaa_mode="genome",
-                            busco_db="bacteria_odb",
+                            busco_db="bacteria_odb9",
                             no_multiqc=True)
 
 
@@ -206,10 +206,16 @@ class BGRRLRunner(object):
             self.bgrrl_config["use_asm_lengthfilter"] = False
             self.bgrrl_config["asm_lengthfilter_contig_minlen"] = 0
 
+        #try:
+        #    eb_criteria = loadEnterobaseCriteria(self.bgrrl_config["enterobase_criteria"])
+        #except:
+        #    eb_criteria = dict()
+        eb_criteria = self.bgrrl_config.get("enterobase_criteria", "")
+
         if self.args.report_only:
             run_result = asm_stage_report_main([self.args.output_dir, join(self.args.output_dir, "reports")])
             if self.args.enterobase_groups: # needs validation?
-                run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups])
+                run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
         else:
             run_result = BGRRLModuleRunner("bgrrl-asm", self.args, self.exe_env, config=self.bgrrl_config).run() 
             if run_result:
@@ -224,7 +230,7 @@ class BGRRLRunner(object):
                         if qaa_run:
                             self.args.finalize_mode = "asm"
                             if self.args.enterobase_groups:
-                                run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups])
+                                run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
                             if run_result:
                                 run_result = self._run_fin() # self.args.input, self.args.output_dir, self.args, self.exe_env, bgrrl_config=self.bgrrl_config)
 
