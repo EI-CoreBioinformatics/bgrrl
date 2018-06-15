@@ -3,7 +3,8 @@ import csv
 import os
 from os.path import join, basename, dirname
 
-from bgrrl import readSamplesheet, TIME_CMD
+from bgrrl.samplesheet import readSamplesheet
+from bgrrl import TIME_CMD
 from eicore.external_process.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)
@@ -71,7 +72,7 @@ rule asm_assembly:
 		8
 	shell:
 		ASM_WRAPPER + \
-		" {params.assembler} {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} {log}"
+		" {params.assembler} {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} &> {log}"
 
 rule asm_lengthfilter:
 	input:

@@ -4,7 +4,8 @@ import os
 from os.path import join, basename, dirname
 from collections import Counter
 
-from bgrrl import readSamplesheet, TIME_CMD
+from bgrrl.samplesheet import readSamplesheet
+from bgrrl import TIME_CMD
 from eicore.external_process.snakemake_helper import loadPreCmd
 
 OUTPUTDIR = config["out_dir"]
