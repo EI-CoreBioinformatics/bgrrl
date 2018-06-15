@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash 
 
 assembler=$1
 r1=$2
@@ -7,7 +7,7 @@ threads=$4
 outdir=$5
 ur1=$6
 ur2=$7
-log=$8
+#log=$8
 
 if [[ "$assembler" == "unicycler" ]] 
 then
@@ -52,7 +52,7 @@ spades_params="--careful --cov-cutoff auto"
 unicycler_params="--min_polish_size ${MIN_POLISH_SIZE}"
 
  # /usr/bin/time -v
- ((unicycler -1 $r1 -2 $r2 -t $threads -o $outdir $unicycler_params && touch $outdir/asm_main_ucn) || (rm -rf $outdir && unicycler -1 $ur1 -2 $ur2 -t $threads -o $outdir $unicycler_params && touch $outdir/asm_fb1_uct) || (rm -rf $outdir && spades.py -1 $r1 -2 $r2 -t $threads -o $outdir -m 64 $spades_params && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb2_spn) || (rm -rf $outdir && spades.py -1 $ur1 -2 $ur2 -t $threads -o $outdir -m 64 $spades_params  && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb3_spt)) &> $log
+ ((unicycler -1 $r1 -2 $r2 -t $threads -o $outdir $unicycler_params && touch $outdir/asm_main_ucn) || (rm -rf $outdir && unicycler -1 $ur1 -2 $ur2 -t $threads -o $outdir $unicycler_params && touch $outdir/asm_fb1_uct) || (rm -rf $outdir && spades.py -1 $r1 -2 $r2 -t $threads -o $outdir -m 64 $spades_params && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb2_spn) || (rm -rf $outdir && spades.py -1 $ur1 -2 $ur2 -t $threads -o $outdir -m 64 $spades_params  && ln -s scaffolds.fasta $outdir/assembly.fasta && touch $outdir/asm_fb3_spt)) # &> $log
 
 elif [[ "$assembler" == "velvet" ]]
 then
@@ -64,9 +64,9 @@ then
  mkdir -p $outdir/tmp
  cwd=$(pwd)
  cd $outdir/tmp
- echo "VelvetOptimiser.pl -s 19 -e 127 -x 2 -t $threads -d ../velvet_assembly -f \"'-shortPaired -fastq -separate $r1 $r2'\" &> ../../log/$(basename $log)"
+ echo "VelvetOptimiser.pl -s 19 -e 127 -x 2 -t $threads -d ../velvet_assembly -f \"'-shortPaired -fastq -separate $r1 $r2'\"" # &> ../../log/$(basename $log)"
  # ls $log
- VelvetOptimiser.pl -v -s 19 -e 127 -x 2 -t $threads -d ../velvet_assembly -f "-shortPaired -fastq.gz -separate $cwd/$r1 $cwd/$r2" &> ../../log/$(basename $log)
+ VelvetOptimiser.pl -v -s 19 -e 127 -x 2 -t $threads -d ../velvet_assembly -f "-shortPaired -fastq.gz -separate $cwd/$r1 $cwd/$r2" # &> ../../log/$(basename $log)
  
  cd ..
  mv -v velvet_assembly/* .
