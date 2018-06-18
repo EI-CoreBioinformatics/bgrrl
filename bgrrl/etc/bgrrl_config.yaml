@@ -1,11 +1,12 @@
 tools:
-  bbduk: "/tgac/software/testing/bbmap/38.06/bbmap/bbduk.sh"
-  bbnorm: "/tgac/software/testing/bbmap/38.06/bbmap/bbnorm.sh"
-  tadpole: "/tgac/software/testing/bbmap/38.06/bbmap/tadpole.sh"
+  # bbduk: "/tgac/software/testing/bbmap/38.06/bbmap/bbduk.sh"
+  # bbnorm: "/tgac/software/testing/bbmap/38.06/bbmap/bbnorm.sh"
+  # tadpole: "/tgac/software/testing/bbmap/38.06/bbmap/tadpole.sh"
   fastqc: "/tgac/software/testing/fastqc/0.11.5/x86_64/bin/fastqc"
 
 resources:
-  bb_adapters: "/tgac/software/testing/bbmap/38.06/bbmap/resources/adapters.fa"
+  # bb_adapters: "/tgac/software/testing/bbmap/38.06/bbmap/resources/adapters.fa"
+  bb_adapters: "/tgac/software/testing/bbmap/38.06/x86_64/bin/resources/adapters.fa"
   blob_blastdb: "/ei/public/databases/blast/ncbi/nt_20171013/nt"
   busco_databases: "/tgac/workarea/group-pb/BUSCO_DATABASES/odb9"
   multiqc_config: "/tgac/software/testing/bgrrl/0.1/src/ei_bgrrl/bgrrl/etc/multiqc_config.yaml"
