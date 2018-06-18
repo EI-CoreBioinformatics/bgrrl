@@ -268,6 +268,8 @@ class BGRRLRunner(object):
                     if qaa_run and self.args.annotation in ("ratt", "both"):
                         ann_report_main(["--ref-dir", self.args.ratt_reference_dir, join(self.args.output_dir, "annotation", "ratt")])
                         annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
+                    else:
+                        open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at")
                     if qaa_run:
                         self.args.finalize_mode = "ann"
                         run_result = self._run_fin() # self.args.input, self.args.output_dir, self.args, self.exe_env, bgrrl_config=self.bgrrl_config)
@@ -275,11 +277,14 @@ class BGRRLRunner(object):
 
     def _run_fin(self):
         self.bgrrl_config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
-        if "enterobase_groups" in self.args:        
-            eb_criteria = loadEnterobaseCriteria(self.bgrrl_config["enterobase_criteria"])
+        if "enterobase_groups" in self.args and self.args.enterobase_groups:        
+        # if self.args.get("enterobase_groups", ""):
+            eb_criteria = loadEnterobaseCriteria(self.bgrrl_config["enterobase_groups"])
             self.bgrrl_config["enterobase_groups"] = validateEnterobaseInput(self.args.enterobase_groups, eb_criteria)
         else:
             self.bgrrl_config["enterobase_groups"] = list()
+        if "project_prefix" in self.args and self.args.project_prefix:
+            self.bgrrl_config["misc"]["project"] = self.args.project_prefix
         print("_FIN_CONFIG")
         print(self.bgrrl_config)
 
