@@ -65,7 +65,8 @@ rule qc_bbduk:
 		8
 	params:
 		load = loadPreCmd(config["load"]["bbmap"]),
-		bbduk = config["tools"]["bbduk"],
+		bbduk = "bbduk.sh", 
+                # config["tools"]["bbduk"],
 		adapters = config["resources"]["bb_adapters"],
                 bbduk_params = config["params"]["bbduk"]
 	shell:
@@ -107,7 +108,8 @@ if not config.get("no_normalization", False):
 			posthist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
 		params:
 			load = loadPreCmd(config["load"]["bbmap"]),
-			bbnorm = config["tools"]["bbnorm"],
+			bbnorm = "bbnorm.sh", 
+                        # config["tools"]["bbnorm"],
 			bbnorm_params = config["params"]["bbnorm"]
 		log:
 			join(QC_OUTDIR, "log", "{sample}.qc_bbnorm.log")
@@ -148,7 +150,8 @@ rule qc_tadpole:
 		contigs = join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
 	params:
 		load = loadPreCmd(config["load"]["bbmap"]),
-		tadpole = config["tools"]["tadpole"]
+		# tadpole = config["tools"]["tadpole"]
+                tadpole = "tadpole.sh"
 	log:
 		join(QC_OUTDIR, "log", "{sample}.qc_tadpole.log")
 	threads:
