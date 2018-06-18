@@ -87,7 +87,6 @@ def main():
 
     parser.add_argument("--enterobase-groups", 
                         type=str, 
-                        default="", 
                         help="""Comma-separated list of Enterobase microbial organisms. 
                                 The set of assemblies is tested against organism-specific criteria and assemblies are 
                                 packaged according to their species. [NEEDS REWORDING!]. 
