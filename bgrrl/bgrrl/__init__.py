@@ -277,9 +277,13 @@ class BGRRLRunner(object):
 
     def _run_fin(self):
         self.bgrrl_config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
-        if "enterobase_groups" in self.args and self.args.enterobase_groups:        
+        if "enterobase_groups" in self.args: # and self.args.enterobase_groups:        
         # if self.args.get("enterobase_groups", ""):
-            eb_criteria = loadEnterobaseCriteria(self.bgrrl_config["enterobase_groups"])
+            try:
+                eb_criteria = loadEnterobaseCriteria(self.bgrrl_config["enterobase_criteria"])
+            except:
+                print("Enterobase-groups selected but missing enterobase_criteria entry in bgrrl_config, please add path to enterobase criteria.", file=sys.stderr)
+                sys.exit(1)
             self.bgrrl_config["enterobase_groups"] = validateEnterobaseInput(self.args.enterobase_groups, eb_criteria)
         else:
             self.bgrrl_config["enterobase_groups"] = list()
