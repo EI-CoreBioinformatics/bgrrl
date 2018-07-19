@@ -11,7 +11,7 @@ from eicore.external_process.snakemake_helper import loadPreCmd
 INPUTDIR = config["out_dir"]
 OUTPUTDIR = config["package_dir"]
 
-INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
+# INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 
 TARGETS = list()
 if config["finalize_mode"] == "asm":

@@ -10,7 +10,8 @@ import pathlib
 
 from collections import Counter, namedtuple
 
-from bgrrl.samplesheet import readSamplesheet, Sample
+# from bgrrl.samplesheet import readSamplesheet, Sample, ASM_Sample, sample2asmsample
+from bgrrl.samplesheet import *
 
 TestResult = namedtuple("TestResult", "test status errmsg data".split(" "))
 
@@ -295,6 +296,7 @@ def main(args_in=sys.argv[1:]):
     
 
     INPUTFILES = dict(readSamplesheet(args.input))
+    SHEET = Samplesheet(args.input)
     global QCDIR
     # QCDIR  = join(args.indir, "Analysis", "qc")
     QCDIR = join(args.indir, "qc")
@@ -317,7 +319,9 @@ def main(args_in=sys.argv[1:]):
         print(*header, sep="\t", file=qc_eval_out)
         print(*header2, sep="\t", file=qc_eval_out)
 
-        for sample in sorted(INPUTFILES):
+        # for sample in sorted(INPUTFILES):
+        keepSamples = set()
+        for sample in SHEET:
             results = list()
             for test, testf, tdata, kwargs in TESTS:
                 if test == "FASTQC:READCOUNT":
@@ -326,7 +330,24 @@ def main(args_in=sys.argv[1:]):
             # results = list(testf(sample, **kwargs) for test, testf, tdata, kwargs in TESTS)
             passed = all(result[1] == "PASS" for result in results)
             if passed:
-                print(*INPUTFILES[sample], sep=",", file=asm_samplesheet)
+
+                # /tgac/data/reads/Jay_Hinton_GCRF_Salmonella_LITE/180524_K00287_0041_BHVMHLBBXX/FD01543206_PRO1620_plate92_H12_ACGCAGCAA-AGTCAA_L008_R1.fastq.gz
+                # /tgac/workarea/group-pb/schudomc_sandbox/bgrrl_test/Analysis_20180719/qc/bbduk/FD01543280_PRO1620_plate92_F03_GAGTATAAT-AGTCAA_L008/FD01543280_PRO1620_plate92_F03_GAGTATAAT-AGTCAA_L008_R1.bbduk.fastq.gz
+                trimdata = [join(QCDIR, "bbduk", SHEET[sample].sampleID, basename(SHEET[sample].R1).replace(".fastq.gz", ".bbduk.fastq.gz")),
+                            join(QCDIR, "bbduk", SHEET[sample].sampleID, basename(SHEET[sample].R2).replace(".fastq.gz", ".bbduk.fastq.gz")),
+                            ""]
+                normdata = [join(QCDIR, "bbnorm", SHEET[sample].sampleID, basename(SHEET[sample].R1).replace(".fastq.gz", ".bbnorm.fastq.gz")),
+                            join(QCDIR, "bbnorm", SHEET[sample].sampleID, basename(SHEET[sample].R2).replace(".fastq.gz", ".bbnorm.fastq.gz")),
+                            ""]
+                if not exists(normdata[0]) or not exists(normdata[1]):
+                    normdata = ["", "", ""]
+                # asmsample = sample2asmsample(INPUTFILES[sample], trimdata, normdata=normdata)
+                # print(asmsample, sep=",", file=asm_samplesheet)
+                SHEET[sample].upgrade(ASM_SAMPLE_FIELDS, trimdata + normdata)
+                keepSamples.add(sample)
+                #print(*INPUTFILES[sample], sep=",", file=asm_samplesheet)
+
+
             elif results[0][1] == "FAIL" and results[0][2] == "MISSING" and results[2][1] == "PASS":
                 print("WARNING: sample {} has missing fastqc report(s), but passes survey assembly.".format(sample), file=sys.stderr)
 
@@ -339,6 +360,7 @@ def main(args_in=sys.argv[1:]):
             # p_result = tuple("\t".join(map(str, result[1:])) for result in results)          
 
             # print(sample, *p_result, sep="\t", file=qc_eval_out)
+        SHEET.write(asm_samplesheet, keepSamples)
 
 
     print(" Done.\n Generated qc_eval report in {} and asm-samplesheet in {}.".format(qc_eval_outf, asm_samplesheet_f))

@@ -3,7 +3,7 @@ import csv
 import os
 from os.path import join, basename, dirname
 
-from bgrrl.samplesheet import readSamplesheet
+from bgrrl.samplesheet import readSamplesheet, Samplesheet, ASM_Sample
 from bgrrl import TIME_CMD
 from eicore.external_process.snakemake_helper import loadPreCmd
 
@@ -17,8 +17,22 @@ ASM_WRAPPER = join(config["etc"], "wrappers", "asm_wrapper")
 OUTPUTDIR = config["out_dir"]
 ASSEMBLY_DIR = join(OUTPUTDIR, "assembly")
 QC_OUTDIR = os.path.join(OUTPUTDIR, "qc")
+
+
+
+
+
+
+
+
+
+
+
+
+
 BBDUK_DIR = os.path.join(QC_OUTDIR, "bbduk")
 BBNORM_DIR = os.path.join(QC_OUTDIR, "bbnorm")
+
 
 if not config.get("no_normalization", False):
 	PRIMARY_READDIR = BBNORM_DIR
@@ -31,8 +45,8 @@ else:
 	PRIMARY_READ_ID = "bbduk"
 	SECONDARY_READ_ID = "bbduk"
 
-
-INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
+# INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
+INPUTFILES = Samplesheet(config["samplesheet"], sampletype=ASM_Sample)
 TARGETS = list()
 TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
 
@@ -49,16 +63,22 @@ localrules: all
 rule all:
 	input: TARGETS
 
+# TODO: Adjust asm_wrapper so it deals with no_normalization cases in a different way than just running it twice.
+def get_sample_files(wc):
+	s = INPUTFILES[wc.sample]
+	if not config.get("no_normalization", False):
+		return s.R1norm, s.R2norm, s.R1trim, s.R2trim
+	else:
+		return s.R1norm, s.R2norm, s.R1norm, s.R2norm        
+
+
 rule asm_assembly:
 	input:
-		# r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-		# r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
-		# ur1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
-		# ur2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
-		r1 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(PRIMARY_READ_ID)),
-		r2 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(PRIMARY_READ_ID)),
-		ur1 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(SECONDARY_READ_ID)),
-		ur2 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(SECONDARY_READ_ID)),
+		get_sample_files
+		#r1 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(PRIMARY_READ_ID)),
+		#r2 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(PRIMARY_READ_ID)),
+		#ur1 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(SECONDARY_READ_ID)),
+		#ur2 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(SECONDARY_READ_ID)),
 	output:
 		join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
 	log:
@@ -72,7 +92,8 @@ rule asm_assembly:
 		8
 	shell:
 		ASM_WRAPPER + \
-		" {params.assembler} {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} &> {log}"
+		" {params.assembler} {input[0]} {input[1]} {threads} {params.outdir} {input[2]} {input[3]} &> {log}"
+		# " {params.assembler} {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} &> {log}"
 
 rule asm_lengthfilter:
 	input:

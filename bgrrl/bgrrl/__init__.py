@@ -28,7 +28,7 @@ from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
 from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
-from bgrrl.samplesheet import verifySamplesheet
+from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample
 
 from qaa import QAA_Runner, QAA_ArgumentsAdapter as QAA_Args, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 print("QAA_ID="+QAA_ID)
@@ -85,7 +85,7 @@ class BGRRLModuleRunner(object):
         self.unlock = args.unlock
         self.exe_env = exe_env
 
-        if verifySamplesheet(args.input):
+        if Samplesheet(args.input, sampletype=BaseSample if self.module == "bgrrl-qc" else ASM_Sample).verifySampleData():
             self.config["samplesheet"] = args.input
         self.config["out_dir"] = self.outdir
 
