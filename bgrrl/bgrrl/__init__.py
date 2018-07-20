@@ -33,12 +33,21 @@ from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sa
 from qaa import QAA_Runner, QAA_ArgumentsAdapter as QAA_Args, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
 print("QAA_ID="+QAA_ID)
 
+# DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,
+#                            no_blobtools=False,
+#                            blobtools_no_bwa=False,
+#                            qaa_mode="genome",
+#                            busco_db="bacteria_odb9",
+#                            no_multiqc=True)
+
 DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,
-                            no_blobtools=False,
-                            blobtools_no_bwa=False,
+                            run_blobtools=True,
+                            create_bam=True,
                             qaa_mode="genome",
                             busco_db="bacteria_odb9",
-                            no_multiqc=True)
+                            run_multiqc=False)
+
+
 
 
 DEFAULT_HPC_CONFIG_FILE = os.path.join(os.path.dirname(__file__), "..", "etc", "hpc_config.json")
@@ -174,8 +183,10 @@ class BGRRLRunner(object):
                 qaa_args.update(**vars(self.args),
                                 survey_assembly=True, 
                                 runmode="survey", 
-                                no_blobtools=True, 
-                                no_busco=True, 
+                                # no_blobtools=True, 
+                                run_blobtools=False,
+                                # no_busco=True, 
+                                run_busco=False, 
                                 normalized=not self.args.no_normalization)
                 qaa_run = QAA_Runner(qaa_args).run()					
                 if qaa_run:
@@ -183,9 +194,12 @@ class BGRRLRunner(object):
                     if run_result:
                         self.args.input = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
                         qaa_args.update(**vars(self.args),
-                                        no_blobtools=False, 
-                                        no_busco=False, 
-                                        no_multiqc=False, 
+                                        # no_blobtools=False, 
+                                        run_blobtools=True, 
+                                        # no_busco=False, 
+                                        run_busco=True, 
+                                        # no_multiqc=False, 
+                                        run_multiqc=True, 
                                         multiqc_dir=join(self.args.output_dir, "reports", "multiqc", "qc"))
                         qaa_run = QAA_Runner(qaa_args).run()
 
@@ -224,7 +238,8 @@ class BGRRLRunner(object):
                         qaa_args.update(**vars(self.args),  # <- s. above, this is kinda stupid, redesign ASAP!
                                         survey_assembly=False,
                                         runmode="asm",
-                                        no_multiqc=False,
+                                        # no_multiqc=False,
+                                        run_multiqc=True,
                                         multiqc_dir=join(self.args.output_dir, "reports", "multiqc", "asm"))
                         qaa_run = QAA_Runner(qaa_args).run()
                         if qaa_run:
