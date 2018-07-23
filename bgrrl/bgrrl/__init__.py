@@ -42,7 +42,7 @@ print("QAA_ID="+QAA_ID)
 
 DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,
                             run_blobtools=True,
-                            create_bam=True,
+                            align_reads=True,
                             qaa_mode="genome",
                             busco_db="bacteria_odb9",
                             run_multiqc=False)
@@ -94,7 +94,8 @@ class BGRRLModuleRunner(object):
         self.unlock = args.unlock
         self.exe_env = exe_env
 
-        if Samplesheet(args.input, sampletype=BaseSample if self.module == "bgrrl-qc" else ASM_Sample).verifySampleData():
+        sampletype, readcols = (BaseSample, ["R1", "R2"]) if self.module == "bgrrl-qc" else (ASM_Sample, ["R1", "R2"])
+        if Samplesheet(args.input, sampletype=sampletype).verifySampleData(fields=readcols):
             self.config["samplesheet"] = args.input
         self.config["out_dir"] = self.outdir
 
