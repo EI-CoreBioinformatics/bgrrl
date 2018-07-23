@@ -38,7 +38,7 @@ load:
 
 cmd:
   quast: "python2 /tgac/software/testing/quast/4.3/x86_64/bin/quast.py"
-  picard_markdup: "/tgac/software/testing/picardtools/2.18.4/x86_64/picard.jar MarkDuplicates"
+  picard_markdup: "java -jar /tgac/software/testing/picardtools/2.18.4/x86_64/picard.jar MarkDuplicates"
 
 misc:
   seqcentre: "EI"
