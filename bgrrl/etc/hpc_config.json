@@ -113,9 +113,19 @@
   },
   "qa_blob_bwa_mem": {
     "J": "bg-qa",
-    "memory": "32000",    
+    "memory": "32000"    
   },
-  "qa_blob_blast": {
+  "qa_align_reads": {
+    "J": "bg-qa",
+    "memory": "32000",    
+    "c": "16"
+  },
+  "qa_qualimap": {
+    "c": "2",
+    "J": "bg-qa",
+    "memory": "10000"
+  },
+  "qa_blast": {
     "J": "bg-qa",
     "memory": "32000",
   },
