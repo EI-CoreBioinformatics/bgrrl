@@ -127,7 +127,7 @@
   },
   "qa_blast": {
     "J": "bg-qa",
-    "memory": "32000",
+    "memory": "32000"
   },
   "qa_blobtools": {
     "J": "bg-qa",
@@ -136,11 +136,11 @@
   },
   "blob_bwa_mem": {
     "J": "bg-qa",
-    "memory": "32000",    
+    "memory": "32000"    
   },
   "blob_blast": {
     "J": "bg-qa",
-    "memory": "32000",
+    "memory": "32000"
   },
   "blob_blobtools": {
     "J": "bg-qa",
