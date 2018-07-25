@@ -42,7 +42,7 @@ print("QAA_ID="+QAA_ID)
 
 DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,
                             run_blobtools=True,
-                            align_reads=True,
+                            align_reads="bowtie2",
                             qaa_mode="genome",
                             busco_db="bacteria_odb9",
                             run_multiqc=False)
