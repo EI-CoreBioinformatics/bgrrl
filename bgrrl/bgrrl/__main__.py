@@ -106,6 +106,7 @@ def main():
     parser.add_argument("--annotation", 
                         type=str, 
                         choices=VALID_ANNOTATORS, 
+                        default="prokka",
                         help="""Annotation software to use for genome annotation. [prokka]""")
 
     parser.add_argument("--ratt-reference-dir", 

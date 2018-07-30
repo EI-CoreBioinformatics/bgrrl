@@ -262,6 +262,8 @@ class BGRRLRunner(object):
         self.bgrrl_config["ratt_reference"] = self.args.ratt_reference_dir
 
         assert not self.bgrrl_config["run_ratt"] or os.path.exists(self.bgrrl_config["ratt_reference"]), "Missing reference data for ratt. Please make sure to use the --ratt-reference-dir parameter."
+        run_result = False
+        print(self.args)
 
         if self.args.report_only:
             run_result = False
