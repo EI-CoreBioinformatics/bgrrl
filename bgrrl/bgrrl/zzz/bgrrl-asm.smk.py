@@ -103,16 +103,21 @@ rule asm_lengthfilter:
 	log:
 		join(ASSEMBLY_DIR, "log", "{sample}.asm_lengthfilter.log")
 	params:
-		minlen = int(config["asm_lengthfilter_contig_minlen"])
+		minlen = int(config["asm_lengthfilter_contig_minlen"]),
+		load = loadPreCmd(config["load"]["bbmap"]),
+		reformat = "reformat.sh"
 	threads:
 		1
-	run:
-		import shutil
-		from ktio.ktio import readFasta
-		with open(output[0], "w") as seqout:
-			for _id, _seq in readFasta(input.assembly):
-				if len(_seq) >= params.minlen:
-					print(_id, _seq, sep="\n", file=seqout)
+	shell:
+		"{params.load}" + TIME_CMD + " {params.reformat}" + \
+		" in={input.assembly} out={output[0]} minlength={params.minlen}"
+#	run:
+#		import shutil
+#		from ktio.ktio import readFasta
+#		with open(output[0], "w") as seqout:
+#			for _id, _seq in readFasta(input.assembly):
+#				if len(_seq) >= params.minlen:
+#					print(_id, _seq, sep="\n", file=seqout)
 
 if config["reapr_correction"]:
 
