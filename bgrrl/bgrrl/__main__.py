@@ -47,8 +47,7 @@ def main():
 
     parser.add_argument("--bgrrl_config", 
                         help="""Configuration file for BGRRL. This file specifies details for accessing services and commands 
-                                to be executed prior to running each pipeline tool.  
-                                The default config file is located at {}""".format(DEFAULT_BGRRL_CONFIG_FILE))
+                                to be executed prior to running each pipeline tool.""") 
 
     parser.add_argument("-m", "--module", 
                         choices=[ps.name.lower() for ps in PipelineStep], 

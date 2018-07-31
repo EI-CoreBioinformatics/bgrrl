@@ -121,6 +121,27 @@ class BGRRLModuleRunner(object):
 
 class BGRRLRunner(object):
     def __init__(self, args, **kwargs):
+        def _handle_output_dir(self, output_dir, overwrite=False):
+            outdir_exists = os.path.exists(output_dir)
+            if outdir_exists
+                if overwrite:
+                    print("Output directory already exists and overwrite was requested (-f option).  Deleting directory contents ... ",
+                          end="", flush=True)
+                    print("DEACTIVATED DUE TO TOO MANY ACCIDENTS.")
+                    # shutil.rmtree(output_dir)
+                    # os.makedirs(output_dir)
+                else:
+                    print("Output already exists, attempting to resume.", flush=True)
+                    os.makedirs(output_dir)
+            self.logs_dir = join(output_dir, "hpc_logs")
+            if not os.path.exists(self.logs_dir) and self.exe_env.use_scheduler:
+                print("HPC log dir doesn't exist.  Creating " + self.logs_dir + " now ... ", end="", flush=True)
+                os.makedirs(self.logs_dir)
+
+            print("done.")
+            print()
+
+            return outdir_exists                   
     
         # Establish a valid cluster configuration... may throw if invalid
         print("Configuring execution environment ... ", end="", flush=True)
@@ -131,46 +152,41 @@ class BGRRLRunner(object):
         print("done.")
         print(str(self.exe_env))
         print()
-    
-        if args.bgrrl_config:
-            print("Custom BGRRL configuration file specifed, overriding defaults")
+
+        self.args = copy(args) # need to find better solution for this.      
+
+        # make sure output-directory exists and create hpclog-directory
+        outdir_exists = self._handle_output_dir(args.output_dir, overwrite=args.force)
+        bginit_bgrrl_cfg = os.path.join(args.out_dir, "config", "bgrrl_config.yaml")
+        bginit_hpc_cfg = os.path.join(args.out_dir, "config", "hpc_config.json")
+            
+        if args.bgrrl_config and os.path.exists(args.bgrrl_config):
+            print("Custom BGRRL configuration file specified, overriding defaults")
             self.bgrrl_config_file = args.bgrrl_config
+        elif os.path.exists(bginit_bgrrl_cfg):
+            print("Found BGRRL configuration file at bginit location ({}), using this.".format(bginit_bgrrl_cfg))
+            self.bgrrl_config_file = bginit_bgrrl_cfg
         else:
-            self.bgrrl_config_file = DEFAULT_BGRRL_CONFIG_FILE
+            raise ValueError("No valid BGRRL configuration specified ({}). Please run bginit or provide a valid configuration file with --bgrrl_config".format(args.bgrrl_config))
+
         print("Loading BGRRL configuration from {} ...".format(self.bgrrl_config_file), end="", flush=True)
         self.bgrrl_config = yaml.load(open(self.bgrrl_config_file))
         print("done.")
         print()
-    
-        if os.path.exists(args.output_dir):
-            if args.force:
-                print("Output directory already exists and overwrite was requested (-f option).  Deleting directory contents ... ",
-                      end="",
-                      flush=True)
-                print("DEACTIVATED DUE TO TOO MANY ACCIDENTS.")
-                # shutil.rmtree(args.output_dir)
-                # os.makedirs(args.output_dir)
-                print("done.")
-            else:
-                print("Output already exists, attempting to resume.", flush=True)
-        else:
-            print("Output directory doesn't exist creating ... ", end="", flush=True)
-            os.makedirs(args.output_dir)
-            print("done.")
-    
-        self.logs_dir = join(args.output_dir, "hpc_logs")
-        if not os.path.exists(self.logs_dir) and self.exe_env.use_scheduler:
-            print("HPC log dir doesn't exist.  Creating " + self.logs_dir + " now ... ", end="", flush=True)
-            os.makedirs(self.logs_dir)
-            print("done.")
-    
-        print()
 
+        if args.hpc_config and os.path.exists(args.hpc_config):
+            print("Custom HPC configuration file specified, overriding defaults")
+            self.hpc_config = args.hpc_config
+        elif os.path.exists(bginit_hpc_cfg):
+            print("Found HPC configuration at bginit location ({}), using this.".format(bginit_hpc_cfg))
+            self.hpc_config = bginit_hpc_cfg
+        else:       
+            raise ValueError("No valid HPC configuration specified ({}). Please run bginit or provide a valid configuration file with --hpc_config".format(args.hpc_config))
+    
         # Set run mode
         print(args.module.upper())
         self.run_mode = PipelineStep[args.module.upper()]
 
-        self.args = copy(args) # need to find better solution for this.      
 
     def _run_qc(self, args): 
         readtype = "bbduk" if self.args.no_normalization else "bbnorm"
