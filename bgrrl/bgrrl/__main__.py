@@ -113,7 +113,7 @@ def main():
                         help="Path to reference data for ratt", 
                         default="")
 
-    make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
+    make_exeenv_arg_group(parser, default_hpc_config_file="", allow_mode_selection=False)	# Add in cluster and DRMAA options
     args = parser.parse_args()
 
     bgrrl_runner = BGRRLRunner(args)
