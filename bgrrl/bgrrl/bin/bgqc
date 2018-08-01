@@ -108,7 +108,6 @@ fi
 resume_str=""
 r=1
 
-# BGQC.Analysis.analysis.err.log
 while [ -f ${app_cmd}.${output_dir}.out.log.${r} ]
 do
     ((r++))
