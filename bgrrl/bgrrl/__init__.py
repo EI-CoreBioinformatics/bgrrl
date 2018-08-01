@@ -120,28 +120,31 @@ class BGRRLModuleRunner(object):
 
 
 class BGRRLRunner(object):
+
+    def _handle_output_dir(self, output_dir, overwrite=False):
+        outdir_exists = os.path.exists(output_dir)
+        if outdir_exists:
+            if overwrite:
+                print("Output directory already exists and overwrite was requested (-f option).  Deleting directory contents ... ",
+                      end="", flush=True)
+                print("DEACTIVATED DUE TO TOO MANY ACCIDENTS.")
+                # shutil.rmtree(output_dir)
+                # os.makedirs(output_dir)
+            else:
+                print("Output already exists, attempting to resume.", flush=True)
+        else:
+            pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+        self.logs_dir = join(output_dir, "hpc_logs")
+        if not os.path.exists(self.logs_dir) and self.exe_env.use_scheduler:
+            print("HPC log dir doesn't exist.  Creating " + self.logs_dir + " now ... ", end="", flush=True)
+            pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+
+        print("done.")
+        print()
+
+        return outdir_exists
+
     def __init__(self, args, **kwargs):
-        def _handle_output_dir(self, output_dir, overwrite=False):
-            outdir_exists = os.path.exists(output_dir)
-            if outdir_exists
-                if overwrite:
-                    print("Output directory already exists and overwrite was requested (-f option).  Deleting directory contents ... ",
-                          end="", flush=True)
-                    print("DEACTIVATED DUE TO TOO MANY ACCIDENTS.")
-                    # shutil.rmtree(output_dir)
-                    # os.makedirs(output_dir)
-                else:
-                    print("Output already exists, attempting to resume.", flush=True)
-                    os.makedirs(output_dir)
-            self.logs_dir = join(output_dir, "hpc_logs")
-            if not os.path.exists(self.logs_dir) and self.exe_env.use_scheduler:
-                print("HPC log dir doesn't exist.  Creating " + self.logs_dir + " now ... ", end="", flush=True)
-                os.makedirs(self.logs_dir)
-
-            print("done.")
-            print()
-
-            return outdir_exists                   
     
         # Establish a valid cluster configuration... may throw if invalid
         print("Configuring execution environment ... ", end="", flush=True)
@@ -157,8 +160,8 @@ class BGRRLRunner(object):
 
         # make sure output-directory exists and create hpclog-directory
         outdir_exists = self._handle_output_dir(args.output_dir, overwrite=args.force)
-        bginit_bgrrl_cfg = os.path.join(args.out_dir, "config", "bgrrl_config.yaml")
-        bginit_hpc_cfg = os.path.join(args.out_dir, "config", "hpc_config.json")
+        bginit_bgrrl_cfg = os.path.join(args.output_dir, "config", "bgrrl_config.yaml")
+        bginit_hpc_cfg = os.path.join(args.output_dir, "config", "hpc_config.json")
             
         if args.bgrrl_config and os.path.exists(args.bgrrl_config):
             print("Custom BGRRL configuration file specified, overriding defaults")
