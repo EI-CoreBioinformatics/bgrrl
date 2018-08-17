@@ -114,7 +114,7 @@ do
 done
 
 if [[ -f ${app_cmd}.${output_dir}.out.log ]]; then
-    resume_str=".{r}"
+    resume_str=".${r}"
 fi
 
 # Override partition if specified
@@ -127,7 +127,7 @@ fi
 
 slurm_jobname=$app_cmd
 
-slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.out.log${resume_str} -e ${app_cmd}.${output_dir}.out.log${resume_str} --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
+slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.out.log${resume_str} -e ${app_cmd}.${output_dir}.err.log${resume_str} --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
 
 echo "Running submission command: sbatch ${slurm_opts} --wrap=\"$app $@\""
 

@@ -114,7 +114,7 @@ do
 done
 
 if [[ -f ${app_cmd}.${output_dir}.out.log ]]; then
-    resume_str=".{r}"
+    resume_str=".${r}"
 fi
 #while [ -f ${output_dir}.${app}.resume${r}.out.log ]
 #do
@@ -143,7 +143,7 @@ slurm_jobname=$app_cmd
 # slurm_jobname="${app}_${output_dir}"
 
 # slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.analysis${resume_str}.out.log -e ${app_cmd}.${output_dir}.analysis${resume_str}.err.log --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
-slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.out.log${resume_str} -e ${app_cmd}.${output_dir}.out.log${resume_str} --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
+slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.out.log${resume_str} -e ${app_cmd}.${output_dir}.err.log${resume_str} --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
 
 echo "Running submission command: sbatch ${slurm_opts} --wrap=\"$app $@\""
 
