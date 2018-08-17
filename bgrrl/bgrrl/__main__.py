@@ -15,7 +15,7 @@ min_version("4.0")
 
 from eicore import NOW
 from eicore.external_process.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment 
-from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
+from . import PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
 VALID_ANNOTATORS = ["prokka", "ratt", "both"]
@@ -25,8 +25,6 @@ def main():
     print("Starting EI BGRRL V " + __version__)
     print()
 
-    # bgrrl_config = yaml.load(open(DEFAULT_BGRRL_CONFIG_FILE))
-    bgrrl_config_file = DEFAULT_BGRRL_CONFIG_FILE
 
     parser = ArgumentParser("The Earlham Institute Bacterial Genome Reconstruction & Recognition Pipeline (BGRR|)",
                             description="""This program controls the various Snakemake pipelines making up the EI-BGRR| pipeline.""")

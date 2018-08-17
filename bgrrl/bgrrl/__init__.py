@@ -62,9 +62,18 @@ class BGRRLModuleRunner(object):
         self.exe_env = exe_env
         self.config["hpc_config"] = hpc_config
 
-        sampletype, readcols = (BaseSample, ["R1", "R2"]) if self.module == "bgrrl-qc" else (ASM_Sample, ["R1", "R2"])
-        if Samplesheet(args.input, sampletype=sampletype).verifySampleData(fields=readcols):
+        try:
+            sample_sheet = Samplesheet(args.input, sampletype=ASM_Sample)
+        except:
+            print("This samplesheet {} is not an ASM_Sample. Trying to parse it as BaseSample.")
+            sample_sheet = Samplesheet(args.input, sampletype=BaseSample)
+
+        if sample_sheet.verifySampleData(fields=["R1", "R2"]):
             self.config["samplesheet"] = args.input
+
+        # sampletype, readcols = (BaseSample, ["R1", "R2"]) if self.module == "bgrrl-qc" else (ASM_Sample, ["R1", "R2"])
+        # if Samplesheet(args.input, sampletype=sampletype).verifySampleData(fields=readcols):
+        #     self.config["samplesheet"] = args.input
         self.config["out_dir"] = self.outdir
 
         for k, v in args._get_kwargs():
@@ -115,6 +124,15 @@ class BGRRLRunner(object):
     def __init__(self, args, **kwargs):
         self.args = copy(args) # need to find better solution for this.      
 
+        # Establish a valid cluster configuration... may throw if invalid
+        print("Configuring execution environment ... ", end="", flush=True)
+        self.exe_env = ExecutionEnvironment(self.args, 
+                                            NOW, 
+                                            job_suffix=args.input + "_" + args.output_dir, 
+                                            log_dir=join(args.output_dir, "hpc_logs"))
+        print("done.")
+        print(str(self.exe_env))
+
         # make sure output-directory exists and create hpclog-directory
         outdir_exists = self._handle_output_dir(args.output_dir, overwrite=args.force)
         bginit_bgrrl_cfg = os.path.join(args.output_dir, "config", "bgrrl_config.yaml")
@@ -145,14 +163,14 @@ class BGRRLRunner(object):
         else:       
             raise ValueError("No valid HPC configuration specified ({}). Please run bginit or provide a valid configuration file with --hpc_config".format(args.hpc_config))
 
-        # Establish a valid cluster configuration... may throw if invalid
-        print("Configuring execution environment ... ", end="", flush=True)
-        self.exe_env = ExecutionEnvironment(self.args, 
-                                            NOW, 
-                                            job_suffix=args.input + "_" + args.output_dir, 
-                                            log_dir=join(args.output_dir, "hpc_logs"))
-        print("done.")
-        print(str(self.exe_env))
+
+
+
+
+
+
+
+
         print()
 
         # Set run mode
