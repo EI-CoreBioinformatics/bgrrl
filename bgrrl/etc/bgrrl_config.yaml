@@ -32,7 +32,7 @@ load:
   blobtools: "source python_anaconda-2.5.0 && source blobtools-0.9.19 && source samtools-1.5"
   multiqc: "source multiqc-1.5_ei"
   ratt: "source ratt-dev && source emboss-6.6.0"
-  prokka: "source prokka-git"
+  prokka: "source prokka-git && source barrnap-0.7"
   picard: "source jre-8u144"
   qualimap: "source qualimap-2.2.1"
 
