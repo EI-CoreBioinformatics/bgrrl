@@ -107,17 +107,14 @@ fi
 # If in resume mode we modify the log files so as not to write over existing output.
 resume_str=""
 r=1
-while [ -f ${output_dir}.${app}.resume${r}.out.log ]
+
+while [ -f ${app_cmd}.${output_dir}.out.log.${r} ]
 do
     ((r++))
 done
-if contains "--mode=resume"; then
-    resume_str=".resume${r}"
-elif contains "--mode"; then
-    get_next "--mode"
-    if [ ${element_val} == "resume" ]; then
-        resume_str=".resume${r}"
-    fi
+
+if [[ -f ${app_cmd}.${output_dir}.out.log ]]; then
+    resume_str=".${r}"
 fi
 
 # Override partition if specified
@@ -128,17 +125,9 @@ elif startswith "--partition="; then
     partition=${element_val}
 fi
 
-if contains "--dependency"; then
-    get_next "--dependency"
-    dependency=${element_val}
-elif startswith "--dependency="; then
-    dependency=${element_val}
-fi
-
 slurm_jobname=$app_cmd
-# slurm_jobname="${app}_${output_dir}"
 
-slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.analysis${resume_str}.out.log -e ${app_cmd}.${output_dir}.analysis${resume_str}.err.log --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
+slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.out.log${resume_str} -e ${app_cmd}.${output_dir}.err.log${resume_str} --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
 
 if [[ -n "$dependency" ]]; then 
     slurm_opts="${slurm_opts} --dependency $dependency"

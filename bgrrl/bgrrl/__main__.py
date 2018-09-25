@@ -15,7 +15,7 @@ min_version("4.0")
 
 from eicore import NOW
 from eicore.external_process.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment 
-from . import DEFAULT_HPC_CONFIG_FILE, DEFAULT_BGRRL_CONFIG_FILE, PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
+from . import PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
 VALID_ANNOTATORS = ["prokka", "ratt", "both"]
@@ -25,8 +25,6 @@ def main():
     print("Starting EI BGRRL V " + __version__)
     print()
 
-    # bgrrl_config = yaml.load(open(DEFAULT_BGRRL_CONFIG_FILE))
-    bgrrl_config_file = DEFAULT_BGRRL_CONFIG_FILE
 
     parser = ArgumentParser("The Earlham Institute Bacterial Genome Reconstruction & Recognition Pipeline (BGRR|)",
                             description="""This program controls the various Snakemake pipelines making up the EI-BGRR| pipeline.""")
@@ -47,8 +45,7 @@ def main():
 
     parser.add_argument("--bgrrl_config", 
                         help="""Configuration file for BGRRL. This file specifies details for accessing services and commands 
-                                to be executed prior to running each pipeline tool.  
-                                The default config file is located at {}""".format(DEFAULT_BGRRL_CONFIG_FILE))
+                                to be executed prior to running each pipeline tool.""") 
 
     parser.add_argument("-m", "--module", 
                         choices=[ps.name.lower() for ps in PipelineStep], 
@@ -114,7 +111,7 @@ def main():
                         help="Path to reference data for ratt", 
                         default="")
 
-    make_exeenv_arg_group(parser)	# Add in cluster and DRMAA options
+    make_exeenv_arg_group(parser, default_hpc_config_file="", allow_mode_selection=False)	# Add in cluster and DRMAA options
     args = parser.parse_args()
 
     bgrrl_runner = BGRRLRunner(args)
