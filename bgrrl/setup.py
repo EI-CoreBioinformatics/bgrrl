@@ -8,7 +8,7 @@ from setuptools import setup, find_packages, Command
 from subprocess import check_call
 
 name = "bgrrl"
-version = "0.3"
+version = "0.4"
 release = version + ".0"
 
 
