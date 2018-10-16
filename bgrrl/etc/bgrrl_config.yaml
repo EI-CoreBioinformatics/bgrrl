@@ -1,5 +1,6 @@
 tools:
   fastqc: "/ei/software/testing/fastqc/0.11.5/x86_64/bin/fastqc"
+  time: "/usr/bin/time -v"
 
 resources:
   bb_adapters: "/ei/software/testing/bbmap/38.06/x86_64/bin/resources/adapters.fa"
@@ -7,13 +8,11 @@ resources:
   busco_databases: "/ei/workarea/group-pb/BUSCO_DATABASES/odb9"
   multiqc_config: "/ei/software/testing/bgrrl/0.1/src/ei_bgrrl/bgrrl/etc/multiqc_config.yaml"
 
-
 params:
   # before 2018-02-21: ktrim=r k=21 mink=11 hdist=2 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo
   bbduk: "ktrim=r k=21 mink=7 hdist=1 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo"
   bbnorm: "target=100 min=2 prefilter"
   qualimap_mem:
-
 
 load:
   fastqc: "source fastqc-0.11.5"
@@ -37,5 +36,5 @@ cmd:
   picard_markdup: "java -jar /ei/software/testing/picardtools/2.18.4/x86_64/picard.jar MarkDuplicates"
 
 misc:
-  seqcentre: "EI"
+  seqcentre: "EI"  
   project: "" # If this is empty, it will be derived from bgrrl-commandline args (basename(dirname(current_folder)) by default)
