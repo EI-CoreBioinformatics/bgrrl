@@ -27,6 +27,9 @@ REF_PREFIXES = dict()
 if config["run_prokka"]:
 	# TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".log"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".prokka.gff"), INPUTFILES))
+	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".ffn.16S"), INPUTFILES))
+	
+
 if config["run_ratt"]:
 	for d in next(os.walk(config["ratt_reference"]))[1]:     
 		# TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.done".format(s, d)), INPUTFILES))
@@ -56,7 +59,7 @@ def get_ref(wc):
 	else:
 		return [join(config["ratt_reference"], wc.ref_ann, "gff", "{}.parts_gff".format(wc.ref_ann))]
 
-localrules: all, ann_prokka_gffconvert
+localrules: all, ann_prokka_gffconvert, ann_prokka_16S
 
 rule all:
 	input: TARGETS
@@ -99,6 +102,17 @@ if config["run_prokka"]:
 			" 'BEGIN {{ print \"##gff-version 3\"; }}" + \
 			" /^[^#]/ {{ $1=gensub(\"[^>_]+_\", \"\", \"g\", $1); }}" + \
 			" {{ if (NF > 1) print $0; }}' {input.gff} > {output.gff}"
+
+	rule ann_prokka_16S:
+		input:
+			ffn = join(PROKKA_DIR, "{sample}", "{sample}.ffn")
+		output:
+			ffn = join(PROKKA_DIR, "{sample}", "{sample}.ffn.16S")
+		params:
+			load = loadPreCmd(config["load"]["seqtk"])
+		shell:
+			"{params.load} " + \
+			"seqtk subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d " " | cut -f 2 -d \>) > {output.ffn}"
 
 
 
