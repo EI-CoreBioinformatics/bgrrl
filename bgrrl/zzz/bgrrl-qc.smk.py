@@ -82,10 +82,12 @@ rule qc_bbduk:
 rule qc_fastqc_bbduk:
 	input:
 		# join(BBDUK_DIR, "{sample}", "{fastq}.bbduk.fastq.gz")
-		join(BBDUK_DIR, "{sample}", "{sample}_{mate}.fastq.gz")
+		r1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.fastq.gz"),
+		r2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.fastq.gz")
 	output:
 		# fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{fastq}.bbduk_fastqc.html")
-		fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html")
+		r1 = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_R1.bbduk_fastqc.html"),
+		r2 = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_R2.bbduk_fastqc.html")
 	params:
 		outdir = join(FASTQC_DIR, "bbduk", "{sample}"),
                 load = loadPreCmd(config["load"]["fastqc"]),
@@ -93,7 +95,7 @@ rule qc_fastqc_bbduk:
 		fastqc = "fastqc"
 	log:
 		# join(QC_OUTDIR, "log", "{fastq}.qc_fastqc_bbduk.log")
-		join(QC_OUTDIR, "log", "{sample}_{mate}.qc_fastqc_bbduk.log")
+		join(QC_OUTDIR, "log", "{sample}.qc_fastqc_bbduk.log")
 	threads:
 		2
 	shell:
@@ -101,8 +103,11 @@ rule qc_fastqc_bbduk:
 		#" --extract --threads={threads} --outdir={params.outdir} {input} " + \
 		#" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 		"source activate bgqc_env &&" + \
-		" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input} " + \
-		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+		" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input.r1}" + \
+		" || mkdir -p {params.outdir} && touch {output.r1}) &&" + \
+		" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input.r2}" + \
+		" || mkdir -p {params.outdir} && touch {output.r2})" + \
+		" &> {log}"
 
 if not config.get("no_normalization", False):
 	rule qc_bbnorm:
