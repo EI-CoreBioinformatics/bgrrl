@@ -70,7 +70,8 @@ rule qc_bbduk:
 		adapters = config["resources"]["bb_adapters"],
                 bbduk_params = config["params"]["bbduk"]
 	shell:
-		"{params.load}" + TIME_CMD + " {params.bbduk}" + \
+		# "{params.load}" + TIME_CMD + " {params.bbduk}" + \
+		"source activate bgqc_env && {params.bbduk}" + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
 		" ref={params.adapters}" + \
 		" {params.bbduk_params}" + \
@@ -80,20 +81,27 @@ rule qc_bbduk:
 
 rule qc_fastqc_bbduk:
 	input:
-		join(BBDUK_DIR, "{sample}", "{fastq}.bbduk.fastq.gz")
+		# join(BBDUK_DIR, "{sample}", "{fastq}.bbduk.fastq.gz")
+		join(BBDUK_DIR, "{sample}", "{sample}_{mate}.fastq.gz")
 	output:
-		fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{fastq}.bbduk_fastqc.html")
+		# fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{fastq}.bbduk_fastqc.html")
+		fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html")
 	params:
 		outdir = join(FASTQC_DIR, "bbduk", "{sample}"),
                 load = loadPreCmd(config["load"]["fastqc"]),
-		fastqc = config["tools"]["fastqc"]
+		# fastqc = config["tools"]["fastqc"]
+		fastqc = "fastqc"
 	log:
-		join(QC_OUTDIR, "log", "{fastq}.qc_fastqc_bbduk.log")
+		# join(QC_OUTDIR, "log", "{fastq}.qc_fastqc_bbduk.log")
+		join(QC_OUTDIR, "log", "{sample}_{mate}.qc_fastqc_bbduk.log")
 	threads:
 		2
 	shell:
-		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
-		" --extract --threads={threads} --outdir={params.outdir} {input} " + \
+		# "{params.load} (" + TIME_CMD + " {params.fastqc}" + \
+		#" --extract --threads={threads} --outdir={params.outdir} {input} " + \
+		#" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+		"source activate bgqc_env &&" + \
+		" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input} " + \
 		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 if not config.get("no_normalization", False):
@@ -116,7 +124,9 @@ if not config.get("no_normalization", False):
 		threads:
 			8
 		shell:
-			"{params.load}" + TIME_CMD + " {params.bbnorm}" + \
+			"source activate bgqc_env &&" + \
+			" {params.bbnorm}" + \
+			# "{params.load}" + TIME_CMD + " {params.bbnorm}" + \
 			" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
 			# " target=100 min=2 prefilter" + \
 			" {params.bbnorm_params}" + \
@@ -124,20 +134,25 @@ if not config.get("no_normalization", False):
 
 	rule qc_fastqc_bbnorm:
 		input:
-			join(BBNORM_DIR, "{sample}", "{fastq}.bbnorm.fastq.gz")
+			# join(BBNORM_DIR, "{sample}", "{fastq}.bbnorm.fastq.gz")
+			join(BBNORM_DIR, "{sample}", "{sample}_{mate}.bbnorm.fastq.gz")
 		output:
-			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{fastq}.bbnorm_fastqc.html")
+			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{sample}_{mate}.bbnorm_fastqc.html")
 		params:
 			outdir = join(FASTQC_DIR, "bbnorm", "{sample}"),
                 	load = loadPreCmd(config["load"]["fastqc"]),
-			fastqc = config["tools"]["fastqc"]
+			# fastqc = config["tools"]["fastqc"]
+			fastqc = "fastqc"
 		log:
-			join(QC_OUTDIR, "log", "{fastq}.qc_fastqc_bbnorm.log")
+			join(QC_OUTDIR, "log", "{sample}_{mate}.qc_fastqc_bbnorm.log")
 		threads:
 			2
 		shell:
-			"{params.load} ({params.fastqc}" + \
-			" --extract --threads={threads} --outdir={params.outdir} {input}" + \
+			# "{params.load} ({params.fastqc}" + \
+			# " --extract --threads={threads} --outdir={params.outdir} {input}" + \
+			# " || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+			"source activate bgqc_env &&" + \
+			" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input}" + \
 			" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
 rule qc_tadpole:
@@ -157,7 +172,8 @@ rule qc_tadpole:
 	threads:
 		8
 	shell:
-		"{params.load}" + TIME_CMD + " {params.tadpole}" + \
+		# "{params.load}" + TIME_CMD + " {params.tadpole}" + \
+		"source activate bgqc_env && {params.tadpole}" + \
 		" -Xmx30g threads={threads} in={input.r1} in2={input.r2} out={output.contigs} &> {log}"
 
 rule qc_katgcp:
@@ -178,6 +194,7 @@ rule qc_katgcp:
 	threads:
 		2
 	shell:
-		"{params.load}" + \
-		" (kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
+		"touch {output.katgcp} &> {log}"
+		# "{params.load}" + \
+		# " (kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
 
