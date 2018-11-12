@@ -63,7 +63,7 @@ class InstallAll(Command):
 
 # External python modules that can be gathered from
 install_requires = [
-    'snakemake',
+    'snakemake>=4.4.0,<=4.4.0',
     'biopython',
     'drmaa'
 ]
