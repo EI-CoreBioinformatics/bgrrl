@@ -91,9 +91,9 @@ rule qc_fastqc_bbduk:
                 load = loadPreCmd(config["load"]["fastqc"]),
 		# fastqc = config["tools"]["fastqc"]
 		fastqc = "fastqc"
-	log:
-		# join(QC_OUTDIR, "log", "{fastq}.qc_fastqc_bbduk.log")
-		join(QC_OUTDIR, "log", "{sample}", "{sample}_R{mate}.qc_fastqc_bbduk.log")
+#	log:
+#		# join(QC_OUTDIR, "log", "{fastq}.qc_fastqc_bbduk.log")
+#		join(QC_OUTDIR, "log", "{sample}", "{sample}_R{mate}.qc_fastqc_bbduk.log")
 	threads:
 		2
 	shell:
@@ -103,7 +103,8 @@ rule qc_fastqc_bbduk:
 		"source activate bgqc_env &&" + \
 		" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input}" + \
 		" || mkdir -p {params.outdir} && touch {output})"  + \
-		" &> {log}"
+		""
+#		" &> {log}"
 
 if not config.get("no_normalization", False):
 	rule qc_bbnorm:
