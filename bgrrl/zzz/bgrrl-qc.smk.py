@@ -59,8 +59,8 @@ rule qc_bbduk:
 	input:
 		get_sample_files
 	output:
-		r1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
-		r2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
+		r1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.fastq.gz"),
+		r2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.fastq.gz")
 	log:
 		join(QC_OUTDIR, "log", "{sample}", "{sample}.qc_bbduk.log")
 	threads:
