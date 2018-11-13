@@ -87,7 +87,8 @@ rule qc_fastqc_bbduk:
 		join(BBDUK_DIR, "{sample}", "{sample}_R{mate}.fastq.gz")
 	output:
 		# fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{fastq}.bbduk_fastqc.html")
-		join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_R{mate}.bbduk_fastqc.html")
+		# join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_R{mate}.bbduk_fastqc.html")
+		expand(FASTQC_DIR + "/bbduk/{{sample}}/{{sample}}_R{mate}.bbduk_fastqc.html", mate=[1,2])
 	params:
 		outdir = join(FASTQC_DIR, "bbduk", "{sample}"),
                 load = loadPreCmd(config["load"]["fastqc"]),
