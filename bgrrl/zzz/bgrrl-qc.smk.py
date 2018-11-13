@@ -34,10 +34,12 @@ else:
 	PRIMARY_READ_ID = "bbduk"
 	SECONDARY_READ_ID = "bbduk"
 
+TARGETS = list()
+
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R1.bbduk_fastqc.html"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.html"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".dist_analysis.json"), INPUTFILES))
+#TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
+#TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".dist_analysis.json"), INPUTFILES))
 
 if DEBUG:
 	with open("inputfiles.txt", "w") as input_out:
@@ -106,97 +108,97 @@ rule qc_fastqc_bbduk:
 		""
 #		" &> {log}"
 
-if not config.get("no_normalization", False):
-	rule qc_bbnorm:
-		input:
-			r1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
-			r2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
-		output:
-			r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-			r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
-			prehist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
-			posthist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
-		params:
-			load = loadPreCmd(config["load"]["bbmap"]),
-			bbnorm = "bbnorm.sh", 
-                        # config["tools"]["bbnorm"],
-			bbnorm_params = config["params"]["bbnorm"]
-		log:
-			join(QC_OUTDIR, "log", "{sample}.qc_bbnorm.log")
-		threads:
-			8
-		shell:
-			"source activate bgqc_env &&" + \
-			" {params.bbnorm}" + \
-			# "{params.load}" + TIME_CMD + " {params.bbnorm}" + \
-			" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
-			# " target=100 min=2 prefilter" + \
-			" {params.bbnorm_params}" + \
-			" khist={output.prehist} khistout={output.posthist} &> {log}"
-
-	rule qc_fastqc_bbnorm:
-		input:
-			# join(BBNORM_DIR, "{sample}", "{fastq}.bbnorm.fastq.gz")
-			join(BBNORM_DIR, "{sample}", "{sample}_{mate}.bbnorm.fastq.gz")
-		output:
-			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{sample}_{mate}.bbnorm_fastqc.html")
-		params:
-			outdir = join(FASTQC_DIR, "bbnorm", "{sample}"),
-                	load = loadPreCmd(config["load"]["fastqc"]),
-			# fastqc = config["tools"]["fastqc"]
-			fastqc = "fastqc"
-		log:
-			join(QC_OUTDIR, "log", "{sample}_{mate}.qc_fastqc_bbnorm.log")
-		threads:
-			2
-		shell:
-			# "{params.load} ({params.fastqc}" + \
-			# " --extract --threads={threads} --outdir={params.outdir} {input}" + \
-			# " || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
-			"source activate bgqc_env &&" + \
-			" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input}" + \
-			" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
-
-rule qc_tadpole:
-	input:
-		# r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-		r1 = join(PRIMARY_READDIR, "{sample}", "{sample}_R1." + PRIMARY_READ_ID + ".fastq.gz"),
-		# r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
-		r2 = join(PRIMARY_READDIR, "{sample}", "{sample}_R2." + PRIMARY_READ_ID + ".fastq.gz")
-	output:
-		contigs = join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
-	params:
-		load = loadPreCmd(config["load"]["bbmap"]),
-		# tadpole = config["tools"]["tadpole"]
-                tadpole = "tadpole.sh"
-	log:
-		join(QC_OUTDIR, "log", "{sample}.qc_tadpole.log")
-	threads:
-		8
-	shell:
-		# "{params.load}" + TIME_CMD + " {params.tadpole}" + \
-		"source activate bgqc_env && {params.tadpole}" + \
-		" -Xmx30g threads={threads} in={input.r1} in2={input.r2} out={output.contigs} &> {log}"
-
-rule qc_katgcp:
-	input:
-		# r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
-		r1 = join(PRIMARY_READDIR, "{sample}", "{sample}_R1." + PRIMARY_READ_ID + ".fastq.gz"),
-		# r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
-		r2 = join(PRIMARY_READDIR, "{sample}", "{sample}_R2." + PRIMARY_READ_ID + ".fastq.gz")
-	output:
-		# katgcp = join(KAT_DIR, "{sample}", "{sample}.kat-gcp.mx")
-		katgcp = join(KAT_DIR, "{sample}", "{sample}.dist_analysis.json")
-	log:
-		join(KAT_DIR, "{sample}", "{sample}.kat")
-	params:
-		# prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample + ".kat-gcp"),
-		prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample), # + ".dist_analysis.json"),
-		load = loadPreCmd(config["load"]["kat"])
-	threads:
-		2
-	shell:
-		"touch {output.katgcp} &> {log}"
-		# "{params.load}" + \
-		# " (kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
-
+#if not config.get("no_normalization", False):
+#	rule qc_bbnorm:
+#		input:
+#			r1 = join(BBDUK_DIR, "{sample}", "{sample}_R1.bbduk.fastq.gz"),
+#			r2 = join(BBDUK_DIR, "{sample}", "{sample}_R2.bbduk.fastq.gz")
+#		output:
+#			r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+#			r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz"),
+#			prehist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
+#			posthist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
+#		params:
+#			load = loadPreCmd(config["load"]["bbmap"]),
+#			bbnorm = "bbnorm.sh", 
+#                        # config["tools"]["bbnorm"],
+#			bbnorm_params = config["params"]["bbnorm"]
+#		log:
+#			join(QC_OUTDIR, "log", "{sample}.qc_bbnorm.log")
+#		threads:
+#			8
+#		shell:
+#			"source activate bgqc_env &&" + \
+#			" {params.bbnorm}" + \
+#			# "{params.load}" + TIME_CMD + " {params.bbnorm}" + \
+#			" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
+#			# " target=100 min=2 prefilter" + \
+#			" {params.bbnorm_params}" + \
+#			" khist={output.prehist} khistout={output.posthist} &> {log}"
+#
+#	rule qc_fastqc_bbnorm:
+#		input:
+#			# join(BBNORM_DIR, "{sample}", "{fastq}.bbnorm.fastq.gz")
+#			join(BBNORM_DIR, "{sample}", "{sample}_{mate}.bbnorm.fastq.gz")
+#		output:
+#			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{sample}_{mate}.bbnorm_fastqc.html")
+#		params:
+#			outdir = join(FASTQC_DIR, "bbnorm", "{sample}"),
+#                	load = loadPreCmd(config["load"]["fastqc"]),
+#			# fastqc = config["tools"]["fastqc"]
+#			fastqc = "fastqc"
+#		log:
+#			join(QC_OUTDIR, "log", "{sample}_{mate}.qc_fastqc_bbnorm.log")
+#		threads:
+#			2
+#		shell:
+#			# "{params.load} ({params.fastqc}" + \
+#			# " --extract --threads={threads} --outdir={params.outdir} {input}" + \
+#			# " || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+#			"source activate bgqc_env &&" + \
+#			" ({params.fastqc} --extract --threads={threads} --outdir={params.outdir} {input}" + \
+#			" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
+#
+#rule qc_tadpole:
+#	input:
+#		# r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+#		r1 = join(PRIMARY_READDIR, "{sample}", "{sample}_R1." + PRIMARY_READ_ID + ".fastq.gz"),
+#		# r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
+#		r2 = join(PRIMARY_READDIR, "{sample}", "{sample}_R2." + PRIMARY_READ_ID + ".fastq.gz")
+#	output:
+#		contigs = join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
+#	params:
+#		load = loadPreCmd(config["load"]["bbmap"]),
+#		# tadpole = config["tools"]["tadpole"]
+#                tadpole = "tadpole.sh"
+#	log:
+#		join(QC_OUTDIR, "log", "{sample}.qc_tadpole.log")
+#	threads:
+#		8
+#	shell:
+#		# "{params.load}" + TIME_CMD + " {params.tadpole}" + \
+#		"source activate bgqc_env && {params.tadpole}" + \
+#		" -Xmx30g threads={threads} in={input.r1} in2={input.r2} out={output.contigs} &> {log}"
+#
+#rule qc_katgcp:
+#	input:
+#		# r1 = join(BBNORM_DIR, "{sample}", "{sample}_R1.bbnorm.fastq.gz"),
+#		r1 = join(PRIMARY_READDIR, "{sample}", "{sample}_R1." + PRIMARY_READ_ID + ".fastq.gz"),
+#		# r2 = join(BBNORM_DIR, "{sample}", "{sample}_R2.bbnorm.fastq.gz")
+#		r2 = join(PRIMARY_READDIR, "{sample}", "{sample}_R2." + PRIMARY_READ_ID + ".fastq.gz")
+#	output:
+#		# katgcp = join(KAT_DIR, "{sample}", "{sample}.kat-gcp.mx")
+#		katgcp = join(KAT_DIR, "{sample}", "{sample}.dist_analysis.json")
+#	log:
+#		join(KAT_DIR, "{sample}", "{sample}.kat")
+#	params:
+#		# prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample + ".kat-gcp"),
+#		prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample), # + ".dist_analysis.json"),
+#		load = loadPreCmd(config["load"]["kat"])
+#	threads:
+#		2
+#	shell:
+#		"touch {output.katgcp} &> {log}"
+#		# "{params.load}" + \
+#		# " (kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
+#
