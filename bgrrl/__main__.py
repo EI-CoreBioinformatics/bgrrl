@@ -15,11 +15,9 @@ min_version("4.0")
 
 from eicore import NOW
 
-from bgrrl.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment
-
 from . import PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
 
-from bgrrl.snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment
+from .snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
 VALID_ANNOTATORS = ["prokka", "ratt", "both"]
