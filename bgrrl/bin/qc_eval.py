@@ -284,6 +284,7 @@ def main(args_in=sys.argv[1:]):
     ap.add_argument("--min_tadpolesize", type=int, default=1e6)
     ap.add_argument("--readtype", type=str, choices=["bbnorm", "bbduk"], default="bbnorm")
     ap.add_argument("--report-dir", type=str, default="")
+    ap.add_argument("--override_survey", action="store_true")
     args = ap.parse_args(args_in)
     
     print("Running qc:evaluation...", end="", flush=True)
@@ -329,7 +330,7 @@ def main(args_in=sys.argv[1:]):
                 results.append(testf(sample, **kwargs))
             # results = list(testf(sample, **kwargs) for test, testf, tdata, kwargs in TESTS)
             passed = all(result[1] == "PASS" for result in results)
-            if passed:
+            if passed or args.override_survey:
 
                 # /tgac/data/reads/Jay_Hinton_GCRF_Salmonella_LITE/180524_K00287_0041_BHVMHLBBXX/FD01543206_PRO1620_plate92_H12_ACGCAGCAA-AGTCAA_L008_R1.fastq.gz
                 # /tgac/workarea/group-pb/schudomc_sandbox/bgrrl_test/Analysis_20180719/qc/bbduk/FD01543280_PRO1620_plate92_F03_GAGTATAAT-AGTCAA_L008/FD01543280_PRO1620_plate92_F03_GAGTATAAT-AGTCAA_L008_R1.bbduk.fastq.gz

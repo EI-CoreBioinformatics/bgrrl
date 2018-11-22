@@ -186,11 +186,13 @@ class BGRRLRunner(object):
             run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
         else:
             run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run()
+            aligner = qaa_args.align_reads
             if run_result:
                 qaa_args.update(**vars(self.args),
                                 survey_assembly=True, 
                                 runmode="survey", 
                                 run_blobtools=False,
+                                align_reads=False,
                                 run_busco=False, 
                                 normalized=not self.args.no_normalization)
                 qaa_run = QAA_Runner(qaa_args).run()					
@@ -200,6 +202,7 @@ class BGRRLRunner(object):
                         self.args.input = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
                         qaa_args.update(**vars(self.args),
                                         run_blobtools=True, 
+                                        align_reads=aligner,
                                         run_busco=True, 
                                         run_multiqc=True, 
                                         multiqc_dir=join(self.args.output_dir, "reports", "multiqc", "qc"))
