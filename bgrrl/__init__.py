@@ -1,6 +1,6 @@
 import pkg_resources
 
-__title__ = "ei:bgrr|"
+__title__ = "bgrr|"
 __author__ = "Christian Schudoma"
 __email__ = "christian.schudoma@earlham.ac.uk"
 __license__ = "MIT"
@@ -71,9 +71,6 @@ class BGRRLModuleRunner(object):
         if sample_sheet.verifySampleData(fields=["R1", "R2"]):
             self.config["samplesheet"] = args.input
 
-        # sampletype, readcols = (BaseSample, ["R1", "R2"]) if self.module == "bgrrl-qc" else (ASM_Sample, ["R1", "R2"])
-        # if Samplesheet(args.input, sampletype=sampletype).verifySampleData(fields=readcols):
-        #     self.config["samplesheet"] = args.input
         self.config["out_dir"] = self.outdir
 
         for k, v in args._get_kwargs():
@@ -98,7 +95,7 @@ class BGRRLModuleRunner(object):
 
 class BGRRLRunner(object):
 
-    def _handle_output_dir(self, output_dir, overwrite=False):
+    def __handle_output_dir(self, output_dir, overwrite=False):
         outdir_exists = os.path.exists(output_dir)
         if outdir_exists:
             if overwrite:
@@ -134,20 +131,20 @@ class BGRRLRunner(object):
         print(str(self.exe_env))
 
         # make sure output-directory exists and create hpclog-directory
-        outdir_exists = self._handle_output_dir(args.output_dir, overwrite=args.force)
+        outdir_exists = self.__handle_output_dir(args.output_dir, overwrite=args.force)
         bginit_bgrrl_cfg = os.path.join(args.output_dir, "config", "bgrrl_config.yaml")
         bginit_hpc_cfg = os.path.join(args.output_dir, "config", "hpc_config.json")
             
         if args.bgrrl_config and os.path.exists(args.bgrrl_config):
-            print("Custom BGRRL configuration file specified, overriding defaults")
+            print("Custom configuration file specified, overriding defaults")
             self.bgrrl_config_file = args.bgrrl_config
         elif os.path.exists(bginit_bgrrl_cfg):
-            print("Found BGRRL configuration file at bginit location ({}), using this.".format(bginit_bgrrl_cfg))
+            print("Found configuration file at bginit location ({}), using this.".format(bginit_bgrrl_cfg))
             self.bgrrl_config_file = bginit_bgrrl_cfg
         else:
-            raise ValueError("No valid BGRRL configuration specified ({}). Please run bginit or provide a valid configuration file with --bgrrl_config".format(args.bgrrl_config))
+            raise ValueError("No valid configuration specified ({}). Please run bginit or provide a valid configuration file with --bgrrl_config".format(args.bgrrl_config))
 
-        print("Loading BGRRL configuration from {} ...".format(self.bgrrl_config_file), end="", flush=True)
+        print("Loading configuration from {} ...".format(self.bgrrl_config_file), end="", flush=True)
         self.bgrrl_config = yaml.load(open(self.bgrrl_config_file))
         print("done.")
         print()
@@ -163,14 +160,6 @@ class BGRRLRunner(object):
         else:       
             raise ValueError("No valid HPC configuration specified ({}). Please run bginit or provide a valid configuration file with --hpc_config".format(args.hpc_config))
 
-
-
-
-
-
-
-
-
         print()
 
         # Set run mode
@@ -178,7 +167,7 @@ class BGRRLRunner(object):
         self.run_mode = PipelineStep[args.module.upper()]
 
 
-    def _run_qc(self, args): 
+    def __run_qc(self, args): 
         readtype = "bbduk" if self.args.no_normalization else "bbnorm"
         qaa_args = copy(args)
 
@@ -211,7 +200,7 @@ class BGRRLRunner(object):
         return run_result
 
 
-    def _run_asm(self, args):
+    def __run_asm(self, args):
         qaa_args = copy(args)
 
         self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
@@ -251,7 +240,7 @@ class BGRRLRunner(object):
 
         return run_result
 
-    def _run_ann(self, args):
+    def __run_ann(self, args):
         qaa_args = copy(args)
         self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
         self.bgrrl_config["cwd"] = os.getcwd()
@@ -292,7 +281,7 @@ class BGRRLRunner(object):
                         run_result = self._run_fin() 
         return run_result
 
-    def _run_fin(self):
+    def __run_fin(self):
         self.bgrrl_config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
         if "enterobase_groups" in self.args: 
             try:
@@ -311,7 +300,7 @@ class BGRRLRunner(object):
         run_result = BGRRLModuleRunner("bgrrl-fin", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run()
         return run_result
 
-    def _run_all(self, args):
+    def __run_all(self, args):
         qaa_args = copy(args)
         print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", self.run_mode)
         exit(1)
@@ -324,15 +313,15 @@ class BGRRLRunner(object):
                         hpc_onfig=self.hpc_config)
     
         if self.run_mode == PipelineStep.READ_QC:
-            run_result = self._run_qc(qaa_args)
+            run_result = self.__run_qc(qaa_args)
         elif self.run_mode == PipelineStep.ASSEMBLY:
-            run_result = self._run_asm(qaa_args) 
+            run_result = self.__run_asm(qaa_args) 
         elif self.run_mode == PipelineStep.ANNOTATION:
-            run_result = self._run_ann(qaa_args)
+            run_result = self.__run_ann(qaa_args)
         elif self.run_mode == PipelineStep.FINALIZE:
-            run_result = self._run_fin() 
+            run_result = self.__run_fin() 
         else:
-            run_result = self._run_all(qaa_args)        
+            run_result = self.__run_all(qaa_args)        
     
         print()
         if run_result:
