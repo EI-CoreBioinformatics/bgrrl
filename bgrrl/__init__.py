@@ -167,9 +167,9 @@ class BGRRLRunner(object):
         self.run_mode = PipelineStep[args.module.upper()]
 
 
-    def __run_qc(self, args): 
+    def __run_qc(self, qaa_args): 
         readtype = "bbduk" if self.args.no_normalization else "bbnorm"
-        qaa_args = copy(args)
+        qaa_args = copy(qaa_args)
 
         if self.args.report_only:
             run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
@@ -200,8 +200,8 @@ class BGRRLRunner(object):
         return run_result
 
 
-    def __run_asm(self, args):
-        qaa_args = copy(args)
+    def __run_asm(self, qaa_args):
+        qaa_args = copy(qaa_args)
 
         self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
         self.bgrrl_config["cwd"] = os.getcwd()
@@ -240,8 +240,8 @@ class BGRRLRunner(object):
 
         return run_result
 
-    def __run_ann(self, args):
-        qaa_args = copy(args)
+    def __run_ann(self, qaa_args):
+        qaa_args = copy(qaa_args)
         self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
         self.bgrrl_config["cwd"] = os.getcwd()
     
@@ -300,8 +300,8 @@ class BGRRLRunner(object):
         run_result = BGRRLModuleRunner("bgrrl-fin", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run()
         return run_result
 
-    def __run_all(self, args):
-        qaa_args = copy(args)
+    def __run_all(self, qaa_args):
+        qaa_args = copy(qaa_args)
         print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", self.run_mode)
         exit(1)
 
