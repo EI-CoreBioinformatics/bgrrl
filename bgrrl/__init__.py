@@ -30,15 +30,11 @@ from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
 from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample
 
-from qaa import QAA_Runner, QAA_ArgumentsAdapter as QAA_Args, DEFAULT_CONFIG_FILE as qaa_config_file, QAA_ID
+from .qaa_helpers import QAA_ArgumentManager
+
+from qaa import QAA_Runner, QAA_ID
 print("QAA_ID="+QAA_ID)
 
-DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,
-                            run_blobtools=True,
-                            align_reads="bowtie2",
-                            qaa_mode="genome",
-                            busco_db="bacteria_odb9",
-                            run_multiqc=False)
 
 TIME_CMD = " /usr/bin/time -v"
 
@@ -53,14 +49,14 @@ class PipelineStep(Enum):
 
 
 class BGRRLModuleRunner(object):
-    def __init__(self, module, args, exe_env, hpc_config, config=dict()):
+    def __init__(self, module, args, exe_env, hpc_config_file, config=dict()):
         print(config)
         self.config = dict(config)
         self.module = module
         self.outdir = args.output_dir
         self.unlock = args.unlock
         self.exe_env = exe_env
-        self.config["hpc_config"] = hpc_config
+        self.config["hpc_config"] = hpc_config_file
 
         try:
             sample_sheet = Samplesheet(args.input, sampletype=ASM_Sample)
@@ -92,7 +88,7 @@ class BGRRLModuleRunner(object):
 
         return run_result
 
-
+        
 class BGRRLRunner(object):
 
     def __handle_output_dir(self, output_dir, overwrite=False):
@@ -138,9 +134,11 @@ class BGRRLRunner(object):
         if args.bgrrl_config and os.path.exists(args.bgrrl_config):
             print("Custom configuration file specified, overriding defaults")
             self.bgrrl_config_file = args.bgrrl_config
+            self.args.bgrrl_config_file = args.bgrrl_config
         elif os.path.exists(bginit_bgrrl_cfg):
             print("Found configuration file at bginit location ({}), using this.".format(bginit_bgrrl_cfg))
             self.bgrrl_config_file = bginit_bgrrl_cfg
+            self.args.bgrrl_config_file = bginit_bgrrl_cfg # I think if this is not here, qaa will not use it - or maybe it will default to args.bgrrl_config
         else:
             raise ValueError("No valid configuration specified ({}). Please run bginit or provide a valid configuration file with --bgrrl_config".format(args.bgrrl_config))
 
@@ -151,12 +149,12 @@ class BGRRLRunner(object):
 
         if args.hpc_config and os.path.exists(args.hpc_config):
             print("Custom HPC configuration file specified, overriding defaults")
-            self.hpc_config = args.hpc_config
-            self.args.hpc_config = args.hpc_config # quick fix: this duplicate needs to be dealt with at some point.
+            self.hpc_config_file = args.hpc_config
+            self.args.hpc_config_file = args.hpc_config # quick fix: this duplicate needs to be dealt with at some point.
         elif os.path.exists(bginit_hpc_cfg):
             print("Found HPC configuration at bginit location ({}), using this.".format(bginit_hpc_cfg))
-            self.hpc_config = bginit_hpc_cfg
-            self.args.hpc_config = bginit_hpc_cfg # quick fix: this duplicate needs to be dealt with at some point.
+            self.hpc_config_file = bginit_hpc_cfg
+            self.args.hpc_config_file = bginit_hpc_cfg # quick fix: this duplicate needs to be dealt with at some point.
         else:       
             raise ValueError("No valid HPC configuration specified ({}). Please run bginit or provide a valid configuration file with --hpc_config".format(args.hpc_config))
 
@@ -167,41 +165,28 @@ class BGRRLRunner(object):
         self.run_mode = PipelineStep[args.module.upper()]
 
 
-    def __run_qc(self, qaa_args): 
+    def __run_qc(self): 
         readtype = "bbduk" if self.args.no_normalization else "bbnorm"
-        qaa_args = copy(qaa_args)
 
         if self.args.report_only:
             run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
         else:
-            run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run()
+            run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config_file, config=self.bgrrl_config).run()
             aligner = qaa_args.align_reads
             if run_result:
-                qaa_args.update(**vars(self.args),
-                                survey_assembly=True, 
-                                runmode="survey", 
-                                run_blobtools=False,
-                                align_reads=False,
-                                run_busco=False, 
-                                normalized=not self.args.no_normalization)
+                qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.bgrrl_config_file, self.hpc_config_file, stage="qc_survey")
                 qaa_run = QAA_Runner(qaa_args).run()					
                 if qaa_run:
                     run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
                     if run_result:
                         self.args.input = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
-                        qaa_args.update(**vars(self.args),
-                                        run_blobtools=True, 
-                                        align_reads=aligner,
-                                        run_busco=True, 
-                                        run_multiqc=True, 
-                                        multiqc_dir=join(self.args.output_dir, "reports", "multiqc", "qc"))
+                        qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.bgrrl_config_file, self.hpc_config_file, stage="qc_report")
                         qaa_run = QAA_Runner(qaa_args).run()
 
         return run_result
 
 
     def __run_asm(self, qaa_args):
-        qaa_args = copy(qaa_args)
 
         self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
         self.bgrrl_config["cwd"] = os.getcwd()
@@ -221,15 +206,11 @@ class BGRRLRunner(object):
             if self.args.enterobase_groups: # needs validation?
                 run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
         else:
-            run_result = BGRRLModuleRunner("bgrrl-asm", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run() 
+            run_result = BGRRLModuleRunner("bgrrl-asm", self.args, self.exe_env, self.hpc_config_file, config=self.bgrrl_config).run() 
             if run_result:
                 run_result = asm_stage_report_main([self.args.output_dir, join(self.args.output_dir, "reports")])
                 if run_result:
-                        qaa_args.update(**vars(self.args),  # <- s. above, this is kinda stupid, redesign ASAP!
-                                        survey_assembly=False,
-                                        runmode="asm",
-                                        run_multiqc=True,
-                                        multiqc_dir=join(self.args.output_dir, "reports", "multiqc", "asm"))
+                        qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.bgrrl_config_file, self.hpc_config_file, stage="asm")
                         qaa_run = QAA_Runner(qaa_args).run()
                         if qaa_run:
                             self.args.finalize_mode = "asm"
@@ -240,8 +221,7 @@ class BGRRLRunner(object):
 
         return run_result
 
-    def __run_ann(self, qaa_args):
-        qaa_args = copy(qaa_args)
+    def __run_ann(self):
         self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
         self.bgrrl_config["cwd"] = os.getcwd()
     
@@ -261,14 +241,11 @@ class BGRRLRunner(object):
         else:
             if self.args.annotation in ("prokka", "both"):
                 print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
-                run_result = BGRRLModuleRunner("bgrrl-ann", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run()
+                run_result = BGRRLModuleRunner("bgrrl-ann", self.args, self.exe_env, self.hpc_config_file, config=self.bgrrl_config).run()
                 if not run_result:
                     print("ANNOTATION RUN FAILED?")
                 if run_result:
-                    qaa_args.update(**vars(self.args),
-                                    survey_assembly=False, 
-                                    qaa_mode="transcriptome,proteome", 
-                                    runmode="ann")
+                    qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.bgrrl_config_file, self.hpc_config_file, stage="ann")
                     qaa_run = QAA_Runner(qaa_args).run()
     
                     if qaa_run and self.args.annotation in ("ratt", "both"):
@@ -297,37 +274,30 @@ class BGRRLRunner(object):
         print("_FIN_CONFIG")
         print(self.bgrrl_config)
 
-        run_result = BGRRLModuleRunner("bgrrl-fin", self.args, self.exe_env, self.hpc_config, config=self.bgrrl_config).run()
+        run_result = BGRRLModuleRunner("bgrrl-fin", self.args, self.exe_env, self.hpc_config_file, config=self.bgrrl_config).run()
         return run_result
 
-    def __run_all(self, qaa_args):
-        qaa_args = copy(qaa_args)
-        print("Wrong runmode: (ATTEMPT_FULL is not implemented yet)", self.run_mode)
-        exit(1)
+    def __run_all(self):
+        raise ValueError("Wrong runmode: (ATTEMPT_FULL is not implemented yet)")
 
     def run(self):
-        qaa_args = DEFAULT_QAA_ARGS
-        qaa_args.update(quast_mincontiglen=1000, 
-                        project_prefix=self.args.project_prefix, 
-                        config=self.bgrrl_config_file, 
-                        hpc_onfig=self.hpc_config)
     
         if self.run_mode == PipelineStep.READ_QC:
-            run_result = self.__run_qc(qaa_args)
+            run_result = self.__run_qc()
         elif self.run_mode == PipelineStep.ASSEMBLY:
-            run_result = self.__run_asm(qaa_args) 
+            run_result = self.__run_asm() 
         elif self.run_mode == PipelineStep.ANNOTATION:
-            run_result = self.__run_ann(qaa_args)
+            run_result = self.__run_ann()
         elif self.run_mode == PipelineStep.FINALIZE:
             run_result = self.__run_fin() 
         else:
-            run_result = self.__run_all(qaa_args)        
+            run_result = self.__run_all()        
     
         print()
         if run_result:
-            print("BGRRL completed successfully.")
+            print("BGRR| completed successfully.")
         else:
-            print("BGRRL failed.  Please consult logs to debug run.")
+            print("BGRR| failed.  Please consult logs to debug run.")
             exit(1)
 
         return True
