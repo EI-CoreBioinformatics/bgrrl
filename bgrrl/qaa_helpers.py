@@ -1,3 +1,5 @@
+from os.path import join
+
 from qaa import QAA_ArgumentsAdapter as QAA_Args
 
 
@@ -30,8 +32,11 @@ class QAA_ArgumentManager(object):
                             normalized=not args.no_normalization)
         elif stage == "qc_report":
             qaa_args.update(**vars(args),
+                            survey_assembly=True,
+                            runmode="survey",
+                            normalized=not args.no_normalization,
                             run_blobtools=True,
-                            align_reads=aligner,
+                            align_reads="bowtie2",
                             run_busco=True,
                             run_multiqc=True,
                             multiqc_dir=join(args.output_dir, "reports", "multiqc", "qc"))

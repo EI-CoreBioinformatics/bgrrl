@@ -172,7 +172,6 @@ class BGRRLRunner(object):
             run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
         else:
             run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config_file, config=self.bgrrl_config).run()
-            aligner = qaa_args.align_reads
             if run_result:
                 qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.bgrrl_config_file, self.hpc_config_file, stage="qc_survey")
                 qaa_run = QAA_Runner(qaa_args).run()					
@@ -297,8 +296,7 @@ class BGRRLRunner(object):
         if run_result:
             print("BGRR| completed successfully.")
         else:
-            print("BGRR| failed.  Please consult logs to debug run.")
-            exit(1)
+            raise ValueError("BGRR| failed.  Please consult logs to debug run.")
 
         return True
 
