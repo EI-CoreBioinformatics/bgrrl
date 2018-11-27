@@ -19,8 +19,7 @@ import shutil
 import pathlib
 from copy import copy
 
-from eicore.external_process.snakemake_helper import *
-from eicore import NOW
+from .snakemake_helper import *
 
 from bgrrl.enterobase_helpers import validateEnterobaseInput, loadEnterobaseCriteria 
 from bgrrl.bin.qc_eval import main as qc_eval_main

@@ -4,9 +4,18 @@ from textwrap import dedent
 
 from snakemake import snakemake
 
-from eicore import DEFAULT_HPC_CONFIG_FILE, NOW
+import datetime
+import os
+import time
 
-from eicore.external_process.capturing import Capturing
+
+NOW = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d_%H%M%S')
+
+ETC_DIR = os.path.join(os.path.dirname(__file__), "..", "etc")
+DEFAULT_HPC_CONFIG_FILE = os.path.join(ETC_DIR, "hpc_config.json")
+DEFAULT_CONFIG_FILE = os.path.join(ETC_DIR, "default_config.yaml")
+
+from .capturing import Capturing
 
 
 @unique

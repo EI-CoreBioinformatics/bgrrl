@@ -5,7 +5,7 @@ from os.path import join, basename, dirname
 
 from bgrrl.samplesheet import readSamplesheet, Samplesheet, ASM_Sample
 from bgrrl import TIME_CMD
-from eicore.external_process.snakemake_helper import loadPreCmd
+from bgrrl.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)
 
