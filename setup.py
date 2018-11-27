@@ -14,6 +14,7 @@ here = path.abspath(path.dirname("__file__"))
 with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 	description = long_description = description.read()
 
+name="bgrrl"
 version = "0.4.2"
 
 if sys.version_info.major != 3:
@@ -21,7 +22,7 @@ if sys.version_info.major != 3:
 
 
 setup(
-	name="bgrrl",
+	name=name,
 	version=version,
 	description=description,
 	long_description=long_description,
