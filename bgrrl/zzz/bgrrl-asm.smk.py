@@ -66,10 +66,12 @@ rule all:
 # TODO: Adjust asm_wrapper so it deals with no_normalization cases in a different way than just running it twice.
 def get_sample_files(wc):
 	s = INPUTFILES[wc.sample]
-	if not config.get("no_normalization", False):
-		return s.R1norm, s.R2norm, s.R1trim, s.R2trim
+	# default case is with normalization, i.e. if --no-normalization option isn't present, it should be "False"
+	skip_normalization = config.get("no_normalization", False)
+	if skip_normalization:
+		return s.R1trim, s.R2trim, s.R1trim, s.R2trim
 	else:
-		return s.R1norm, s.R2norm, s.R1norm, s.R2norm        
+		return s.R1norm, s.R2norm, s.R1trim, s.R2trim
 
 
 rule asm_assembly:

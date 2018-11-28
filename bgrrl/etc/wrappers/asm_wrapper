@@ -1,5 +1,7 @@
 #!/bin/bash 
 
+source activate bgasm_env
+
 assembler=$1
 r1=$2
 r2=$3
@@ -12,27 +14,27 @@ ur2=$7
 if [[ "$assembler" == "unicycler" ]] 
 then
 
- module purge
-
- # these things will go into the wrapper later on
- export PATH=$(echo $PATH | cut -f 6- -d :)
- echo "SET PATH TO ${PATH}"
- echo "PYTHON IS $(which python)"
-
-
- export PYTHONPATH=$PYTHONPATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/lib/python3.5/site-packages
- export PATH=$PATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/bin
-
- source lmod-6.1
- ml python/3.5
- ml gcc/6.2.0
-
- source pilon-1.22
- source bowtie-2.2.9
- source spades-3.8.1
- source blast-2.6.0
- source jre-8u92
- source samtools-1.5
+#######! module purge
+#######!
+#######! # these things will go into the wrapper later on
+#######! export PATH=$(echo $PATH | cut -f 6- -d :)
+#######! echo "SET PATH TO ${PATH}"
+#######! echo "PYTHON IS $(which python)"
+#######!
+#######!
+#######! export PYTHONPATH=$PYTHONPATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/lib/python3.5/site-packages
+#######! export PATH=$PATH:/tgac/software/testing/Unicycler/0.4.3_cs2/x86_64/bin
+#######!
+#######! source lmod-6.1
+#######! ml python/3.5
+#######! ml gcc/6.2.0
+#######!
+#######! source pilon-1.22
+#######! source bowtie-2.2.9
+#######! source spades-3.8.1
+#######! source blast-2.6.0
+#######! source jre-8u92
+#######! source samtools-1.5
 
  # unicycler input: -1 <r1> -2 <r2> -t <threads> -o <outdir>
  # spades input -1 <r1> -2 <r2> -t <threads> -o <outdir> -m 64
@@ -57,7 +59,7 @@ unicycler_params="--min_polish_size ${MIN_POLISH_SIZE}"
 elif [[ "$assembler" == "velvet" ]]
 then
 
- source velvetoptimiser-2.2.6_cs
+#######! source velvetoptimiser-2.2.6_cs
  # alias velveth=/tgac/software/production/velvet/1.2.08_longsequences/x86_64/bin/velveth-127
  # alias velvetg=/tgac/software/production/velvet/1.2.08_longsequences/x86_64/bin/velvetg-127
  
