@@ -65,9 +65,9 @@ setup(
 	},
 	include_package_data=True,
 	data_files=[
-		("etc", glob.glob("etc/*.*")),
-		("etc/wrappers", glob.glob("etc/wrappers/*")),
-		("etc/util", glob.glob("etc/util/*"))
+		("bgrrl/etc", glob.glob("bgrrl/etc/*.*")),
+		("bgrrl/etc/wrappers", glob.glob("bgrrl/etc/wrappers/*")),
+		("bgrrl/etc/util", glob.glob("bgrrl/etc/util/*"))
 	]
 )
 

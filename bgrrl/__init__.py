@@ -184,9 +184,9 @@ class BGRRLRunner(object):
         return run_result
 
 
-    def __run_asm(self, qaa_args):
+    def __run_asm(self):
 
-        self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+        self.bgrrl_config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
         self.bgrrl_config["cwd"] = os.getcwd()
         self.bgrrl_config["reapr_correction"] = False
     
