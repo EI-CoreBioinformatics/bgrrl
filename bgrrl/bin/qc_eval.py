@@ -302,7 +302,7 @@ def main(args_in=sys.argv[1:]):
     # QCDIR  = join(args.indir, "Analysis", "qc")
     QCDIR = join(args.indir, "qc")
     global QADIR
-    QADIR = join(args.indir, "qa", "survey")
+    QADIR = join(args.indir, "qaa", "survey")
 
     #Sample = namedtuple("Sample", "sampleID customerSampleID R1 R2 S taxonomyID taxonomyTxt fastqcR1 fastqcR2 fastqcS".split(" "))
     

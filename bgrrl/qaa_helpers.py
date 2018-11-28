@@ -1,6 +1,6 @@
 from os.path import join
 
-from qaa import QAA_ArgumentsAdapter as QAA_Args
+from qaa.qaa_args import QAA_ArgumentsAdapter as QAA_Args
 
 
 DEFAULT_QAA_ARGS = QAA_Args(make_input_stream=True,

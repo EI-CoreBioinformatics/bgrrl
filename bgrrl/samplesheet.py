@@ -81,9 +81,9 @@ class Samplesheet(OrderedDict):
                 for r in csv.reader(_in, delimiter=","):
                     print(r)
                     self[r[0]] = sampletype(*r)
-    def write(self, stream, _filter=set()):
+    def write(self, stream, _filter=None):
         for s in self:
-            if not _filter or s in _filter:
+            if _filter is None or s in _filter:
                 print(*tuple(self[s]), sep=",", file=stream)
                 print("")
     def verifySampleData(self, fields=["R1", "R2", "R1trim", "R2trim", "R1norm", "R2norm"]):
