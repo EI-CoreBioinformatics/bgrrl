@@ -70,8 +70,8 @@ if config["run_prokka"]:
 			contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 		output:
 			log = join(PROKKA_DIR, "{sample}", "{sample}.log"),
-			faa = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.faa"),
-			ffn = join(join(config["cwd"]), PROKKA_DIR, "{sample}", "{sample}.ffn"),
+			faa = join(PROKKA_DIR, "{sample}", "{sample}.faa"),
+			ffn = join(PROKKA_DIR, "{sample}", "{sample}.ffn"),
 			gff = join(PROKKA_DIR, "{sample}", "{sample}.gff")
 		log:
 			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_ann_prokka.log")
@@ -98,7 +98,7 @@ if config["run_prokka"]:
 		output:
 			gff = join(PROKKA_DIR, "{sample}", "{sample}.prokka.gff")
 		shell:
-			"awk -v OFS=\"\t\" -v FS=\"\t\"" + \
+			"awk -v OFS=\"\\t\" -v FS=\"\\t\"" + \
 			" 'BEGIN {{ print \"##gff-version 3\"; }}" + \
 			" /^[^#]/ {{ $1=gensub(\"[^>_]+_\", \"\", \"g\", $1); }}" + \
 			" {{ if (NF > 1) print $0; }}' {input.gff} > {output.gff}"
