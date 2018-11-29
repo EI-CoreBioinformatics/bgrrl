@@ -107,10 +107,30 @@ elif config["finalize_mode"] == "asm":
 			" && touch {output.done}"
 
 elif config["finalize_mode"] == "ann":
-	if not config["run_ratt"]:
+	if config["run_prokka"] and not config["run_ratt"]:
+
 		rule all:
 			input: 
 				join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+
+		shell_str = "" + \
+			"mkdir -p {params.package_dir}" + \
+			" && cwd=$(pwd)" + \
+			" && cd {params.package_dir}" + \
+			" && {0}" + \
+			" && cd .." + \
+			" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
+			" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
+			" && cd $cwd" + \
+			" && touch {output.done}"
+
+		if config.get("prokka_package_style", "by_sample") == "by_sample":
+
+			link_command = "ln -s ../../{0}/annotation/prokka".format(basename(INPUTDIR))
+
+		else:
+			
+			link_command = "find ../../{0}/annotation/prokka -type f -print -exec ln -sf {{}} \;".format(basename(INPUTDIR))
 
 		rule fin_package_annotation:
 			input:
@@ -118,20 +138,32 @@ elif config["finalize_mode"] == "ann":
 			output:
 				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
 			params:
-				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_prokka_denovo_annotation"),
 				outdir = basename(INPUTDIR),
-				prefix = config["misc"]["project"]
+				prefix = config["misc"]["project"],
+				lcmd = link_command
 			shell:
 				"mkdir -p {params.package_dir}" + \
-				"&& ln -s ../../{params.outdir}/annotation/prokka/ {params.package_dir}/prokka" + \
-				" && cd $(dirname {params.package_dir})" + \
+				" && cwd=$(pwd)" + \
+				" && cd {params.package_dir}" + \
+				" && {params.lcmd}" + \
+				" && cd .." + \
 				" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
-				" && echo TARBALL_DONE" + \
 				" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
-				" && cd -" + \
+				" && cd $cwd" + \
 				" && touch {output.done}"
 				
-	else:
+
+				# "mkdir -p {params.package_dir}" + \
+				# "&& ln -s ../../{params.outdir}/annotation/prokka/ {params.package_dir}/prokka" + \
+				# " && cd $(dirname {params.package_dir})" + \
+				# " && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
+				# " && echo TARBALL_DONE" + \
+				# " && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
+				# " && cd -" + \
+				# " && touch {output.done}"
+
+	elif config["run_ratt"]:		
 		from math import ceil
 		annotation_report = join(INPUTDIR, "reports", "annotation_report.tsv")
 		NUM_BATCHES = ceil((len(list(row for row in csv.reader(open(annotation_report), delimiter="\t"))) - 1)/30)

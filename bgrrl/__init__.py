@@ -40,55 +40,55 @@ TIME_CMD = " /usr/bin/time -v"
 
 @unique
 class PipelineStep(Enum):
-    READ_QC = 0
-    ASSEMBLY = 1
-    ANNOTATION = 2
-    DATA_QA = 3
-    FINALIZE = 4
-    ATTEMPT_FULL = 5
+	READ_QC = 0
+	ASSEMBLY = 1
+	ANNOTATION = 2
+	DATA_QA = 3
+	FINALIZE = 4
+	ATTEMPT_FULL = 5
 
 
 class BGRRLModuleRunner(object):
-    def __init__(self, module, args, exe_env, hpc_config_file, config=dict()):
-        print(config)
-        self.config = dict(config)
-        self.module = module
-        self.outdir = args.output_dir
-        self.unlock = args.unlock
-        self.exe_env = exe_env
-        self.config["hpc_config"] = hpc_config_file
+	def __init__(self, module, args, exe_env, hpc_config_file, config=dict()):
+		print(config)
+		self.config = dict(config)
+		self.module = module
+		self.outdir = args.output_dir
+		self.unlock = args.unlock
+		self.exe_env = exe_env
+		self.config["hpc_config"] = hpc_config_file
 
-        try:
-            sample_sheet = Samplesheet(args.input, sampletype=ASM_Sample)
-        except:
-            print("This samplesheet {} is not an ASM_Sample. Trying to parse it as BaseSample.")
-            sample_sheet = Samplesheet(args.input, sampletype=BaseSample)
+		try:
+			sample_sheet = Samplesheet(args.input, sampletype=ASM_Sample)
+		except:
+			print("This samplesheet {} is not an ASM_Sample. Trying to parse it as BaseSample.")
+			sample_sheet = Samplesheet(args.input, sampletype=BaseSample)
 
-        if sample_sheet.verifySampleData(fields=["R1", "R2"]):
-            self.config["samplesheet"] = args.input
+		if sample_sheet.verifySampleData(fields=["R1", "R2"]):
+			self.config["samplesheet"] = args.input
 
-        self.config["out_dir"] = self.outdir
+		self.config["out_dir"] = self.outdir
 
-        for k, v in args._get_kwargs():
-            # need to find a solution here how to not override already sanitised input, e.g. enterobase-groups
-            # this should do it for the moment, but the whole args-structure needs to be changed
-            if k not in self.config:                
-                print("WRITING {}: {} TO CONFIG".format(k, v))
-                self.config[k] = v
+		for k, v in args._get_kwargs():
+			# need to find a solution here how to not override already sanitised input, e.g. enterobase-groups
+			# this should do it for the moment, but the whole args-structure needs to be changed
+			if k not in self.config:
+				print("WRITING {}: {} TO CONFIG".format(k, v))
+				self.config[k] = v
 
-        self.config_file = os.path.join(self.outdir, module + ".conf.yaml")
-        with open(self.config_file, "w") as conf_out:
-            yaml.dump(self.config, conf_out, default_flow_style=False)
+		self.config_file = os.path.join(self.outdir, module + ".conf.yaml")
+		with open(self.config_file, "w") as conf_out:
+			yaml.dump(self.config, conf_out, default_flow_style=False)
 
-    def run(self):
+	def run(self):
  
-        print("Running " + self.module)
-        snake = os.path.join(os.path.dirname(__file__), "zzz", self.module + ".smk.py")
-        run_result = run_snakemake(snake, self.outdir, self.config_file, self.exe_env, dryrun=False, unlock=self.unlock)
+		print("Running " + self.module)
+		snake = os.path.join(os.path.dirname(__file__), "zzz", self.module + ".smk.py")
+		run_result = run_snakemake(snake, self.outdir, self.config_file, self.exe_env, dryrun=False, unlock=self.unlock)
 
-        return run_result
+		return run_result
 
-        
+
 class BGRRLRunner(WorkflowRunner):
 
 	def __init__(self, args, **kwargs):
@@ -152,7 +152,7 @@ class BGRRLRunner(WorkflowRunner):
 						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="asm")
 						qaa_run = QAA_Runner(qaa_args).run()
 						if qaa_run:
-							self.args.finalize_mode = "asm"
+							self.args.package_mode = "asm"
 							if self.args.enterobase_groups:
 								run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
 							if run_result:
@@ -167,6 +167,7 @@ class BGRRLRunner(WorkflowRunner):
 		self.config["run_ratt"] = self.args.annotation in ("both", "ratt")
 		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")
 		self.config["ratt_reference"] = self.args.ratt_reference_dir
+		self.config["prokka_package_style"] = self.args.prokka_package_style 
 
 		assert not self.config["run_ratt"] or os.path.exists(self.config["ratt_reference"]), "Missing reference data for ratt. Please make sure to use the --ratt-reference-dir parameter."
 		run_result = False
@@ -193,12 +194,18 @@ class BGRRLRunner(WorkflowRunner):
 					else:
 						open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at")
 					if qaa_run:
-						self.args.finalize_mode = "ann"
+						self.args.package_mode = "ann"
 						run_result = self.__run_fin() 
 		return run_result
 
 	def __run_fin(self):
 		self.config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
+		self.config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+		self.config["cwd"] = os.getcwd()	
+		self.config["run_ratt"] = self.args.annotation in ("both", "ratt")
+		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")
+		self.config["prokka_package_style"] = self.args.prokka_package_style 
+
 		if "enterobase_groups" in self.args: 
 			try:
 				eb_criteria = loadEnterobaseCriteria(self.config["enterobase_criteria"])
