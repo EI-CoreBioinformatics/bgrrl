@@ -10,28 +10,14 @@ from bgrrl.snakemake_helper import loadPreCmd
 DEBUG = config.get("debugmode", False)
 
 # tools
-UNICYCLER_WRAPPER = join(config["etc"], "wrappers", "unicycler_wrapper")
 ASM_WRAPPER = join(config["etc"], "wrappers", "asm_wrapper")
 
 # set up i/o
 OUTPUTDIR = config["out_dir"]
 ASSEMBLY_DIR = join(OUTPUTDIR, "assembly")
-QC_OUTDIR = os.path.join(OUTPUTDIR, "qc")
-
-
-
-
-
-
-
-
-
-
-
-
-
-BBDUK_DIR = os.path.join(QC_OUTDIR, "bbduk")
-BBNORM_DIR = os.path.join(QC_OUTDIR, "bbnorm")
+QC_OUTDIR = join(OUTPUTDIR, "qc")
+BBDUK_DIR = join(QC_OUTDIR, "bbduk")
+BBNORM_DIR = join(QC_OUTDIR, "bbnorm")
 
 
 if not config.get("no_normalization", False):
@@ -77,10 +63,6 @@ def get_sample_files(wc):
 rule asm_assembly:
 	input:
 		get_sample_files
-		#r1 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(PRIMARY_READ_ID)),
-		#r2 = join(PRIMARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(PRIMARY_READ_ID)),
-		#ur1 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R1.{}.fastq.gz".format(SECONDARY_READ_ID)),
-		#ur2 = join(SECONDARY_READDIR, "{sample}", "{sample}" + "_R2.{}.fastq.gz".format(SECONDARY_READ_ID)),
 	output:
 		join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
 	log:
@@ -88,20 +70,18 @@ rule asm_assembly:
 	params:
 		outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 		assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
-		final_assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, wildcards.sample + ".assembly.fasta"),
 		assembler = config["assembler"]
 	threads:
 		8
 	shell:
 		ASM_WRAPPER + \
 		" {params.assembler} {input[0]} {input[1]} {threads} {params.outdir} {input[2]} {input[3]} &> {log}"
-		# " {params.assembler} {input.r1} {input.r2} {threads} {params.outdir} {input.ur1} {input.ur2} &> {log}"
 
 rule asm_lengthfilter:
 	input:
-		assembly = os.path.join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
+		assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
 	output:
-		filtered_assembly = os.path.join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
+		filtered_assembly = join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	log:
 		join(ASSEMBLY_DIR, "log", "{sample}.asm_lengthfilter.log")
 	params:
@@ -113,13 +93,9 @@ rule asm_lengthfilter:
 	shell:
 		"{params.load}" + TIME_CMD + " {params.reformat}" + \
 		" in={input.assembly} out={output[0]} minlength={params.minlen}"
-#	run:
-#		import shutil
-#		from ktio.ktio import readFasta
-#		with open(output[0], "w") as seqout:
-#			for _id, _seq in readFasta(input.assembly):
-#				if len(_seq) >= params.minlen:
-#					print(_id, _seq, sep="\n", file=seqout)
+
+
+#### ! UNDER DEVELOPMENT ####
 
 if config["reapr_correction"]:
 
