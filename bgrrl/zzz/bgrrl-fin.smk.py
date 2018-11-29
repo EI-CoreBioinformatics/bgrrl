@@ -45,17 +45,18 @@ if EB_ORGANISMS:
 		output:
 			done = join(OUTPUTDIR, "{organism}_ASSEMBLY_PKG_DONE")
 		params:
-			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_" + wildcards.organism + "_assemblies"),
+			package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_" + wildcards.organism + "_assemblies"),
+			outdir = basename(INPUTDIR),
 			prefix = config["project_prefix"]
 		shell:
-			"mkdir -p {params.outdir} &&" + \
+			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(cat {input.eb_samples}); do" + \
-			" ln -s ../../Analysis/assembly/$s/$s.assembly.fasta {params.outdir}/$s.assembly.fasta;" + \
+			" ln -s ../../{params.outdir}/assembly/$s/$s.assembly.fasta {params.package_dir}/$s.assembly.fasta;" + \
 			" done)" + \
 			" && cd " + OUTPUTDIR + \
-			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+			" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
 			" && cd " + CWD + \
-			" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
+			" && md5sum {params.package_dir}.tar.gz > {params.package_dir}.tar.gz.md5" + \
 			" && touch {output.done}"
 
 	rule fin_compile_reads:
@@ -91,16 +92,17 @@ elif config["finalize_mode"] == "asm":
 		output:
 			done = join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
 		params:
-			outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_assemblies"),
+			package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_assemblies"),
+			outdir = basename(INPUTDIR),
 			prefix = config["misc"]["project"]
 		shell:
-			"mkdir -p {params.outdir} &&" + \
+			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(tail -n +2 {input.samples} | cut -f 1 | grep -v _broken); do" + \
-			" ln -s ../../Analysis/assembly/$s/$s.assembly.fasta {params.outdir}/$s.assembly.fasta;" + \
+			" ln -s ../../{params.outdir}/assembly/$s/$s.assembly.fasta {params.package_dir}/$s.assembly.fasta;" + \
 			" done)" + \
-			" && cd $(dirname {params.outdir})" + \
-			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
-			" && md5sum $(basename {params.outdir}).tar.gz > $(basename {params.outdir}).tar.gz.md5" + \
+			" && cd $(dirname {params.package_dir})" + \
+			" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
+			" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
 			" && cd -" + \
 			" && touch {output.done}"
 
@@ -116,22 +118,23 @@ elif config["finalize_mode"] == "ann":
 			output:
 				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
 			params:
-				outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				outdir = basename(INPUTDIR),
 				prefix = config["misc"]["project"]
 			shell:
-				"mkdir -p {params.outdir}" + \
-				"&& ln -s ../../Analysis/annotation/prokka/ {params.outdir}/prokka" + \
-				" && cd $(dirname {params.outdir})" + \
-				" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+				"mkdir -p {params.package_dir}" + \
+				"&& ln -s ../../{params.outdir}/annotation/prokka/ {params.package_dir}/prokka" + \
+				" && cd $(dirname {params.package_dir})" + \
+				" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
 				" && echo TARBALL_DONE" + \
-				" && md5sum $(basename {params.outdir}).tar.gz > $(basename {params.outdir}).tar.gz.md5" + \
+				" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
 				" && cd -" + \
 				" && touch {output.done}"
 				
 	else:
 		from math import ceil
 		annotation_report = join(INPUTDIR, "reports", "annotation_report.tsv")
-                NUM_BATCHES = ceil((len(list(row for row in csv.reader(open(annotation_report), delimiter="\t"))) - 1)/30)
+		NUM_BATCHES = ceil((len(list(row for row in csv.reader(open(annotation_report), delimiter="\t"))) - 1)/30)
 
 		rule all:
 			input:
@@ -144,20 +147,21 @@ elif config["finalize_mode"] == "ann":
 			output:
 				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
 			params:
-				outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				outdir = basename(INPUTDIR),
 				prefix = config["misc"]["project"]
 			shell:
-				"mkdir -p {params.outdir}/ratt/{{reports,gff}}" + \
-				" && ln -s ../../Analysis/annotation/prokka/ {params.outdir}/prokka" + \
-				" && ln -s ../../Analysis/annotation/delta/ {params.outdir}/delta" + \
-				" && cd {params.outdir}/ratt/reports" + \
-				" && find ../../../../Analysis/annotation/ratt -name '*.ratt_report.tsv' -exec ln -s {{}} \;" + \
-				" && cd - && cd {params.outdir}/ratt/gff" + \
-				" && find ../../../../Analysis/annotation/ratt -name '*.final.gff' -exec ln -s {{}} \;" + \
-				" && cd - && cd $(dirname {params.outdir})" + \
-				" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+				"mkdir -p {params.package_dir}/ratt/{{reports,gff}}" + \
+				" && ln -s ../../{params.outdir}/annotation/prokka/ {params.package_dir}/prokka" + \
+				" && ln -s ../../{params.outdir}/annotation/delta/ {params.package_dir}/delta" + \
+				" && cd {params.package_dir}/ratt/reports" + \
+				" && find ../../../../{params.outdir}/annotation/ratt -name '*.ratt_report.tsv' -exec ln -s {{}} \;" + \
+				" && cd - && cd {params.package_dir}/ratt/gff" + \
+				" && find ../../../../{params.outdir}/annotation/ratt -name '*.final.gff' -exec ln -s {{}} \;" + \
+				" && cd - && cd $(dirname {params.package_dir})" + \
+				" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
 				" && echo TARBALL_DONE" + \
-				" && md5sum $(basename {params.outdir}).tar.gz > $(basename {params.outdir}).tar.gz.md5" + \
+				" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
 				" && cd -" + \
 				" && touch {output.done}"
 
@@ -167,7 +171,8 @@ elif config["finalize_mode"] == "ann":
 			output:
 				batches = expand(join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}"), batch_id=list(range(1, NUM_BATCHES + 1)))
 			params:
-				outdir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				outdir = basename(INPUTDIR),
 				prefix = config["misc"]["project"]
 			run:
 				import pathlib
@@ -177,9 +182,9 @@ elif config["finalize_mode"] == "ann":
 						bid = i % 30
 						if bid == 0:
 							batchid += 1
-							bdir = params.outdir + "_batch.{}".format(batchid)
+							bdir = params.package_dir + "_batch.{}".format(batchid)
 							pathlib.Path(bdir).mkdir(parents=True, exist_ok=True)
-						os.symlink(join("..", "..", "Analysis", "annotation", "ratt", row[0]), join(bdir, row[0]))
+						os.symlink(join("..", "..", params.outdir, "annotation", "ratt", row[0]), join(bdir, row[0]))
 
 		rule fin_package_annotation_ratt_tarballs:
 			input:
@@ -187,11 +192,11 @@ elif config["finalize_mode"] == "ann":
 			output:
 				tarball = join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}.tar.gz")
 			params:
-                        	outdir = OUTPUTDIR, 
-	                        prefix = config["misc"]["project"]
+				outdir = OUTPUTDIR, 
+				prefix = config["misc"]["project"]
 			shell:
 				"""
 				cd {params.outdir} &&
-				tar chvzf $(basename {output.tarball}) $(basename {input.indir}) &&
-        	                md5sum $(basename {output.tarball}) > $(basename {output.tarball}).md5
+				tar chvzf $(basename {output.tarball}) $(basename {input.indir}) && 
+				md5sum $(basename {output.tarball}) > $(basename {output.tarball}).md5
 				"""
