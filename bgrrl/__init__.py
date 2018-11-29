@@ -156,7 +156,7 @@ class BGRRLRunner(WorkflowRunner):
 							if self.args.enterobase_groups:
 								run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
 							if run_result:
-								run_result = self._run_fin() 
+								run_result = self.__run_fin() 
 
 		return run_result
 
@@ -194,7 +194,7 @@ class BGRRLRunner(WorkflowRunner):
 						open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at")
 					if qaa_run:
 						self.args.finalize_mode = "ann"
-						run_result = self._run_fin() 
+						run_result = self.__run_fin() 
 		return run_result
 
 	def __run_fin(self):
