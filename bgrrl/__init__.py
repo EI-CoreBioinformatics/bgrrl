@@ -155,7 +155,7 @@ class BGRRLRunner(WorkflowRunner):
 							self.args.package_mode = "asm"
 							if self.args.enterobase_groups:
 								run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
-							if run_result:
+							if run_result and not self.args.no_packaging:
 								run_result = self.__run_fin() 
 
 		return run_result
@@ -193,7 +193,7 @@ class BGRRLRunner(WorkflowRunner):
 						annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
 					else:
 						open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at")
-					if qaa_run:
+					if qaa_run and not self.args.no_packaging:
 						self.args.package_mode = "ann"
 						run_result = self.__run_fin() 
 		return run_result
