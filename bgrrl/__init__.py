@@ -161,7 +161,7 @@ class BGRRLRunner(WorkflowRunner):
 		return run_result
 
 	def __run_ann(self):
-		self.config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
 		self.config["cwd"] = os.getcwd()
 	
 		self.config["run_ratt"] = self.args.annotation in ("both", "ratt")
@@ -200,7 +200,7 @@ class BGRRLRunner(WorkflowRunner):
 
 	def __run_fin(self):
 		self.config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
-		self.config["etc"] = os.path.join(os.path.dirname(__file__), "..", "etc")
+		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
 		self.config["cwd"] = os.getcwd()	
 		self.config["run_ratt"] = self.args.annotation in ("both", "ratt")
 		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")

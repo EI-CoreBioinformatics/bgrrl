@@ -125,8 +125,8 @@ if config["run_ratt"]:
 				embl_ref = join(config["ratt_reference"], "{ref_ann}", "{prefix}.embl")
 			output:
 				join(config["ratt_reference"], "{ref_ann}", "gff", "{prefix}.parts_gff")
-			log:
-				join(config["cwd"], ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_prepref.log")
+			# log:
+			#	join(config["cwd"], ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_prepref.log")
 			params:
 				load = loadPreCmd(config["load"]["ratt"]),
 				refdir = join(config["cwd"], config["ratt_reference"], "{ref_ann}")				

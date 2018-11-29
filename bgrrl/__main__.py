@@ -101,6 +101,7 @@ def main():
 		"--no-packaging",
 		action="store_true",
 		help="""Disable automatic packaging. [False]"""
+	)
 
 	parser.add_argument(
 		"--enterobase-groups", 
