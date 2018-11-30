@@ -112,7 +112,7 @@ if config["run_prokka"]:
 			load = loadPreCmd(config["load"]["seqtk"])
 		shell:
 			"{params.load} " + \
-			"seqtk subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d " " | cut -f 2 -d \>) > {output.ffn}"
+			"seqtk subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d \" \" | cut -f 2 -d \>) > {output.ffn}"
 
 
 
