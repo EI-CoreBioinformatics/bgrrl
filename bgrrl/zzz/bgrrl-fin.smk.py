@@ -2,7 +2,7 @@ import sys
 import csv
 import os
 import glob
-from os.path import join, basename
+from os.path import join, basename, dirname
 
 from bgrrl.samplesheet import readSamplesheet
 from bgrrl import TIME_CMD
@@ -14,9 +14,9 @@ OUTPUTDIR = config["package_dir"]
 # INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
 
 TARGETS = list()
-if config["finalize_mode"] == "asm":
+if config["package_mode"] == "asm":
 	TARGETS.append(join(OUTPUTDIR, "ASSEMBLY_PKG_DONE"))
-if config["finalize_mode"] == "ann":
+if config["package_mode"] == "ann":
 	TARGETS.append(join(OUTPUTDIR, "ANNOTATION_PKG_DONE"))
 
 localrules: all
@@ -51,7 +51,7 @@ if EB_ORGANISMS:
 		shell:
 			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(cat {input.eb_samples}); do" + \
-			" ln -s ../../{params.outdir}/assembly/$s/$s.assembly.fasta {params.package_dir}/$s.assembly.fasta;" + \
+			" ln -sf ../../{params.outdir}/assembly/$s/$s.assembly.fasta {params.package_dir}/$s.assembly.fasta;" + \
 			" done)" + \
 			" && cd " + OUTPUTDIR + \
 			" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
@@ -71,9 +71,9 @@ if EB_ORGANISMS:
 		shell:
 			"mkdir -p {params.outdir} &&" + \
 			" (for r in $(grep -F -f {input.eb_samples} {input.samplesheet} | cut -f 3 -d ,); do" + \
-			" ln -s $r {params.outdir}/$(basename $r);" + \
+			" ln -sf $r {params.outdir}/$(basename $r);" + \
 			" r=$(dirname $r)/$(basename $r _R1.fastq.gz)_R2.fastq.gz;" + \
-			" ln -s $r {params.outdir}/$(basename $r); done)" + \
+			" ln -sf $r {params.outdir}/$(basename $r); done)" + \
 			" && cd " + OUTPUTDIR + \
 			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
 			" && cd " + CWD + \
@@ -81,7 +81,7 @@ if EB_ORGANISMS:
 			" && touch {output.done}"
 
 
-elif config["finalize_mode"] == "asm":
+elif config["package_mode"] == "asm":
 	rule all:
 		input: 
 			join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
@@ -98,7 +98,7 @@ elif config["finalize_mode"] == "asm":
 		shell:
 			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(tail -n +2 {input.samples} | cut -f 1 | grep -v _broken); do" + \
-			" ln -s ../../{params.outdir}/assembly/$s/$s.assembly.fasta {params.package_dir}/$s.assembly.fasta;" + \
+			" ln -sf ../../{params.outdir}/assembly/$s/$s.assembly.fasta {params.package_dir}/$s.assembly.fasta;" + \
 			" done)" + \
 			" && cd $(dirname {params.package_dir})" + \
 			" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
@@ -106,7 +106,7 @@ elif config["finalize_mode"] == "asm":
 			" && cd -" + \
 			" && touch {output.done}"
 
-elif config["finalize_mode"] == "ann":
+elif config["package_mode"] == "ann":
 	if config["run_prokka"] and not config["run_ratt"]:
 
 		rule all:
@@ -126,7 +126,7 @@ elif config["finalize_mode"] == "ann":
 
 		if config.get("prokka_package_style", "by_sample") == "by_sample":
 
-			link_command = "ln -s ../../{0}/annotation/prokka".format(basename(INPUTDIR))
+			link_command = "ln -sf ../../{0}/annotation/prokka".format(basename(INPUTDIR))
 
 		else:
 			
@@ -171,7 +171,7 @@ elif config["finalize_mode"] == "ann":
 		rule all:
 			input:
 				join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
-				expand(join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
+				expand(join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
 
 		rule fin_package_annotation:
 			input:
@@ -184,12 +184,12 @@ elif config["finalize_mode"] == "ann":
 				prefix = config["misc"]["project"]
 			shell:
 				"mkdir -p {params.package_dir}/ratt/{{reports,gff}}" + \
-				" && ln -s ../../{params.outdir}/annotation/prokka/ {params.package_dir}/prokka" + \
-				" && ln -s ../../{params.outdir}/annotation/delta/ {params.package_dir}/delta" + \
+				" && ln -sf ../../{params.outdir}/annotation/prokka {params.package_dir}/prokka" + \
+				" && ln -sf ../../{params.outdir}/annotation/delta {params.package_dir}/delta" + \
 				" && cd {params.package_dir}/ratt/reports" + \
-				" && find ../../../../{params.outdir}/annotation/ratt -name '*.ratt_report.tsv' -exec ln -s {{}} \;" + \
+				" && find ../../../../{params.outdir}/annotation/ratt -name '*.ratt_report.tsv' -exec ln -sf {{}} \;" + \
 				" && cd - && cd {params.package_dir}/ratt/gff" + \
-				" && find ../../../../{params.outdir}/annotation/ratt -name '*.final.gff' -exec ln -s {{}} \;" + \
+				" && find ../../../../{params.outdir}/annotation/ratt -name '*.final.gff' -exec ln -sf {{}} \;" + \
 				" && cd - && cd $(dirname {params.package_dir})" + \
 				" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
 				" && echo TARBALL_DONE" + \
@@ -201,9 +201,9 @@ elif config["finalize_mode"] == "ann":
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
-				batches = expand(join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}"), batch_id=list(range(1, NUM_BATCHES + 1)))
+				batches = expand(join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}", "good_to_go"), batch_id=list(range(1, NUM_BATCHES + 1)))
 			params:
-				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation"),
 				outdir = basename(INPUTDIR),
 				prefix = config["misc"]["project"]
 			run:
@@ -216,19 +216,23 @@ elif config["finalize_mode"] == "ann":
 							batchid += 1
 							bdir = params.package_dir + "_batch.{}".format(batchid)
 							pathlib.Path(bdir).mkdir(parents=True, exist_ok=True)
+							open(join(bdir, "good_to_go"), "wt").write("")
 						os.symlink(join("..", "..", params.outdir, "annotation", "ratt", row[0]), join(bdir, row[0]))
 
 		rule fin_package_annotation_ratt_tarballs:
 			input:
-				indir = join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}")
+				goflag = join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}", "good_to_go")
 			output:
-				tarball = join(OUTPUTDIR, config["misc"]["project"] + "_annotation_batch.{batch_id}.tar.gz")
+				tarball = join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}.tar.gz")
 			params:
 				outdir = OUTPUTDIR, 
-				prefix = config["misc"]["project"]
+				prefix = config["misc"]["project"],
+				indir = dirname("{input.goflag}")
 			shell:
 				"""
 				cd {params.outdir} &&
-				tar chvzf $(basename {output.tarball}) $(basename {input.indir}) && 
+				indir=$(dirname {input.goflag}) &&
+				rm -vf {input.goflag} &&
+				tar chvzf $(basename {output.tarball}) $(basename $indir) && 
 				md5sum $(basename {output.tarball}) > $(basename {output.tarball}).md5
 				"""
