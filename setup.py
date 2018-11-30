@@ -15,7 +15,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 	description = long_description = description.read()
 
 name="bgrrl"
-version = "0.4.3"
+version = "0.4.4"
 
 if sys.version_info.major != 3:
 	raise EnvironmentError("""bgrrl is a python module that requires python3, and is not compatible with python2.""")
@@ -57,7 +57,8 @@ setup(
 			"asm_stage_report=bgrrl.bin.asm_stage_report:main",
 			"ann_cmp=bgrrl.bin.annocmp:main",
 			"create_samplesheet=bgrrl.bin.create_samplesheet:main",
-			"prokka_report=bgrrl.bin.prokka_report:main"
+			"prokka_report=bgrrl.bin.prokka_report:main",
+			"asm_wrapper=bgrrl.bin.asm_wrapper:main"
 		]
 	},
 	package_data={

@@ -55,9 +55,11 @@ def get_sample_files(wc):
 	# default case is with normalization, i.e. if --no-normalization option isn't present, it should be "False"
 	skip_normalization = config.get("no_normalization", False)
 	if skip_normalization:
-		return s.R1trim, s.R2trim, s.R1trim, s.R2trim
+		# return s.R1trim, s.R2trim, s.R1trim, s.R2trim
+		return s.R1trim, s.R2trim
 	else:
-		return s.R1norm, s.R2norm, s.R1trim, s.R2trim
+		# return s.R1norm, s.R2norm, s.R1trim, s.R2trim
+		return s.R1norm, s.R1trim, s.R2norm, s.R2trim
 
 
 rule asm_assembly:
@@ -70,12 +72,21 @@ rule asm_assembly:
 	params:
 		outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 		assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
-		assembler = config["assembler"]
+		assembler = config["assembler"],
+		r1 = lambda wildcards: ",".join(get_sample_files(wildcards)[0] if config.get("no_normalization", True) else get_sample_files(wildcards)[:2]),
+		r2 = lambda wildcards: ",".join(get_sample_files(wildcards)[1] if config.get("no_normalization", True) else get_sample_files(wildcards)[2:])		
 	threads:
 		8
 	shell:
-		ASM_WRAPPER + \
-		" {params.assembler} {input[0]} {input[1]} {threads} {params.outdir} {input[2]} {input[3]} &> {log}"
+		"set +u && source activate bgasm_env" + \
+		" && asm_wrapper --threads {threads} {params.assembler} {params.r1} {params.r2} {params.outdir} &> {log}"
+
+		# usage: asm_wrapper [-h] [--threads THREADS]
+		#                 {unicycler,spades,velvet} r1 r2 outdir
+		# asm_wrapper: error: the following arguments are required: assembler, r1, r2, outdira
+		#
+		#ASM_WRAPPER + \
+		#" {params.assembler} {input[0]} {input[1]} {threads} {params.outdir} {input[2]} {input[3]} &> {log}"
 
 rule asm_lengthfilter:
 	input:
