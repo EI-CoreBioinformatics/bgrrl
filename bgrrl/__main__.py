@@ -94,7 +94,7 @@ def main():
 		"--package-mode", 
 		choices=["ann", "asm"],
 		help="""By default, packaging runs automatically after the assembly/annotation steps. 
-				In case packages need to be (re-)generated, the finalize step can be ran for each module separately."""
+				In case packages need to be (re-)generated, the finalize step can be run for each module separately."""
 	)
 
 	parser.add_argument(
