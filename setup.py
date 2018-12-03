@@ -58,7 +58,8 @@ setup(
 			"ann_cmp=bgrrl.bin.annocmp:main",
 			"create_samplesheet=bgrrl.bin.create_samplesheet:main",
 			"prokka_report=bgrrl.bin.prokka_report:main",
-			"asm_wrapper=bgrrl.bin.asm_wrapper:main"
+			"asm_wrapper=bgrrl.bin.wrappers.asm_wrapper:main",
+			"prokka_wrapper=bgrrl.bin.wrappers.prokka_wrapper:main"
 		]
 	},
 	package_data={

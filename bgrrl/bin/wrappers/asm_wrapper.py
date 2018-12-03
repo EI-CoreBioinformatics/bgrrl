@@ -39,13 +39,13 @@ class ASM_Wrapper(object):
 
 			print(out)
 
-			os.open(os.path.join(self.outdir, step), "wt").close()
+			open(os.path.join(self.outdir, step), "wt").close()
 			assembly_complete = True
 			break
 
 		if not assembly_complete:
 			pathlib.Path(self.outdir).mkdir(parents=True, exists_ok=True)
-			os.open(os.path.join(self.outdir, "assembly.fasta"), "wt").close()		
+			open(os.path.join(self.outdir, "assembly.fasta"), "wt").close()		
 
 
 
@@ -65,7 +65,7 @@ class VelvetWrapper(ASM_Wrapper):
 		cwd = os.getcwd()
 
 		cmd = "cd {0}" + \
-			" && VelvetOptimiser.pl -v -s 19 -e 127 -x 2 -t {1} -d ../velvet_assembly -f -shortPaired -fastq.gz -separate {2} {3}" + \
+			" && VelvetOptimiser.pl -v -s 19 -e 191 -x 2 -t {1} -d ../velvet_assembly -f -shortPaired -fastq.gz -separate {2} {3}" + \
 			" && cd .." + \
 			" && mv -v velvet_assembly/* ." + \
 			" && rm -rf velvet_assembly/ tmp/" + \

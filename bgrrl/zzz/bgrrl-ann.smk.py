@@ -79,18 +79,31 @@ if config["run_prokka"]:
 			outdir = lambda wildcards: join(PROKKA_DIR, wildcards.sample),
 			prefix = lambda wildcards: wildcards.sample,
 			load = loadPreCmd(config["load"]["prokka"]),
-			centre = config["misc"]["seqcentre"]
+			centre = config["misc"]["seqcentre"],
 		threads:
 			8
 		shell:
-			"cd {params.outdir}" + \
-			" && echo $(pwd)" + \
-			" && cp -v " + join(config["cwd"], "{input.contigs}") + " prokka_contigs.fasta" + \
-			" && ls -l" + \
-			" && {params.load} (" + TIME_CMD + \				
-			" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force" + \
-			" && rm prokka_contigs.fasta" + \
-			" && cd " + CWD + ") &> {log}"
+			"set +u && source activate prokka_env" + \
+			" && prokka_wrapper {input.contigs} --prefix {params.prefix} --outdir {params.outdir} --seq-centre {params.centre} --force --threads {threads}" + \
+			" &> {log}"
+			 
+
+			# ap = argparse.ArgumentParser()
+			#ap.add_argument("contigs", type=str)
+			#ap.add_argument("--outdir", type=str)
+			#ap.add_argument("--prefix", type=str)
+			#ap.add_argument("--seq-centre", type=str, default="EI")
+			#ap.add_argument("--force")
+			#ap.add_argument("--threads", type=int, default=8)
+
+			#"cd {params.outdir}" + \
+			#" && echo $(pwd)" + \
+			#" && cp -v " + join(config["cwd"], "{input.contigs}") + " prokka_contigs.fasta" + \
+			#" && ls -l" + \
+			#" && {params.load} (" + TIME_CMD + \				
+			#" prokka --cpus {threads} --outdir . --prefix {params.prefix} --centre {params.centre} prokka_contigs.fasta --force" + \
+			#" && rm prokka_contigs.fasta" + \
+			#" && cd " + CWD + ") &> {log}"
 
 	rule ann_prokka_gffconvert:
 		input:
