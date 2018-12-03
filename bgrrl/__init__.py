@@ -18,6 +18,7 @@ import shutil
 # https://stackoverflow.com/a/600612
 import pathlib
 from copy import copy
+import glob
 
 from .snakemake_helper import *
 from .workflow_runner import WorkflowRunner
@@ -164,7 +165,7 @@ class BGRRLRunner(WorkflowRunner):
 		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
 		self.config["cwd"] = os.getcwd()
 	
-		self.config["run_ratt"] = self.args.annotation in ("both", "ratt")
+		self.config["run_ratt"] = self.args.annotation == "both"
 		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")
 		self.config["ratt_reference"] = self.args.ratt_reference_dir
 		self.config["prokka_package_style"] = self.args.prokka_package_style 
@@ -175,7 +176,7 @@ class BGRRLRunner(WorkflowRunner):
 
 		if self.args.report_only:
 			run_result = False
-			if self.args.annotation in ("ratt", "both"):
+			if self.args.annotation == "both":
 				run_result = ann_report_main(["--ref-dir", self.args.ratt_reference_dir, join(self.args.output_dir, "annotation", "ratt")])
 				annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
 		else:
@@ -185,10 +186,20 @@ class BGRRLRunner(WorkflowRunner):
 				if not run_result:
 					print("ANNOTATION RUN FAILED?")
 				if run_result:
+
+					with open(join(self.args.output_dir, "reports", "ann_run_report.txt"), "at") as run_report:
+						nodes = set()
+						for f in glob.glob(join(self.args.output_dir, "annotation", "prokka", "*", "PROKKA_FAILED")):
+							node = open(f).read().strip()
+							nodes.add(node)
+							print(basename(dirname(f)), node, sep="\t", file=run_report)
+						print("Failed prokka jobs were executed on nodes: {}. Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))), file=run_report)
+
+
 					qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="ann")
 					qaa_run = QAA_Runner(qaa_args).run()
 	
-					if qaa_run and self.args.annotation in ("ratt", "both"):
+					if qaa_run and self.args.annotation == "both":
 						ann_report_main(["--ref-dir", self.args.ratt_reference_dir, join(self.args.output_dir, "annotation", "ratt")])
 						annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
 					else:
@@ -202,7 +213,7 @@ class BGRRLRunner(WorkflowRunner):
 		self.config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
 		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
 		self.config["cwd"] = os.getcwd()	
-		self.config["run_ratt"] = self.args.annotation in ("both", "ratt")
+		self.config["run_ratt"] = self.args.annotation == "both"
 		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")
 		self.config["prokka_package_style"] = self.args.prokka_package_style 
 

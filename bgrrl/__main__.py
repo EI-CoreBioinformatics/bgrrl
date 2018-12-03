@@ -19,7 +19,7 @@ from . import PipelineStep, __version__, BGRRLModuleRunner, BGRRLRunner
 from .snakemake_helper import make_exeenv_arg_group, ExecutionEnvironment, NOW
 
 VALID_ASSEMBLERS = ["unicycler", "velvet"]
-VALID_ANNOTATORS = ["prokka", "ratt", "both"]
+VALID_ANNOTATORS = ["prokka", "both"]
 
 	
 def main():
