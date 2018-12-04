@@ -15,7 +15,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 	description = long_description = description.read()
 
 name="bgrrl"
-version = "0.4.4"
+version = "0.4.5"
 
 if sys.version_info.major != 3:
 	raise EnvironmentError("""bgrrl is a python module that requires python3, and is not compatible with python2.""")
@@ -42,7 +42,9 @@ setup(
 	zip_safe=False,
 	keywords="bacterial genomics illumina sequencing assembly annotation",
 	packages=find_packages(exclude=["test"]),
-	scripts=[path.join("bgrrl/bin", script) for script in ["bgqc", "bgasm", "bgann", "bgfin", "bginit"]],
+	scripts=[
+		path.join("bgrrl/bin/slurm", script) for script in ["bgsurvey_sub", "bgasm_sub", "bgann_sub", "bgpack_sub"]
+	] + ["bgrrl/bin/bginit"	],
 	install_requires=[
 		"snakemake>=4.4.0",
 		"drmaa"
@@ -50,6 +52,10 @@ setup(
 	entry_points={
 		"console_scripts": [
 			"bgrrl=bgrrl.__main__:main",
+			"bgsurvey=bgrrl.__main__:main",
+			"bgasm=bgrrl.__main__:main",
+			"bgann=bgrrl.__main__:main",
+			"bgpack=bgrrl.__main__:main",
 			"qc_eval=bgrrl.bin.qc_eval:main",
 			"asm_report=bgrrl.bin.asm_report:main",
 			"ann_report=bgrrl.bin.ann_report:main",

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 app=bgrrl
-app_cmd=BGFIN
-bgmode=finalize
+app_cmd=BGPACK
+bgmode=bgpack
 
 # Check environment variable for the email address to which to send pipeline failure emails
 if [[ -z "${SNAKEMAKE_EMAIL}" ]]; then

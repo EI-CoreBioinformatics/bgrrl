@@ -2,7 +2,7 @@
 
 app=bgrrl
 app_cmd=BGASM
-bgmode=assembly
+bgmode=bgasm
 
 # Check environment variable for the email address to which to send pipeline failure emails
 if [[ -z "${SNAKEMAKE_EMAIL}" ]]; then

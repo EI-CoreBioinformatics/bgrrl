@@ -1,8 +1,8 @@
 #!/bin/bash
 
 app=bgrrl
-app_cmd=BGANN
-bgmode=annotation
+app_cmd=BGSURVEY
+bgmode=survey
 
 # Check environment variable for the email address to which to send pipeline failure emails
 if [[ -z "${SNAKEMAKE_EMAIL}" ]]; then
@@ -116,6 +116,20 @@ done
 if [[ -f ${app_cmd}.${output_dir}.out.log ]]; then
     resume_str=".${r}"
 fi
+#while [ -f ${output_dir}.${app}.resume${r}.out.log ]
+#do
+#    ((r++))
+#done
+
+
+#if contains "--mode=resume"; then
+#    resume_str=".resume${r}"
+#elif contains "--mode"; then
+#    get_next "--mode"
+#    if [ ${element_val} == "resume" ]; then
+#        resume_str=".resume${r}"
+#    fi
+#fi
 
 # Override partition if specified
 if contains "--partition"; then
@@ -126,7 +140,9 @@ elif startswith "--partition="; then
 fi
 
 slurm_jobname=$app_cmd
+# slurm_jobname="${app}_${output_dir}"
 
+# slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.analysis${resume_str}.out.log -e ${app_cmd}.${output_dir}.analysis${resume_str}.err.log --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
 slurm_opts="-J ${slurm_jobname} -o ${app_cmd}.${output_dir}.out.log${resume_str} -e ${app_cmd}.${output_dir}.err.log${resume_str} --mail-type=FAIL --mail-user=${email_addr} -p ${partition}"
 
 echo "Running submission command: sbatch ${slurm_opts} --wrap=\"$app $@\""
