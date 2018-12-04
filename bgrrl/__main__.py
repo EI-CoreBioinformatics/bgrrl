@@ -22,7 +22,7 @@ BGPACKAGE_DESC = "This stage (re-)generates data packages on demand. By default,
 def add_default_options(parser):
 
 	common_group = parser.add_argument_group(
-		"bgrrl options"
+		"bgrr| options"
 	)
 	common_group.add_argument(                                                                                                                                   	
 		"input_sheet", 
