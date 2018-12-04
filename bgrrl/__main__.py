@@ -203,13 +203,13 @@ def main():
 
 	bgrrl_parser = ArgumentParser(
 		"bgrrl",
-		description="""The Earlham Institute Bacterial Genome Reconstruction & Recognition Pipeline (bgrr|). This utility is the central control program of bgrr|. """
+		description="""The Earlham Institute Bacterial Genome Reconstruction & Recognition Pipeline (bgrr|). 
+					This utility is the central control program of bgrr|."""
 	)
 
 	stage_parsers = bgrrl_parser.add_subparsers(
 		help="""bgrr| comprises three main stages: *survey*, *assemble*, and *annotate* and an auxiliary stage *package*.
-			                    Reporting and quality assessment of the results of each main stage is performed using qaa.
-			 """
+				Reporting and quality assessment of the results of each main stage is performed using qaa."""
 	)
 
 	add_survey_parser(stage_parsers)
