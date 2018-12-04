@@ -151,9 +151,9 @@ rm -f ${app_cmd}.${output_dir}.command.sh
 echo "#!/bin/bash -e" >> ${app_cmd}.${output_dir}.command.sh
 if [[ ${out_provided} -eq 1 ]]
 then
-    echo "$app -m ${bgmode} $@" >> ${app_cmd}.${output_dir}.command.sh
+    echo "$app ${bgmode} $@" >> ${app_cmd}.${output_dir}.command.sh
 else
-    echo "$app -m ${bgmode} -o ${output_dir} $@" >> ${app_cmd}.${output_dir}.command.sh
+    echo "$app ${bgmode} -o ${output_dir} $@" >> ${app_cmd}.${output_dir}.command.sh
 fi
 sbatch ${slurm_opts} ${app_cmd}.${output_dir}.command.sh
 rm -f ${app_cmd}.${output_dir}.command.sh

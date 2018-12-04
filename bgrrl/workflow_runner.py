@@ -43,7 +43,7 @@ class WorkflowRunner(object):
 
 		return outdir_exists
 
-	def __init__(self, args, **kwargs):
+	def __init__(self, args):
 		# self.args = copy(args) # need to find better solution for this.
 
 		# Establish a valid cluster configuration... may throw if invalid
@@ -51,14 +51,14 @@ class WorkflowRunner(object):
 		self.exe_env = ExecutionEnvironment(
 			args, 
 			NOW, 
-			job_suffix=args.input + "_" + args.output_dir, 
+			job_suffix=args.input_sheet + "_" + args.output_dir, 
 			log_dir=join(args.output_dir, "hpc_logs")
 		)
 		print("done.")
 		print(str(self.exe_env))
 
 		# make sure output-directory exists and create hpclog-directory
-		self.outdir_exists = self.__handle_output_dir(args.output_dir, overwrite=args.force)
+		outdir_exists = self.__handle_output_dir(args.output_dir, overwrite=args.force)
 
 		# see if there are config files at the init location 
 		try:

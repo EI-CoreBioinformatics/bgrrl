@@ -60,17 +60,17 @@ class BGRRLModuleRunner(object):
 		self.config["hpc_config"] = hpc_config_file
 
 		try:
-			sample_sheet = Samplesheet(args.input, sampletype=ASM_Sample)
+			sample_sheet = Samplesheet(args.input_sheet, sampletype=ASM_Sample)
 		except:
 			print("This samplesheet {} is not an ASM_Sample. Trying to parse it as BaseSample.")
-			sample_sheet = Samplesheet(args.input, sampletype=BaseSample)
+			sample_sheet = Samplesheet(args.input_sheet, sampletype=BaseSample)
 
 		if sample_sheet.verifySampleData(fields=["R1", "R2"]):
-			self.config["samplesheet"] = args.input
+			self.config["samplesheet"] = args.input_sheet
 
 		self.config["out_dir"] = self.outdir
 
-		for k, v in args._get_kwargs():
+		for k, v in sorted(vars(args).items()):
 			# need to find a solution here how to not override already sanitised input, e.g. enterobase-groups
 			# this should do it for the moment, but the whole args-structure needs to be changed
 			if k not in self.config:
@@ -89,37 +89,70 @@ class BGRRLModuleRunner(object):
 
 		return run_result
 
+class BGRRLConfigManager(object):
+	@staticmethod
+	def manageArgs(args, config): 
+		config["etc"] = join(dirname(__file__), "etc")
+		config["cwd"] = os.getcwd()
+		config["reapr_correction"] = False
+
+		if hasattr(args, "contig_minlen"):
+			config["asm_lengthfilter_contig_minlen"] = max(0, args.contig_minlen)
+			config["use_asm_lengthfilter"] = config["asm_lengthfilter_contig_minlen"] > 0 # probably not needed anymore
+
+		config["run_prokka"] = True
+		if hasattr(args, "ratt_reference"):
+			config["run_ratt"] = True
+			config["ratt_reference"] = args.ratt_reference
+			if not os.path.exists(config["ratt_reference"]):
+				raise ValueError("ratt reference location is invalid: " + config["ratt_reference"])
+			if hasattr(args, "make_ratt_data_tarballs"):
+				config["make_ratt_data_tarballs"] = args.make_ratt_data_tarballs
+
+		if hasattr(args, "prokka_package_style"):
+			config["prokka_package_style"] = args.prokka_package_style
+
+
+		config["package_dir"] = join(dirname(args.output_dir), "Data_Package")
+		if hasattr(args, "project_prefix") and args.project_prefix:
+			config["misc"]["project"] = args.project_prefix
+
+		pass
+
+
 
 class BGRRLRunner(WorkflowRunner):
 
-	def __init__(self, args, **kwargs):
+	def __init__(self, args):
 
 		self.args = copy(args)
 	
 		args.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
 		args.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
-		args.config = args.bgrrl_config
+		# args.config = args.bgrrl_config
 
 		super().__init__(args)
 
-		# Set run mode
-		print(args.module.upper())
-		self.run_mode = PipelineStep[args.module.upper()]
+		BGRRLConfigManager.manageArgs(args, self.config)
 
-	def __run_qc(self): 
+		# Set run mode
+		# print(args.module.upper())
+		# self.run_mode = PipelineStep[args.module.upper()]
+
+	def __run_survey(self): 
 		readtype = "bbduk" if self.args.no_normalization else "bbnorm"
 
 		if self.args.report_only:
-			run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
+			run_result = qc_eval_main(["--readtype", readtype, self.args.input_sheet, self.args.output_dir])
 		else:
 			run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 			if run_result:
 				qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_survey")
 				qaa_run = QAA_Runner(qaa_args).run()					
 				if qaa_run:
-					run_result = qc_eval_main(["--readtype", readtype, self.args.input, self.args.output_dir])
+					run_result = qc_eval_main(["--readtype", readtype, self.args.input_sheet, self.args.output_dir])
 					if run_result:
-						self.args.input = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
+						self.args.input_sheet = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_report")
 						qaa_run = QAA_Runner(qaa_args).run()
 
@@ -127,17 +160,6 @@ class BGRRLRunner(WorkflowRunner):
 
 
 	def __run_asm(self):
-
-		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
-		self.config["cwd"] = os.getcwd()
-		self.config["reapr_correction"] = False
-	
-		if self.args.contig_minlen: # this is really, really, really bad! 
-			self.config["use_asm_lengthfilter"] = True
-			self.config["asm_lengthfilter_contig_minlen"] = self.args.contig_minlen
-		else:
-			self.config["use_asm_lengthfilter"] = False
-			self.config["asm_lengthfilter_contig_minlen"] = 0
 
 		eb_criteria = self.config.get("enterobase_criteria", "")
 
@@ -157,27 +179,17 @@ class BGRRLRunner(WorkflowRunner):
 							if self.args.enterobase_groups:
 								run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
 							if run_result and not self.args.no_packaging:
-								run_result = self.__run_fin() 
+								run_result = self.__run_package() 
 
 		return run_result
 
 	def __run_ann(self):
-		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
-		self.config["cwd"] = os.getcwd()
-	
-		self.config["run_ratt"] = self.args.annotation == "both"
-		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")
-		self.config["ratt_reference"] = self.args.ratt_reference_dir
-		self.config["prokka_package_style"] = self.args.prokka_package_style 
-
-		assert not self.config["run_ratt"] or os.path.exists(self.config["ratt_reference"]), "Missing reference data for ratt. Please make sure to use the --ratt-reference-dir parameter."
 		run_result = False
-		print(self.args)
 
 		if self.args.report_only:
 			run_result = False
 			if self.args.annotation == "both":
-				run_result = ann_report_main(["--ref-dir", self.args.ratt_reference_dir, join(self.args.output_dir, "annotation", "ratt")])
+				run_result = ann_report_main(["--ref-dir", self.args.ratt_reference, join(self.args.output_dir, "annotation", "ratt")])
 				annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
 		else:
 			if self.args.annotation in ("prokka", "both"):
@@ -206,30 +218,18 @@ class BGRRLRunner(WorkflowRunner):
 						open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at")
 					if qaa_run and not self.args.no_packaging:
 						self.args.package_mode = "ann"
-						run_result = self.__run_fin() 
+						run_result = self.__run_package() 
 		return run_result
 
-	def __run_fin(self):
-		self.config["package_dir"] = os.path.join(os.path.dirname(self.args.output_dir), "Data_Package")
-		self.config["etc"] = os.path.join(os.path.dirname(__file__), "etc")
-		self.config["cwd"] = os.getcwd()	
-		self.config["run_ratt"] = self.args.annotation == "both"
-		self.config["run_prokka"] = self.args.annotation in ("both", "prokka")
-		self.config["prokka_package_style"] = self.args.prokka_package_style 
-
+	def __run_package(self):
 		if "enterobase_groups" in self.args: 
 			try:
 				eb_criteria = loadEnterobaseCriteria(self.config["enterobase_criteria"])
 			except:
-				print("Enterobase-groups selected but missing enterobase_criteria entry in config, please add path to enterobase criteria.", file=sys.stderr)
-				sys.exit(1)
+				raise ValueError("Enterobase-groups selected but missing enterobase_criteria entry in config, please add path to enterobase criteria.")
 			self.config["enterobase_groups"] = validateEnterobaseInput(self.args.enterobase_groups, eb_criteria)
 		else:
 			self.config["enterobase_groups"] = list()
-		if "project_prefix" in self.args and self.args.project_prefix:
-			self.config["misc"]["project"] = self.args.project_prefix
-		print("_FIN_CONFIG")
-		print(self.config)
 
 		run_result = BGRRLModuleRunner("bgrrl-fin", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 		return run_result
@@ -238,15 +238,14 @@ class BGRRLRunner(WorkflowRunner):
 		raise ValueError("Wrong runmode: (ATTEMPT_FULL is not implemented yet)")
 
 	def run(self):
-	
-		if self.run_mode == PipelineStep.READ_QC:
-			run_result = self.__run_qc()
-		elif self.run_mode == PipelineStep.ASSEMBLY:
+		if self.args.runmode == "survey":
+			run_result = self.__run_survey()
+		elif self.args.runmode == "assemble":
 			run_result = self.__run_asm() 
-		elif self.run_mode == PipelineStep.ANNOTATION:
+		elif self.args.runmode == "annotate":
 			run_result = self.__run_ann()
-		elif self.run_mode == PipelineStep.FINALIZE:
-			run_result = self.__run_fin() 
+		elif self.args.runmode == "package":
+			run_result = self.__run_package() 
 		else:
 			run_result = self.__run_all()		
 	

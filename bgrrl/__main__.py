@@ -93,7 +93,7 @@ def add_survey_parser(subparsers):
 	)
 
 	add_default_options(survey_parser)
-	survey_parser.set_defaults(survey_parser=True)
+	survey_parser.set_defaults(runmode="survey")
 
 
 def add_asm_parser(subparsers):
@@ -124,7 +124,7 @@ def add_asm_parser(subparsers):
 	)
 
 	add_default_options(asm_parser)
-	asm_parser.set_defaults(asm_parser=True)
+	asm_parser.set_defaults(runmode="assemble")
 	
 
 def add_ann_parser(subparsers):
@@ -155,7 +155,7 @@ def add_ann_parser(subparsers):
 	)
 
 	add_default_options(ann_parser)
-	ann_parser.set_defaults(ann_parser=True)
+	ann_parser.set_defaults(runmode="annotate")
 
 
 def add_package_parser(subparsers):
@@ -189,7 +189,7 @@ def add_package_parser(subparsers):
 
 
 	add_default_options(package_parser)
-	package_parser.set_defaults(package_parser=True)
+	package_parser.set_defaults(runmode="package")
 
 
 
@@ -221,7 +221,9 @@ def main():
 	args = bgrrl_parser.parse_args()
 	print("ARGS", args)
 
-	# BGRRLRunner(args).run()
+	print(vars(args))
+
+	BGRRLRunner(args).run()
 
 
 
