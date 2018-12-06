@@ -73,8 +73,8 @@ rule asm_assembly:
 		outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 		assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
 		assembler = config["assembler"],
-		r1 = lambda wildcards: ",".join(get_sample_files(wildcards)[0] if config.get("no_normalization", True) else get_sample_files(wildcards)[:2]),
-		r2 = lambda wildcards: ",".join(get_sample_files(wildcards)[1] if config.get("no_normalization", True) else get_sample_files(wildcards)[2:])		
+		r1 = lambda wildcards: get_sample_files(wildcards)[0] if config.get("no_normalization", True) else join(",", get_sample_files(wildcards)[:2]),
+		r2 = lambda wildcards: get_sample_files(wildcards)[1] if config.get("no_normalization", True) else join(",", get_sample_files(wildcards)[2:])
 	threads:
 		8
 	shell:
