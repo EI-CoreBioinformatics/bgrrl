@@ -45,6 +45,11 @@ class WorkflowRunner(object):
 
 	def __init__(self, args):
 		# self.args = copy(args) # need to find better solution for this.
+		if not hasattr(args, "input"):
+			try:
+				args.input = args.input_sheet
+			except:
+				raise ValueError("args does neither have input nor input_sheet attribute.")
 
 		# Establish a valid cluster configuration... may throw if invalid
 		print("Configuring execution environment ... ", end="", flush=True)
