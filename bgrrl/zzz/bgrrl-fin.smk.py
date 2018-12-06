@@ -1,45 +1,40 @@
 import sys
 import csv
 import os
-import glob
 from os.path import join, basename, dirname
+import glob
 
-from bgrrl.samplesheet import readSamplesheet
 from bgrrl import TIME_CMD
 from bgrrl.snakemake_helper import loadPreCmd
 
+DEBUG = config.get("debugmode", False)
+# needed for tar-ball generation
+EB_ORGANISMS = config.get("enterobase_groups", list())  # ["Salmonella"]
+CWD = os.getcwd()
+
+# setup i/o
 INPUTDIR = config["out_dir"]
 OUTPUTDIR = config["package_dir"]
 
-# INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
+if DEBUG:
+	print("IN_SNAKE:")
+	print(config)
+	print(EB_ORGANISMS)
 
-TARGETS = list()
-if config["package_mode"] == "asm":
-	TARGETS.append(join(OUTPUTDIR, "ASSEMBLY_PKG_DONE"))
-if config["package_mode"] == "ann":
-	TARGETS.append(join(OUTPUTDIR, "ANNOTATION_PKG_DONE"))
+
+### RULES ###
 
 localrules: all
-
-EB_ORGANISMS = config.get("enterobase_groups", list())  # ["Salmonella"]
-# needed for tar-ball generation
-CWD = os.getcwd()
-
-
-print("IN_SNAKE:")
-print(config)
-print(EB_ORGANISMS)
 
 if EB_ORGANISMS:
 	rule all:
 		input: 
 			expand(join(OUTPUTDIR, "{organism}_ASSEMBLY_PKG_DONE"), organism=EB_ORGANISMS),
-			expand(join(OUTPUTDIR, "{organism}_READ_PKG_DONE"), organism=EB_ORGANISMS),
-		#	expand(join(OUTPUTDIR, "{organism}_RESULTS_PKG_DONE"), organism=EB_ORGANISMS),
-		#	expand(join(OUTPUTDIR, config["project_prefix"] + "_{organism}_multiqc_report.html"), organism=EB_ORGANISMS)
-		# TARGETS
+			expand(join(OUTPUTDIR, "{organism}_READ_PKG_DONE"), organism=EB_ORGANISMS)
 
 	rule fin_compile_assembly:
+		message:
+			"Packaging assemblies by organism..."
 		input:
 			eb_samples = join(INPUTDIR, "reports", "eb_{organism}_samples.txt")		
 		output:
@@ -60,6 +55,8 @@ if EB_ORGANISMS:
 			" && touch {output.done}"
 
 	rule fin_compile_reads:
+		message:
+			"Packaging reads by organism..."
 		input:
 			eb_samples = join(INPUTDIR, "reports", "eb_{organism}_samples.txt"),
 			samplesheet = config["samplesheet"]
@@ -87,6 +84,8 @@ elif config["package_mode"] == "asm":
 			join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
 
 	rule fin_package_assembly:
+		message:
+			"Packaging assemblies..."
 		input:
 			samples = join(INPUTDIR, "reports", "quast_report.tsv")
 		output:
@@ -108,7 +107,6 @@ elif config["package_mode"] == "asm":
 
 elif config["package_mode"] == "ann":
 	if config["run_prokka"] and not config["run_ratt"]:
-
 		rule all:
 			input: 
 				join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
@@ -125,14 +123,13 @@ elif config["package_mode"] == "ann":
 			" && touch {output.done}"
 
 		if config.get("prokka_package_style", "by_sample") == "by_sample":
-
 			link_command = "ln -sf ../../{0}/annotation/prokka".format(basename(INPUTDIR))
-
-		else:
-			
+		else:			
 			link_command = "find ../../{0}/annotation/prokka -type f -print -exec ln -sf {{}} \;".format(basename(INPUTDIR))
 
 		rule fin_package_annotation:
+			message:
+				"Packaging prokka annotations (style={})...".format(config.get("prokka_package_style", "by_sample"))
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
@@ -152,16 +149,6 @@ elif config["package_mode"] == "ann":
 				" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
 				" && cd $cwd" + \
 				" && touch {output.done}"
-				
-
-				# "mkdir -p {params.package_dir}" + \
-				# "&& ln -s ../../{params.outdir}/annotation/prokka/ {params.package_dir}/prokka" + \
-				# " && cd $(dirname {params.package_dir})" + \
-				# " && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
-				# " && echo TARBALL_DONE" + \
-				# " && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
-				# " && cd -" + \
-				# " && touch {output.done}"
 
 	elif config["run_ratt"]:		
 		from math import ceil
@@ -174,6 +161,8 @@ elif config["package_mode"] == "ann":
 				expand(join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
 
 		rule fin_package_annotation:
+			message:
+				"Packaging prokka/delta annotations..."
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
@@ -198,6 +187,8 @@ elif config["package_mode"] == "ann":
 				" && touch {output.done}"
 
 		rule fin_package_annotation_make_ratt_batches:
+			message:
+				"Preparing ratt annotation batches..."
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
@@ -220,6 +211,8 @@ elif config["package_mode"] == "ann":
 						os.symlink(join("..", "..", params.outdir, "annotation", "ratt", row[0]), join(bdir, row[0]))
 
 		rule fin_package_annotation_ratt_tarballs:
+			message:
+				"Packaging ratt annotations..."
 			input:
 				goflag = join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}", "good_to_go")
 			output:
