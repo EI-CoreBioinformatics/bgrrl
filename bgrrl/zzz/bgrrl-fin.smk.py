@@ -77,11 +77,77 @@ if EB_ORGANISMS:
 			" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
 			" && touch {output.done}"
 
+elif config["package_mode"] == "processed_reads":
+	sentinel = join(OUTPUTDIR, "READ_PKG_DONE")
+
+	rule all:
+		input:
+			sentinel	
+	
+	rule fin_package_processed_reads:
+		message:
+			"Packaging processed_reads..."
+		input:
+			samplesheet = config["samplesheet"]
+		output:
+			done = sentinel
+		params:
+			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_processed_reads"),
+			prefix = config["project_prefix"]
+		shell:
+			"mkdir -p {params.outdir}" + \
+			" && (for r in $(cut -f 11 -d , {input.samplesheet}); do" + \
+			" ln -sf $r {params.outdir}/$(basename $r); done)" + \
+			" r=$(dirname $r)/$(basename $r _R1.fastq.gz)_R2.fastq.gz;" + \
+			" ln -sf $r {params.outdir}/$(basename $r); done)" + \
+			" && cd " + OUTPUTDIR + \
+			" && tar chvzf $(basename {params.outdir}.tar.gz $(basename {params.outdir})" + \
+			" && cd " + CWD + \
+			" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
+			" && touch {output.done}"
+
+elif config["package_mode"] == "analysis":
+	sentinel = join(OUTPUTDIR, "ANALYSIS_PKG_DONE")
+	
+	rule all:
+		input:
+			sentinel
+
+	rule fin_package_analysis:
+		message:
+			"Packaging analysis files..."
+		input:
+			samplesheet = config["samplesheet"]
+		output:
+			done = sentinel
+		params:
+			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_analysis"),
+			prefix = config["project_prefix"]
+		shell:
+			"mkdir -p {params.outdir}" + \
+			" && cd {params.outdir}" + \
+			" && ln -sf ../../Analysis/reports/16S_report.tsv" + \
+			" && ln -sf ../../Analysis/qaa/asm/blobtools" + \
+			" && ln -sf ../../Analysis/reports/blobtools_report.tsv" + \
+			" && ln -sf ../../Analysis/qa/asm/busco" + \
+			" && ln -sf ../../Analysis/reports/multiqc/asm/{params.prefix}_asm_multiqc_report.html" + \
+			" && ln -sf ../../Analysis/reports/qc_eval.tsv" + \
+			" && ln -sf ../../Analysis/qa/asm/quast" + \
+			" && ln -sf ../../Analysis/reports/quast_report.tsv" +\
+			# annotation_report.xlsx???
+			" && cd .." + \
+			" && tar chvzf $(basename {params.outdir}.tar.gz $(basename {params.outdir})" + \
+            " && cd " + CWD + \
+            " && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
+            " && touch {output.done}"
+
 
 elif config["package_mode"] == "asm":
+	sentinel = join(OUTPUTDIR, "ASSEMBLY_PKG_DONE") 
+
 	rule all:
 		input: 
-			join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
+			sentinel
 
 	rule fin_package_assembly:
 		message:
@@ -89,7 +155,7 @@ elif config["package_mode"] == "asm":
 		input:
 			samples = join(INPUTDIR, "reports", "quast_report.tsv")
 		output:
-			done = join(OUTPUTDIR, "ASSEMBLY_PKG_DONE")
+			done = sentinel
 		params:
 			package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_assemblies"),
 			outdir = basename(INPUTDIR),
@@ -106,10 +172,12 @@ elif config["package_mode"] == "asm":
 			" && touch {output.done}"
 
 elif config["package_mode"] == "ann":
+	sentinel = join(OUTPUTDIR, "ANNOTATION_PKG_DONE") 
+
 	if config["run_prokka"] and not config["run_ratt"]:
 		rule all:
 			input: 
-				join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+				sentinel				
 
 		shell_str = "" + \
 			"mkdir -p {params.package_dir}" + \
@@ -133,7 +201,7 @@ elif config["package_mode"] == "ann":
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
-				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+				done = sentinel
 			params:
 				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_prokka_denovo_annotation"),
 				outdir = basename(INPUTDIR),
@@ -150,14 +218,16 @@ elif config["package_mode"] == "ann":
 				" && cd $cwd" + \
 				" && touch {output.done}"
 
-	elif config["run_ratt"]:		
+	elif config["run_ratt"]:
+		sentinel = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
+	
 		from math import ceil
 		annotation_report = join(INPUTDIR, "reports", "annotation_report.tsv")
 		NUM_BATCHES = ceil((len(list(row for row in csv.reader(open(annotation_report), delimiter="\t"))) - 1)/30)
 
 		rule all:
 			input:
-				join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
+				sentinel,
 				expand(join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}.tar.gz"), batch_id=list(range(1, NUM_BATCHES + 1)))
 
 		rule fin_package_annotation:
@@ -166,7 +236,7 @@ elif config["package_mode"] == "ann":
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
-				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE"),
+				done = sentinel
 			params:
 				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
 				outdir = basename(INPUTDIR),
