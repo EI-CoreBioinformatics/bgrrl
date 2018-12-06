@@ -101,7 +101,7 @@ class BGRRLConfigManager(object):
 			config["use_asm_lengthfilter"] = config["asm_lengthfilter_contig_minlen"] > 0 # probably not needed anymore
 
 		config["run_prokka"] = True
-		if hasattr(args, "ratt_reference"):
+		if hasattr(args, "ratt_reference") and args.ratt_reference is not None:
 			config["run_ratt"] = True
 			config["ratt_reference"] = args.ratt_reference
 			if not os.path.exists(config["ratt_reference"]):
