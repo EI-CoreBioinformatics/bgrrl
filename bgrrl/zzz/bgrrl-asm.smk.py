@@ -3,14 +3,13 @@ import csv
 import os
 from os.path import join, basename, dirname
 
-from bgrrl.samplesheet import readSamplesheet, Samplesheet, ASM_Sample
 from bgrrl import TIME_CMD
+from bgrrl.samplesheet import readSamplesheet, Samplesheet, ASM_Sample
 from bgrrl.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)
 
-# tools
-ASM_WRAPPER = join(config["etc"], "wrappers", "asm_wrapper")
+SKIP_NORMALIZATION = config.get("no_normalization", False)
 
 # set up i/o
 OUTPUTDIR = config["out_dir"]
@@ -19,22 +18,23 @@ QC_OUTDIR = join(OUTPUTDIR, "qc")
 BBDUK_DIR = join(QC_OUTDIR, "bbduk")
 BBNORM_DIR = join(QC_OUTDIR, "bbnorm")
 
+INPUTFILES = Samplesheet(config["samplesheet"], sampletype=ASM_Sample)
 
-if not config.get("no_normalization", False):
-	PRIMARY_READDIR = BBNORM_DIR
-	SECONDARY_READDIR = BBDUK_DIR
-	PRIMARY_READ_ID = "bbnorm"
-	SECONDARY_READ_ID = "bbduk"
-else:
+# generate target list
+TARGETS = list()
+TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
+
+# define normalization/no-normalization behaviour
+if SKIP_NORMALIZATION:
 	PRIMARY_READDIR = BBDUK_DIR
 	SECONDARY_READDIR = BBDUK_DIR
 	PRIMARY_READ_ID = "bbduk"
 	SECONDARY_READ_ID = "bbduk"
-
-# INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
-INPUTFILES = Samplesheet(config["samplesheet"], sampletype=ASM_Sample)
-TARGETS = list()
-TARGETS.extend(map(lambda s:join(config["cwd"], ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
+else:
+	PRIMARY_READDIR = BBNORM_DIR
+	SECONDARY_READDIR = BBDUK_DIR
+	PRIMARY_READ_ID = "bbnorm"
+	SECONDARY_READ_ID = "bbduk"
 
 if DEBUG:
 	print("CONFIG")
@@ -44,25 +44,28 @@ if DEBUG:
 	with open("asm-targets.txt", "w") as targets_out:
 		print(*TARGETS, sep="\n", file=targets_out)
 
+# helper
+def get_sample_files(wc):
+	s = INPUTFILES[wc.sample]
+	# default case is with normalization, i.e. if --no-normalization option isn't present, it should be "False"
+	# skip_normalization = config.get("no_normalization", False)
+	if SKIP_NORMALIZATION:
+		print("skipping normalization")
+		return s.R1trim, s.R2trim
+	else:
+		return s.R1norm, s.R1trim, s.R2norm, s.R2trim
+
+
+### RULES ###
+
 localrules: all
 
 rule all:
 	input: TARGETS
 
-# TODO: Adjust asm_wrapper so it deals with no_normalization cases in a different way than just running it twice.
-def get_sample_files(wc):
-	s = INPUTFILES[wc.sample]
-	# default case is with normalization, i.e. if --no-normalization option isn't present, it should be "False"
-	skip_normalization = config.get("no_normalization", False)
-	if skip_normalization:
-		# return s.R1trim, s.R2trim, s.R1trim, s.R2trim
-		return s.R1trim, s.R2trim
-	else:
-		# return s.R1norm, s.R2norm, s.R1trim, s.R2trim
-		return s.R1norm, s.R1trim, s.R2norm, s.R2trim
-
-
 rule asm_assembly:
+	message:
+		"Generating assembly with " + config["assembler"] + "..."
 	input:
 		get_sample_files
 	output:
@@ -73,28 +76,23 @@ rule asm_assembly:
 		outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 		assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
 		assembler = config["assembler"],
-		r1 = lambda wildcards: get_sample_files(wildcards)[0] if config.get("no_normalization", True) else join(",", get_sample_files(wildcards)[:2]),
-		r2 = lambda wildcards: get_sample_files(wildcards)[1] if config.get("no_normalization", True) else join(",", get_sample_files(wildcards)[2:])
+		r1 = lambda wildcards: get_sample_files(wildcards)[0] if SKIP_NORMALIZATION else join(",", get_sample_files(wildcards)[:2]),
+		r2 = lambda wildcards: get_sample_files(wildcards)[1] if SKIP_NORMALIZATION else join(",", get_sample_files(wildcards)[2:])
 	threads:
 		8
 	shell:
 		"set +u && source activate bgasm_env" + \
 		" && asm_wrapper --threads {threads} {params.assembler} {params.r1} {params.r2} {params.outdir} &> {log}"
 
-		# usage: asm_wrapper [-h] [--threads THREADS]
-		#                 {unicycler,spades,velvet} r1 r2 outdir
-		# asm_wrapper: error: the following arguments are required: assembler, r1, r2, outdira
-		#
-		#ASM_WRAPPER + \
-		#" {params.assembler} {input[0]} {input[1]} {threads} {params.outdir} {input[2]} {input[3]} &> {log}"
-
-rule asm_lengthfilter:
+rule asm_postprocess:
+	message:
+		"Postprocessing assembly (minimum contig length={})...".format(config["asm_lengthfilter_contig_minlen"]) 
 	input:
 		assembly = join(ASSEMBLY_DIR, "{sample}", "assembly.fasta")
 	output:
 		filtered_assembly = join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 	log:
-		join(ASSEMBLY_DIR, "log", "{sample}.asm_lengthfilter.log")
+		join(ASSEMBLY_DIR, "log", "{sample}.asm_postprocess.log")
 	params:
 		minlen = int(config["asm_lengthfilter_contig_minlen"]),
 		load = loadPreCmd(config["load"]["bbmap"]),

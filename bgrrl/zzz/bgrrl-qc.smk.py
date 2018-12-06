@@ -4,10 +4,12 @@ import os
 from os.path import join
 
 from bgrrl import TIME_CMD
-from bgrrl.samplesheet import readSamplesheet
+from bgrrl.samplesheet import readSamplesheet, Samplesheet 
 from bgrrl.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)
+
+SKIP_NORMALIZATION = config.get("no_normalization", False)
 
 # set up i/o
 OUTPUTDIR = config["out_dir"]
@@ -19,26 +21,28 @@ KAT_DIR = join(QC_OUTDIR, "kat")
 BBNORM_DIR = join(QC_OUTDIR, "bbnorm")
 TADPOLE_DIR = join(QC_OUTDIR, "tadpole")
 
-INPUTFILES = dict(readSamplesheet(config["samplesheet"]))
+INPUTFILES = Samplesheet(config["samplesheet"])
 
+# generate target list
 TARGETS = list()
-if not config.get("no_normalization", False):
+TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R1.bbduk_fastqc.html"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.html"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
+TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".dist_analysis.json"), INPUTFILES))
+
+# define normalization/no-normalization behaviour
+if SKIP_NORMALIZATION:
+	PRIMARY_READDIR = BBDUK_DIR
+	SECONDARY_READDIR = BBDUK_DIR
+	PRIMARY_READ_ID = "bbduk"
+	SECONDARY_READ_ID = "bbduk"
+else:
 	PRIMARY_READDIR = BBNORM_DIR
 	SECONDARY_READDIR = BBDUK_DIR
 	PRIMARY_READ_ID = "bbnorm"
 	SECONDARY_READ_ID = "bbduk"
 	TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R1.bbnorm_fastqc.html"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbnorm", s, s + "_R2.bbnorm_fastqc.html"), INPUTFILES))
-else:
-	PRIMARY_READDIR = BBDUK_DIR
-	SECONDARY_READDIR = BBDUK_DIR
-	PRIMARY_READ_ID = "bbduk"
-	SECONDARY_READ_ID = "bbduk"
-
-TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R1.bbduk_fastqc.html"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(FASTQC_DIR, "bbduk", s, s + "_R2.bbduk_fastqc.html"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(TADPOLE_DIR, s, s + "_tadpole_contigs.fasta"), INPUTFILES))
-TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".dist_analysis.json"), INPUTFILES))
 
 if DEBUG:
 	with open("inputfiles.txt", "w") as input_out:
@@ -46,8 +50,12 @@ if DEBUG:
 	with open("targets.txt", "w") as targets_out:
 		print(*TARGETS, sep="\n", file=targets_out)
 
+# helper
 def get_sample_files(wc):
 	return INPUTFILES[wc.sample].R1, INPUTFILES[wc.sample].R2
+
+
+### RULES ###
 
 localrules: all
 
@@ -70,7 +78,7 @@ rule qc_bbduk:
 		load = loadPreCmd(config["load"]["bbmap"]),
 		bbduk = "bbduk.sh", 
 		adapters = config["resources"]["bb_adapters"],
-                bbduk_params = config["params"]["bbduk"]
+		bbduk_params = config["params"]["bbduk"]
 	shell:
 		"{params.load}" + TIME_CMD + " {params.bbduk}" + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
@@ -87,7 +95,7 @@ rule qc_fastqc_bbduk:
 		fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html")
 	params:
 		outdir = join(FASTQC_DIR, "bbduk", "{sample}"),
-                load = loadPreCmd(config["load"]["fastqc"]),
+		load = loadPreCmd(config["load"]["fastqc"]),
 		fastqc = config["tools"]["fastqc"]
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}_{mate}.qc_fastqc_bbduk.log")
@@ -98,7 +106,7 @@ rule qc_fastqc_bbduk:
 		" --extract --threads={threads} --outdir={params.outdir} {input} " + \
 		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
-if not config.get("no_normalization", False):
+if not SKIP_NORMALIZATION:
 	rule qc_bbnorm:
 		message:
 			"Normalizing read data with bbnorm..."
@@ -133,7 +141,7 @@ if not config.get("no_normalization", False):
 			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{sample}_{mate}.bbnorm_fastqc.html")
 		params:
 			outdir = join(FASTQC_DIR, "bbnorm", "{sample}"),
-                	load = loadPreCmd(config["load"]["fastqc"]),
+			load = loadPreCmd(config["load"]["fastqc"]),
 			fastqc = config["tools"]["fastqc"]
 		log:
 			join(QC_LOGDIR, "{sample}", "{sample}_{mate}.qc_fastqc_bbnorm.log")
@@ -154,7 +162,7 @@ rule qc_tadpole:
 		contigs = join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
 	params:
 		load = loadPreCmd(config["load"]["bbmap"]),
-                tadpole = "tadpole.sh"
+		tadpole = "tadpole.sh"
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}.qc_tadpole.log")
 	threads:
