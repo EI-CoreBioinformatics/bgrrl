@@ -51,14 +51,14 @@ def add_default_options(parser):
 	common_group.add_argument(
 		"--report-only", 
 		action="store_true", 
-		help="Only runs reporting modules, no snakemake pipelines [False]"
+		help="""Only runs reporting modules, no snakemake pipelines [False]"""
 	)
 
 	common_group.add_argument(
 		"-f", 
 		"--force", 
 		action="store_true", 
-		help="Force overwriting existing output directory, causes pipeline to be restarted. (disabled)"
+		help="""Force overwriting existing output directory, causes pipeline to be restarted. [DISABLED]"""
 	)
 
 	common_group.add_argument(
@@ -83,7 +83,7 @@ def add_survey_parser(subparsers):
 	survey_parser.add_argument(
 		"--no-normalization", 
 		action="store_true", 
-		help="Use non-normalized reads in asm module (kills fallback-mode!) [False]"
+		help="""Disable read normalization. [False]""" # !TODO
 	)
 
 	survey_parser.add_argument(
@@ -91,6 +91,11 @@ def add_survey_parser(subparsers):
 		action="store_true",
 		help="""Disable automatic packaging. [False]"""
 	)
+
+	survey_parser.add_argument(
+		"--full-qaa-analysis",
+		action="store_true",
+		help="""Perform full qaa-analysis on survey assemblies. [False]"""		
 
 	add_default_options(survey_parser)
 	survey_parser.set_defaults(runmode="survey")
@@ -114,8 +119,14 @@ def add_asm_parser(subparsers):
 		"--contig-minlen", 
 		type=int, 
 		default=0, 
-		help="Minimum length [bp] of contigs retained in filtering step [0]."
+		help="""Minimum length [bp] of contigs retained in filtering step [0]."""
 	)
+
+	asm_parser.add_argument(
+        "--no-normalization",
+        action="store_true",
+        help="""Use non-normalized reads in asm module [False]"""
+    )
 
 	asm_parser.add_argument(
 		"--no-packaging",

@@ -151,7 +151,7 @@ class BGRRLRunner(WorkflowRunner):
 				qaa_run = QAA_Runner(qaa_args).run()					
 				if qaa_run:
 					run_result = qc_eval_main(["--readtype", readtype, self.args.input_sheet, self.args.output_dir])
-					if run_result:
+					if run_result and self.args.full_qaa_analysis:
 						self.args.input_sheet = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_report")
 						qaa_run = QAA_Runner(qaa_args).run()
