@@ -101,6 +101,7 @@ class BGRRLConfigManager(object):
 			config["use_asm_lengthfilter"] = config["asm_lengthfilter_contig_minlen"] > 0 # probably not needed anymore
 
 		config["run_prokka"] = True
+		config["run_ratt"] = False
 		if hasattr(args, "ratt_reference") and args.ratt_reference is not None:
 			config["run_ratt"] = True
 			config["ratt_reference"] = args.ratt_reference
@@ -192,13 +193,12 @@ class BGRRLRunner(WorkflowRunner):
 				run_result = ann_report_main(["--ref-dir", self.args.ratt_reference, join(self.args.output_dir, "annotation", "ratt")])
 				annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
 		else:
-			if self.args.annotation in ("prokka", "both"):
+			if True: #self.args.annotation in ("prokka", "both"):
 				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
 				run_result = BGRRLModuleRunner("bgrrl-ann", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 				if not run_result:
 					print("ANNOTATION RUN FAILED?")
-				if run_result:
-
+				else:
 					with open(join(self.args.output_dir, "reports", "ann_run_report.txt"), "at") as run_report:
 						nodes = set()
 						for f in glob.glob(join(self.args.output_dir, "annotation", "prokka", "*", "PROKKA_FAILED")):
