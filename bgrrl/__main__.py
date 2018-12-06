@@ -95,7 +95,8 @@ def add_survey_parser(subparsers):
 	survey_parser.add_argument(
 		"--full-qaa-analysis",
 		action="store_true",
-		help="""Perform full qaa-analysis on survey assemblies. [False]"""		
+		help="""Perform full qaa-analysis on survey assemblies. [False]"""
+	)	
 
 	add_default_options(survey_parser)
 	survey_parser.set_defaults(runmode="survey")
