@@ -126,17 +126,17 @@ elif config["package_mode"] == "analysis" or "analysis" in config["package_mode"
 		shell:
 			"mkdir -p {params.outdir}" + \
 			" && cd {params.outdir}" + \
-			" && ln -sf ../../Analysis/reports/16S_report.tsv" + \
+			" && if [[ -e ../../Analysis/reports/16S_report.tsv ]]; then ln -sf ../../Analysis/reports/16S_report.tsv; fi" + \
 			" && ln -sf ../../Analysis/qaa/asm/blobtools" + \
 			" && ln -sf ../../Analysis/reports/blobtools_report.tsv" + \
-			" && ln -sf ../../Analysis/qa/asm/busco" + \
+			" && ln -sf ../../Analysis/qaa/asm/busco" + \
 			" && ln -sf ../../Analysis/reports/multiqc/asm/{params.prefix}_asm_multiqc_report.html" + \
 			" && ln -sf ../../Analysis/reports/qc_eval.tsv" + \
-			" && ln -sf ../../Analysis/qa/asm/quast" + \
+			" && ln -sf ../../Analysis/qaa/asm/quast" + \
 			" && ln -sf ../../Analysis/reports/quast_report.tsv" +\
 			# annotation_report.xlsx???
 			" && cd .." + \
-			" && tar chvzf $(basename {params.outdir}.tar.gz $(basename {params.outdir})" + \
+			" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
             " && cd " + CWD + \
             " && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
             " && touch {output.done}"
