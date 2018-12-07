@@ -39,15 +39,6 @@ print("QAA_ID="+QAA_ID)
 
 TIME_CMD = " /usr/bin/time -v"
 
-@unique
-class PipelineStep(Enum):
-	READ_QC = 0
-	ASSEMBLY = 1
-	ANNOTATION = 2
-	DATA_QA = 3
-	FINALIZE = 4
-	ATTEMPT_FULL = 5
-
 
 class BGRRLModuleRunner(object):
 	def __init__(self, module, args, exe_env, hpc_config_file, config=dict()):
@@ -130,15 +121,11 @@ class BGRRLRunner(WorkflowRunner):
 	
 		args.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
 		args.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
-		# args.config = args.bgrrl_config
 
 		super().__init__(args)
 
 		BGRRLConfigManager.manageArgs(args, self.config)
 
-		# Set run mode
-		# print(args.module.upper())
-		# self.run_mode = PipelineStep[args.module.upper()]
 
 	def __run_survey(self): 
 		readtype = "bbduk" if self.args.no_normalization else "bbnorm"
@@ -207,18 +194,19 @@ class BGRRLRunner(WorkflowRunner):
 							print(basename(dirname(f)), node, sep="\t", file=run_report)
 						print("Failed prokka jobs were executed on nodes: {}. Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))), file=run_report)
 
-
 					qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="ann")
 					qaa_run = QAA_Runner(qaa_args).run()
 	
-					if qaa_run and self.args.annotation == "both":
-						ann_report_main(["--ref-dir", self.args.ratt_reference_dir, join(self.args.output_dir, "annotation", "ratt")])
+					if qaa_run and hasattr(self.args, "ratt_reference") and self.args.ratt_reference is not None:
+						ann_report_main(["--ref-dir", self.args.ratt_reference, join(self.args.output_dir, "annotation", "ratt")])
 						annocmp_main([join(self.args.output_dir, "annotation", "prokka"), join(self.args.output_dir, "annotation", "ratt"), join(self.args.output_dir, "reports")])
 					else:
-						open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at")
+						open(join(self.args.output_dir, "reports", "annotation_report.tsv"), "at").close()
+
 					if qaa_run and not self.args.no_packaging:
 						self.args.package_mode = "ann"
-						run_result = self.__run_package() 
+						run_result = self.__run_package()
+
 		return run_result
 
 	def __run_package(self):
