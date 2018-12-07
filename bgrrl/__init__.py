@@ -168,8 +168,8 @@ class BGRRLRunner(WorkflowRunner):
 				run_result = asm_stage_report_main([self.args.output_dir, join(self.args.output_dir, "reports")])
 				if run_result:
 						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="asm")
-						qaa_run = QAA_Runner(qaa_args).run()
-						if qaa_run:
+						run_result = QAA_Runner(qaa_args).run()
+						if run_result:
 							if self.args.enterobase_groups:
 								run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
 							if run_result and not self.args.no_packaging:
