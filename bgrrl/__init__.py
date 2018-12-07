@@ -134,7 +134,7 @@ class BGRRLRunner(WorkflowRunner):
 		if self.args.report_only:
 			run_result = qc_eval_main(["--readtype", readtype, "--min_tadpolesize", min_tadpole_size, self.args.input_sheet, self.args.output_dir])
 		else:
-			run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
+			run_result = BGRRLModuleRunner("bgsurvey", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 			if run_result:
 				qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_survey")
 				qaa_run = QAA_Runner(qaa_args).run()					
@@ -163,7 +163,7 @@ class BGRRLRunner(WorkflowRunner):
 			if self.args.enterobase_groups: # needs validation?
 				run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
 		else:
-			run_result = BGRRLModuleRunner("bgrrl-asm", self.args, self.exe_env, self.hpc_config_file, config=self.config).run() 
+			run_result = BGRRLModuleRunner("bgasm", self.args, self.exe_env, self.hpc_config_file, config=self.config).run() 
 			if run_result:
 				run_result = asm_stage_report_main([self.args.output_dir, join(self.args.output_dir, "reports")])
 				if run_result:
@@ -192,7 +192,7 @@ class BGRRLRunner(WorkflowRunner):
 		else:
 			if True: #self.args.annotation in ("prokka", "both"):
 				print("WARNING: Prokka annotation selected. If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails).")
-				run_result = BGRRLModuleRunner("bgrrl-ann", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
+				run_result = BGRRLModuleRunner("bgann", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 				if not run_result:
 					print("ANNOTATION RUN FAILED?")
 				else:
@@ -241,7 +241,7 @@ class BGRRLRunner(WorkflowRunner):
 		else:
 			self.config["enterobase_groups"] = list()
 
-		run_result = BGRRLModuleRunner("bgrrl-fin", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
+		run_result = BGRRLModuleRunner("bgpackage", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 		return run_result
 
 	def __run_all(self):
