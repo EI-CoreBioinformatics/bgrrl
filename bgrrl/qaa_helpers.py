@@ -6,6 +6,7 @@ from qaa.qaa_args import QAA_ArgumentsAdapter as QAA_Args
 DEFAULT_QAA_ARGS = {
 	"make_input_stream": True,
 	"run_blobtools": True,
+	"run_qualimap": True,
 	"align_reads": "bowtie2",
 	"qaa_mode": "genome",
 	"busco_db": "bacteria_odb9",
@@ -34,6 +35,7 @@ class QAA_ArgumentManager(object):
 					survey_assembly=True,
 					runmode="survey",
 					run_blobtools=False,
+					run_qualimap=False,
 					align_reads=False,
 					run_busco=False,
 					normalized=not args.no_normalization
@@ -44,6 +46,7 @@ class QAA_ArgumentManager(object):
 					runmode="survey",
 					normalized=not args.no_normalization,
 					run_blobtools=True,
+					run_qualimap=True,
 					align_reads="bowtie2",
 					run_busco=True,
 					run_multiqc=True,
