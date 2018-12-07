@@ -98,6 +98,13 @@ def add_survey_parser(subparsers):
 		help="""Perform full qaa-analysis on survey assemblies. [False]"""
 	)	
 
+	survey_parser.add_argument(
+		"--minimum-survey-assembly-size",
+		type=int,
+		default=1e6,
+		help="""Minimum size (in bp) for tadpole assembly to pass survey stage [1Mbp] This allows plasmids to be processed."""
+	)
+
 	add_default_options(survey_parser)
 	survey_parser.set_defaults(runmode="survey")
 

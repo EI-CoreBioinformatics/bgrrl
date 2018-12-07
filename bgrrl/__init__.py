@@ -129,24 +129,27 @@ class BGRRLRunner(WorkflowRunner):
 
 	def __run_survey(self): 
 		readtype = "bbduk" if self.args.no_normalization else "bbnorm"
+		min_tadpole_size = str(int(self.args.minimum_survey_assembly_size))
 
 		if self.args.report_only:
-			run_result = qc_eval_main(["--readtype", readtype, self.args.input_sheet, self.args.output_dir])
+			run_result = qc_eval_main(["--readtype", readtype, "--min_tadpolesize", min_tadpole_size, self.args.input_sheet, self.args.output_dir])
 		else:
 			run_result = BGRRLModuleRunner("bgrrl-qc", self.args, self.exe_env, self.hpc_config_file, config=self.config).run()
 			if run_result:
 				qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_survey")
 				qaa_run = QAA_Runner(qaa_args).run()					
 				if qaa_run:
-					run_result = qc_eval_main(["--readtype", readtype, self.args.input_sheet, self.args.output_dir])
+					run_result = qc_eval_main(["--readtype", readtype, "--min_tadpolesize", min_tadpole_size, self.args.input_sheet, self.args.output_dir])
+					
+					self.args.input_sheet = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
+
+					if run_result and self.args.full_qaa_analysis:
+						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_report")
+						run_result = QAA_Runner(qaa_args).run()
+
 					if run_result and not self.args.no_packaging:
 						self.args.package_mode = "processed_reads"
 						run_result = self.__run_package()
-					
-					if run_result and self.args.full_qaa_analysis:
-						self.args.input_sheet = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
-						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_report")
-						run_result = QAA_Runner(qaa_args).run()
 
 		return run_result
 
@@ -223,7 +226,7 @@ class BGRRLRunner(WorkflowRunner):
 	
 		req_pmodes = set(self.args.package_mode.split(","))
 		req_valid_pmodes = req_pmodes.intersection({"ann", "asm", "analysis", "processed_reads"})
-		if req_modes != req_valid_pmodes:
+		if req_pmodes != req_valid_pmodes:
 			print("Warning: Dropping invalid modes {} from requested package modes.".format(req_modes.difference(req_valid_pmodes)))
 			if not req_valid_pmodes:
 				raise ValueError("No valid package modes requested: {}.".format(req_pmodes))
