@@ -44,7 +44,6 @@ class WorkflowRunner(object):
 		return outdir_exists
 
 	def __init__(self, args):
-		# self.args = copy(args) # need to find better solution for this.
 		if not hasattr(args, "input"):
 			try:
 				args.input = args.input_sheet
