@@ -130,6 +130,13 @@ def add_asm_parser(subparsers):
     )
 
 	asm_parser.add_argument(
+		"--is-final-step",
+		action="store_true",
+		help="""If set, analysis packaging will take place after the assembly stage.
+				Otherwise, assume that an annotation stage will follow, which will then take care of analysis packaging. [False]"""
+	)
+
+	asm_parser.add_argument(
 		"--no-packaging",
 		action="store_true",
 		help="""Disable automatic packaging. [False]"""

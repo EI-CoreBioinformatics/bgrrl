@@ -77,7 +77,7 @@ if EB_ORGANISMS:
 			" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
 			" && touch {output.done}"
 
-elif config["package_mode"] == "processed_reads":
+elif config["package_mode"] == "processed_reads" or "processed_reads" in config["package_mode"]:
 	sentinel = join(OUTPUTDIR, "READ_PKG_DONE")
 
 	rule all:
@@ -106,7 +106,7 @@ elif config["package_mode"] == "processed_reads":
 			" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
 			" && touch {output.done}"
 
-elif config["package_mode"] == "analysis":
+elif config["package_mode"] == "analysis" or "analysis" in config["package_mode"]:
 	sentinel = join(OUTPUTDIR, "ANALYSIS_PKG_DONE")
 	
 	rule all:
@@ -142,7 +142,7 @@ elif config["package_mode"] == "analysis":
             " && touch {output.done}"
 
 
-elif config["package_mode"] == "asm":
+elif config["package_mode"] == "asm" or "asm" in config["package_mode"]:
 	sentinel = join(OUTPUTDIR, "ASSEMBLY_PKG_DONE") 
 
 	rule all:
@@ -171,7 +171,7 @@ elif config["package_mode"] == "asm":
 			" && cd -" + \
 			" && touch {output.done}"
 
-elif config["package_mode"] == "ann":
+elif config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 	sentinel = join(OUTPUTDIR, "ANNOTATION_PKG_DONE") 
 
 	if config["run_prokka"] and not config["run_ratt"]:

@@ -139,10 +139,14 @@ class BGRRLRunner(WorkflowRunner):
 				qaa_run = QAA_Runner(qaa_args).run()					
 				if qaa_run:
 					run_result = qc_eval_main(["--readtype", readtype, self.args.input_sheet, self.args.output_dir])
+					if run_result and not self.args.no_packaging:
+						self.args.package_mode = "processed_reads"
+						run_result = self.__run_package()
+					
 					if run_result and self.args.full_qaa_analysis:
 						self.args.input_sheet = join(self.args.output_dir, "reports", "samplesheets", "samplesheet.qc_pass.tsv")
 						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="qc_report")
-						qaa_run = QAA_Runner(qaa_args).run()
+						run_result = QAA_Runner(qaa_args).run()
 
 		return run_result
 
@@ -163,11 +167,14 @@ class BGRRLRunner(WorkflowRunner):
 						qaa_args = QAA_ArgumentManager.get_qaa_args(self.args, self.config_file, self.hpc_config_file, stage="asm")
 						qaa_run = QAA_Runner(qaa_args).run()
 						if qaa_run:
-							self.args.package_mode = "asm"
 							if self.args.enterobase_groups:
 								run_result = asm_report_main([self.args.output_dir, self.args.enterobase_groups, eb_criteria])
 							if run_result and not self.args.no_packaging:
+								self.args.package_mode = "asm"
 								run_result = self.__run_package() 
+								if run_result and self.args.is_final_step:
+									self.args.package_mode = "analysis"
+									run_result = self.__run_package()
 
 		return run_result
 
@@ -206,10 +213,22 @@ class BGRRLRunner(WorkflowRunner):
 					if qaa_run and not self.args.no_packaging:
 						self.args.package_mode = "ann"
 						run_result = self.__run_package()
+						if run_result:
+							self.args.package_mode = "analysis"
+							run_result = self.__run_package()
 
 		return run_result
 
 	def __run_package(self):
+	
+		req_pmodes = set(self.args.package_mode.split(","))
+		req_valid_pmodes = req_pmodes.intersection({"ann", "asm", "analysis", "processed_reads"})
+		if req_modes != req_valid_pmodes:
+			print("Warning: Dropping invalid modes {} from requested package modes.".format(req_modes.difference(req_valid_pmodes)))
+			if not req_valid_pmodes:
+				raise ValueError("No valid package modes requested: {}.".format(req_pmodes))
+		self.args.package_mode = tuple(req_valid_pmodes)
+
 		if "enterobase_groups" in self.args: 
 			try:
 				eb_criteria = loadEnterobaseCriteria(self.config["enterobase_criteria"])
