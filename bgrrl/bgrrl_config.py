@@ -141,7 +141,7 @@ class ConfigurationManager(OrderedDict):
 
 		# Load configuration
 		print("Loading configuration from {} ... ".format(self.config_file), end="", flush=True)
-		self.config = yaml.load(open(self.config_file))
+		self._config = yaml.load(open(self.config_file))
 		print("done.")
 		print()
 
@@ -167,24 +167,24 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			"run_ratt": False,
 			"package_dir": self.package_dir,			
 		}
-		self.config.update(cfg_d)
+		self._config.update(cfg_d)
 		
 		if hasattr(self, "project_prefix"):
-			config["project_prefix"] = config["misc"]["project"] = self.project_prefix if self.project_prefix is not None else ""
+			self._config["project_prefix"] = self._config["misc"]["project"] = self.project_prefix if self.project_prefix is not None else ""
 		
 		if hasattr(self, "prokka_package_style"):
-			config["prokka_package_style"] = self.prokka_package_style
+			self._config["prokka_package_style"] = self.prokka_package_style
 
 		if hasattr(self, "contig_minlen"):
-			config["asm_lengthfilter_contig_minlen"] = max(0, self.contig_minlen)
+			self._config["asm_lengthfilter_contig_minlen"] = max(0, self.contig_minlen)
 
-		config["run_ratt"] = hasattr(self, "ratt_reference") and self.ratt_reference is not None
-		if config["run_ratt"]:
+		self._config["run_ratt"] = hasattr(self, "ratt_reference") and self.ratt_reference is not None
+		if self._config["run_ratt"]:
 			if not exists(self.ratt_reference):
 				raise ValueError("Invalid ratt reference location: " + self.ratt_reference)
-			config["ratt_reference"] = self.ratt_reference
+			self._config["ratt_reference"] = self.ratt_reference
 			if hasattr(self, "make_ratt_data_tarballs"):
-				config["make_ratt_data_tarballs"] = self.make_ratt_data_tarballs		
+				self._config["make_ratt_data_tarballs"] = self.make_ratt_data_tarballs		
 
 
 	def __init__(self, ap_args):
@@ -194,7 +194,7 @@ class BGRRLConfigurationManager(ConfigurationManager):
 
 		super(BGRRLConfigurationManager, self).__init__(ap_args)
 
-		
+		self.__manage()
 
 
 

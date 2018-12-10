@@ -147,7 +147,7 @@ class BGRRLRunner(WorkflowRunner):
 				self.config_manager, 
 				self.config_manager.exe_env, 
 				self.config_manager.hpc_config_file, 
-				config=self.config_manager.config
+				config=self.config_manager._config
 			).run()
 			if run_result:
 				qaa_args = QAA_ArgumentManager.get_qaa_args(
@@ -215,7 +215,7 @@ class BGRRLRunner(WorkflowRunner):
 				self.config_manager, 
 				self.config_manager.exe_env, 
 				self.config_manager.hpc_config_file, 
-				config=self.config_manager.config
+				config=self.config_manager._config
 			).run() 
 			if run_result:
 				run_result = asm_stage_report_main(
@@ -255,7 +255,7 @@ class BGRRLRunner(WorkflowRunner):
 
 		if self.config_manager.report_only:
 			run_result = False
-			if self.config_manager.config["run_ratt"]: 
+			if self.config_manager._config["run_ratt"]: 
 				run_result = ann_report_main(
 					[
 						"--ref-dir", self.config_manager.ratt_reference,
@@ -279,7 +279,7 @@ class BGRRLRunner(WorkflowRunner):
 				self.config_manager, 
 				self.config_manager.exe_env, 
 				self.config_manager.hpc_config_file,
-				config=self.config_manager.config
+				config=self.config_manager._config
 			).run()
 			if not run_result:
 				print("ANNOTATION RUN FAILED?")
@@ -343,25 +343,25 @@ class BGRRLRunner(WorkflowRunner):
 
 		if hasattr(self.config_manager, "enterobase_groups"):
 			try:
-				eb_criteria = loadEnterobaseCriteria(self.config_manager.config["enterobase_criteria"])
+				eb_criteria = loadEnterobaseCriteria(self.config_manager._config["enterobase_criteria"])
 			except:
 				raise ValueError(
 					"""Enterobase-groups selected but missing enterobase_criteria entry in config, 
 					please add path to enterobase criteria."""
 				)
-			self.config_manager.config["enterobase_groups"] = validateEnterobaseInput(
+			self.config_manager._config["enterobase_groups"] = validateEnterobaseInput(
 				self.config_manager.enterobase_groups, 
 				eb_criteria
 			)
 		else:
-			self.config_manager.config["enterobase_groups"] = list()
+			self.config_manager._config["enterobase_groups"] = list()
 
 		run_result = BGRRLModuleRunner(
 			"bgpackage", 
 			self.config_manager,
 			self.config_manager.exe_env,
 			self.config_manager.hpc_config_file, 
-			config=self.config_manager.config
+			config=self.config_manager._config
 		).run()
 		return run_result
 
