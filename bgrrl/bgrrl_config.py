@@ -1,4 +1,12 @@
 from collections import OrderedDict, namedtuple
+import os 
+from os.path import exists, dirname, basename, join
+import sys
+import yaml
+import pathlib
+import glob
+
+from .snakemake_helper import *
 
 ExecutionEnvironmentArguments = namedtuple(
 	"ExecutionEnvironmentArguments",
@@ -14,20 +22,130 @@ ExecutionEnvironmentArguments = namedtuple(
 
 
 class ConfigurationManager(OrderedDict):
-	def __make_exe_env_args(self, ap_args):
-		self.exe_env = ExecutionEnvironmentArguments(
-			ap_args.scheduler,
-			ap_args.partition,
-			ap_args.no_drmaa,
-			ap_args.max_nodes,
-			ap_args.max_cores,
-			ap_args.hpc_config
+	
+	def __handle_config_file(self, config_file, config_type, file_pattern, warning=""):
+		try:
+			init_file = glob.glob(self.config_dir, file_pattern)[0]
+		except:
+			init_file = ""
+
+		if hasattr(self, config_file) and exists(getattr(self, config_file)):
+			print("Custom {} file specified, overriding defaults.".format(config_type))
+			setattr(self, config_file + "_file", getattr(self, config_file))
+		elif init_file:
+			print("Found {} file at init location, using this.".format(config_type))
+			setattr(self, config_file + "_file", init_file)
+		else:
+			raise ValueError(
+				"No valid {} file specified.{}".format(
+					config_type,
+					("\n" + warning) if warning else ""
+				)
+			)
+		
+
+
+	def __handle_output_dir(self, output_dir, overwrite=False):
+		outdir_exists = exists(output_dir)
+		if outdir_exists:
+			if overwrite:
+				print(
+					"Output directory already exists and overwrite was requested (-f option).  Deleting directory contents ... ",
+					end="", flush=True
+				)
+				print("DEACTIVATED DUE TO TOO MANY ACCIDENTS.")
+				# shutil.rmtree(output_dir)
+				# os.makedirs(output_dir)
+			else:
+				print("Output directory already exists, attempting to resume.", flush=True)
+		else:
+			pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+		self.logs_dir = join(output_dir, "hpc_logs")
+		if not exists(self.logs_dir):
+			print("HPC log dir doesn't exist. Creating " + self.logs_dir + " now ... ", end="", flush=True)
+			pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+		print("done.")
+
+		self.config_dir = join(output_dir, "config")
+		if not exists(self.config_dir):
+			print("Config dir does not exist. Creating " + self.config_dir + " now ...", end="", flush=True)
+		print("done.")
+
+		self.package_dir = "Data_Package"
+		if not exists(self.package_dir):
+			print("Package dir does not exist. Creating " + self.package_dir + " now ...", end="", flush=True)
+		print("done.")
+
+		print()
+
+		return outdir_exists
+
+	def __make_exe_env_args(self):
+		return ExecutionEnvironmentArguments(
+			self.scheduler,
+			self.partition,
+			self.no_drmaa,
+			self.max_nodes,
+			self.max_cores,
+			self.hpc_config
 		)
 
+	def __make_exe_env(self):
+		print("Configuring execution environment ... ", end="", flush=True)
+		self.exe_env = ExecutionEnvironment(
+			self.__make_exe_env_args(),
+			NOW,
+			job_suffix=self.input + "_" + self.output_dir,
+			log_dir=self.logs_dir
+		)
+		print("done.")
+		print(str(self.exe_env))
+	
+
 	def __init__(self, ap_args):		
+
+		# take all items from argparse args
+		for k, v in vars(ap_args).items():
+			setattr(self, k, v)
+
+		# check for input
+		if not hasattr(self, "input"):
+			try:
+				self.input = self.input_sheet
+			except:
+				raise ValueError("Configuration has neither 'input' nor 'input_sheet' attribute.")
+
+		
+		
+
+		# make sure output-directory exists and create hpclog-directory  	
+		self.__handle_output_dir(self.output_dir, overwrite=self.force)
+
+		# handle hpc configuration
+		self.__handle_config_file(
+			"hpc_config", 
+			"HPC configuration", 
+			"hpc_config.json", 
+			warning=self.alt_hpc_config_warning if hasattr(self, "alt_hpc_config_warning") else "")
+
 		# hand this over to ExecutionEnvironment
-		# or: TODO - lets ConfigurationManager create an ExeEnv
-		self.__make_exe_env_args(ap_args)
+		self.__make_exe_env()
+
+		# handle main main configuration
+		self.__handle_config_file(
+			"config",
+			"configuration",
+			"*config.yaml",
+			warning=self.alt_config_warning if hasattr(self, "alt_config_warning") else "")
+
+		# Load configuration
+		print("Loading configuration from {} ... ".format(self.config_file), end="", flush=True)
+		self.config = yaml.load(open(self.config_file))
+		print("done.")
+		print()
+
+
 
 
 	def __str__(self):
@@ -39,44 +157,45 @@ class ConfigurationManager(OrderedDict):
 
 
 class BGRRLConfigurationManager(ConfigurationManager):
+	
+	def __manage(self):
+		cfg_d = {
+			"etc": join(dirname(__file__), "etc"),
+			"cwd": os.getcwd(),
+			"reapr_correction": False,
+			"run_prokka": True,
+			"run_ratt": False,
+			"package_dir": self.package_dir,			
+		}
+		self.config.update(cfg_d)
+		
+		if hasattr(self, "project_prefix"):
+			config["project_prefix"] = config["misc"]["project"] = self.project_prefix if self.project_prefix is not None else ""
+		
+		if hasattr(self, "prokka_package_style"):
+			config["prokka_package_style"] = self.prokka_package_style
+
+		if hasattr(self, "contig_minlen"):
+			config["asm_lengthfilter_contig_minlen"] = max(0, self.contig_minlen)
+
+		config["run_ratt"] = hasattr(self, "ratt_reference") and self.ratt_reference is not None
+		if config["run_ratt"]:
+			if not exists(self.ratt_reference):
+				raise ValueError("Invalid ratt reference location: " + self.ratt_reference)
+			config["ratt_reference"] = self.ratt_reference
+			if hasattr(self, "make_ratt_data_tarballs"):
+				config["make_ratt_data_tarballs"] = self.make_ratt_data_tarballs		
+
+
 	def __init__(self, ap_args):
 
-		ap_args.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
-        ap_args.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
+		self.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
+		self.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
 
-		super(BGRRLConfigurationManager, self).__init__(ap_args)	
+		super(BGRRLConfigurationManager, self).__init__(ap_args)
 
-		self["input_sheet"] = ap_args.input_sheet
-		self["output_dir"] = ap_args.output_dir
-		self["project_prefix"] = ap_args.project_prefix
-		self["config"] = ap_args.config
-		self["report_only"] = ap_args.report_only
-		self["force"] = ap_args.force
-		self["enterobase_groups"] = ap_args.enterobase_groups
-		self["unlock"] = ap_args.unlock
-		self["runmode"] = ap_args.runmode
+		
 
-		if self["runmode"] == "survey":			
-			self["no_normalization"] = ap_args.no_normalization
-			self["no_packaging"] = ap_args.no_packaging
-			self["full_qaa_analysis"] = ap_args.full_qaa_analysis
-			self["minimum_survey_assembly_size"] = ap_args.minimum_survey_assembly_size
-
-		if self["runmode"] == "assembly":
-			self["assembler"] = ap_args.assembler
-			self["contig_minlen"] = ap_args.contig_minlen
-			self["is_final_step"] = ap_args.is_final_step
-			self["no_packaging"] = ap_args.no_packaging
-
-		if self["runmode"] == "annotation":
-			self["ratt_reference"] = ap_args.ratt_reference
-			self["no_packaging"] = ap_args.no_packaging
-			self["prokka_package_style"] = ap_args.prokka_package_style
-
-		if self["runmode"] == "package":
-			self["package_mode"] = ap_args.package_mode
-			self["prokka_package_style"] = ap_args.prokka_package_style
-			self["make_ratt_data_tarballs"] = ap_args.make_ratt_data_tarballs
 
 
 

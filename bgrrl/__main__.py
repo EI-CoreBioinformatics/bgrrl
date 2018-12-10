@@ -24,9 +24,11 @@ def add_default_options(parser):
 	common_group = parser.add_argument_group(
 		"bgrr| options"
 	)
-	common_group.add_argument(                                                                                                                                   	
+	
+	common_group.add_argument(
 		"input_sheet", 
-		help="""The samplesheet to process. This is a comma-separated file, containing location and meta-information for each sample to be processed."""
+		help="""The samplesheet to process. This is a comma-separated file, 
+				containing location and meta-information for each sample to be processed."""
 	)
 	
 	common_group.add_argument(
@@ -101,7 +103,7 @@ def add_survey_parser(subparsers):
 	survey_parser.add_argument(
 		"--minimum-survey-assembly-size",
 		type=int,
-		default=1e6,
+		default=1000000,
 		help="""Minimum size (in bp) for tadpole assembly to pass survey stage [1Mbp] This allows plasmids to be processed."""
 	)
 
@@ -248,6 +250,18 @@ def main():
 	print("ARGS", args)
 
 	print(vars(args))
+
+
+#	from bgrrl.bgrrl_config import BGRRLConfigurationManager as CM
+#	print("CM:ARGS")
+#	for k, v in CM(args).items():
+#		print(k, v, sep="\t")
+#
+#	print("CM:ARGS_FULL")
+#	print(CM(args))
+#
+#	print("CM:ARGS_END")
+
 
 	BGRRLRunner(args).run()
 
