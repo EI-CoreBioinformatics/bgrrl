@@ -192,7 +192,7 @@ class BGRRLRunner(WorkflowRunner):
 
 	def __run_asm(self):
 
-		eb_criteria = self.config.get("enterobase_criteria", "")
+		eb_criteria = self.config_manager._config.get("enterobase_criteria", "")
 
 		if self.config_manager.report_only:
 			run_result = asm_stage_report_main(
