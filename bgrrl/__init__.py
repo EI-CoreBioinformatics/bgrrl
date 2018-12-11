@@ -271,8 +271,8 @@ class BGRRLRunner(WorkflowRunner):
 				)
 		else:
 			print(
-				"""WARNING: Prokka annotation selected.
-				If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails)."""
+				"WARNING: Prokka annotation selected\n" + \
+				"If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails)."
 			)
 			run_result = BGRRLModuleRunner(
 				"bgann", 
@@ -284,16 +284,16 @@ class BGRRLRunner(WorkflowRunner):
 			if not run_result:
 				print("ANNOTATION RUN FAILED?")
 			else:
-				with open(join(self.config_manager.output_dir, "reports", "ann_run_report.txt"), "at") as run_report:
-					nodes = set()
-					for f in glob.glob(join(self.config_manager.output_dir, "annotation", "prokka", "*", "PROKKA_FAILED")):
-						node = open(f).read().strip()
-						nodes.add(node)
-						print(basename(dirname(f)), node, sep="\t", file=run_report)
+				nodes = set()
+				for f in glob.glob(join(self.config_manager.output_dir, "annotation", "prokka", "*", "PROKKA_FAILED")):
+					nodes.add(open(f).read().strip())
+				if nodes:
+					with open(join(self.config_manager.output_dir, "reports", "ann_run_report.txt"), "at") as run_report:
+						for node in sorted(nodes):
+							print(node, file=run_report)
 					print(
-						"""Failed prokka jobs were executed on nodes: {}. 
-						Try to exclude those nodes from being used for rule ann_prokka.""".format(sorted(list(nodes))), 
-						file=run_report
+						"Failed prokka jobs were executed on nodes: {}.\n" + \
+						"Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))), 
 					)
 
 				qaa_args = QAA_ArgumentManager.get_qaa_args(
