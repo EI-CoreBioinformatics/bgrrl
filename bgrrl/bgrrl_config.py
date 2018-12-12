@@ -42,8 +42,6 @@ class ConfigurationManager(OrderedDict):
 					("\n" + warning) if warning else ""
 				)
 			)
-		
-
 
 	def __handle_output_dir(self, output_dir, overwrite=False):
 		outdir_exists = exists(output_dir)
@@ -101,6 +99,22 @@ class ConfigurationManager(OrderedDict):
 		)
 		print("done.")
 		print(str(self.exe_env))
+
+
+	def generate_config_file(self, module):
+		config_file = join(self.config_dir, module + ".conf.yaml")
+
+		with open(config_file, "wt") as cfg_out:
+			config_d = OrderedDict(self._config)
+			for k, v in sorted(vars(self).items()):
+				if not k in self._config and k != "_config":
+					print("WRITING {}: {} -> CONFIG".format(k, v))
+					config_d[k] = v
+			print("Writing configuration to file {} ... ".format(config_file), end="", flush=True)
+			yaml.dump(config_d, cfg_out, default_flow_style=False)
+			print("done.")
+
+		return config_file
 	
 
 	def __init__(self, ap_args):		
@@ -115,9 +129,6 @@ class ConfigurationManager(OrderedDict):
 				self.input = self.input_sheet
 			except:
 				raise ValueError("Configuration has neither 'input' nor 'input_sheet' attribute.")
-
-		
-		
 
 		# make sure output-directory exists and create hpclog-directory  	
 		self.__handle_output_dir(self.output_dir, overwrite=self.force)
@@ -139,17 +150,18 @@ class ConfigurationManager(OrderedDict):
 			"*config.yaml",
 			warning=self.alt_config_warning if hasattr(self, "alt_config_warning") else "")
 
-		# Load configuration
+		# Load/edit configuration
 		print("Loading configuration from {} ... ".format(self.config_file), end="", flush=True)
 		self._config = yaml.load(open(self.config_file))
 		print("done.")
 		print()
 
-
+		self._config["out_dir"] = self.output_dir
 
 
 	def __str__(self):
 		return super(ConfigurationManager, self).__str__() + "\n" + str(self.exe_env)
+
 
 	def setConfiguration(self):
 		pass
@@ -197,21 +209,4 @@ class BGRRLConfigurationManager(ConfigurationManager):
 		self.__manage()
 
 
-
-
-"""
-no_normalization        False
-no_packaging    False
-full_qaa_analysis       False
-minimum_survey_assembly_size    1000000.0
-input_sheet     samplesheet.csv.20
-output_dir      Analysis
-project_prefix  bgrrl_test
-config  Analysis/config/bgrrl_config.yaml
-report_only     False
-force   False
-enterobase_groups       None
-unlock  False
-runmode survey
-"""	
 		
