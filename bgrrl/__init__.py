@@ -30,6 +30,7 @@ from bgrrl.bin.ann_report import main as ann_report_main
 from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
 from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample
+from bgrrl.bgrrl_config import BGRRLConfigurationManager
 
 from .qaa_helpers import QAA_ArgumentManager
 
@@ -41,92 +42,37 @@ TIME_CMD = " /usr/bin/time -v"
 
 
 class BGRRLModuleRunner(object):
-	def __init__(self, module, args, exe_env, hpc_config_file, config=dict()):
-		print(config)
-		self.config = dict(config)
-		self.module = module
-		self.outdir = args.output_dir
-		self.unlock = args.unlock
-		self.exe_env = exe_env
-		self.config["hpc_config"] = hpc_config_file
+	@staticmethod
+	def run(module, config_manager):
+		
+		samplesheet = Samplesheet(
+			config_manager.input_sheet, 
+			sampletype=BaseSample if module == "bgsurvey" else ASM_Sample
+		)
 
-		try:
-			sample_sheet = Samplesheet(args.input_sheet, sampletype=ASM_Sample)
-		except:
-			print("This samplesheet {} is not an ASM_Sample. Trying to parse it as BaseSample.")
-			sample_sheet = Samplesheet(args.input_sheet, sampletype=BaseSample)
+		if samplesheet.verifySampleData(fields=["R1", "R2"]):
+			config_manager._config["samplesheet"] = config_manager.input_sheet
 
-		if sample_sheet.verifySampleData(fields=["R1", "R2"]):
-			self.config["samplesheet"] = args.input_sheet
+		config_file = config_manager.generate_config_file(module)
 
-		self.config["out_dir"] = self.outdir
-
-		for k, v in sorted(vars(args).items()):
-			# need to find a solution here how to not override already sanitised input, e.g. enterobase-groups
-			# this should do it for the moment, but the whole args-structure needs to be changed
-			if k not in self.config:
-				print("WRITING {}: {} TO CONFIG".format(k, v))
-				self.config[k] = v
-
-		self.config_file = os.path.join(self.outdir, module + ".conf.yaml")
-		with open(self.config_file, "w") as conf_out:
-			yaml.dump(self.config, conf_out, default_flow_style=False)
-
-	def run(self):
- 
-		print("Running " + self.module)
-		snake = os.path.join(os.path.dirname(__file__), "zzz", self.module + ".smk.py")
-		run_result = run_snakemake(snake, self.outdir, self.config_file, self.exe_env, dryrun=False, unlock=self.unlock)
-
-		return run_result
-
-#class BGRRLConfigManager(object):
-#	@staticmethod
-#	def manageArgs(args, config): 
-#		config["etc"] = join(dirname(__file__), "etc")
-#		config["cwd"] = os.getcwd()
-#		config["reapr_correction"] = False
-#
-#		if hasattr(args, "contig_minlen"):
-#			config["asm_lengthfilter_contig_minlen"] = max(0, args.contig_minlen)
-#			config["use_asm_lengthfilter"] = config["asm_lengthfilter_contig_minlen"] > 0 # probably not needed anymore
-#
-#		config["run_prokka"] = True
-#		config["run_ratt"] = False
-#		if hasattr(args, "ratt_reference") and args.ratt_reference is not None:
-#			config["run_ratt"] = True
-#			config["ratt_reference"] = args.ratt_reference
-#			if not os.path.exists(config["ratt_reference"]):
-#				raise ValueError("ratt reference location is invalid: " + config["ratt_reference"])
-#			if hasattr(args, "make_ratt_data_tarballs"):
-#				config["make_ratt_data_tarballs"] = args.make_ratt_data_tarballs
-#
-#		if hasattr(args, "prokka_package_style"):
-#			config["prokka_package_style"] = args.prokka_package_style
-#
-#
-#		config["package_dir"] = join(dirname(args.output_dir), "Data_Package")
-#		if hasattr(args, "project_prefix") and args.project_prefix:
-#			config["misc"]["project"] = args.project_prefix
-#
-#		pass
-
+		print("Running " + module)
+		snake = join(dirname(__file__), "zzz", module + ".smk.py")
+		
+		return run_snakemake(
+			snake,
+			config_manager.output_dir,
+			config_file,
+			config_manager.exe_env,
+			dryrun=False,
+			unlock=config_manager.unlock
+		)
+			
 
 # WorkflowRunner is legacy
 class BGRRLRunner(WorkflowRunner):
 
 	def __init__(self, args):
-		from .bgrrl_config import BGRRLConfigurationManager as BCM
-		
-		self.config_manager = BCM(args)
-		# self.args = copy(args)
-	
-		# self.args.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
-		# self.args.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
-		# super().__init__(self.args)
-
-		# BGRRLConfigManager.manageArgs(self.args, self.config)
-
+		self.config_manager = BGRRLConfigurationManager(args)
 
 	def __run_survey(self): 
 		readtype = "bbduk" if self.config_manager.no_normalization else "bbnorm"
@@ -142,13 +88,7 @@ class BGRRLRunner(WorkflowRunner):
 				]
 			)
 		else:
-			run_result = BGRRLModuleRunner(
-				"bgsurvey", 
-				self.config_manager, 
-				self.config_manager.exe_env, 
-				self.config_manager.hpc_config_file, 
-				config=self.config_manager._config
-			).run()
+			run_result = BGRRLModuleRunner.run("bgsurvey", self.config_manager)
 			if run_result:
 				qaa_args = QAA_ArgumentManager.get_qaa_args(
 					self.config_manager, 
@@ -210,13 +150,7 @@ class BGRRLRunner(WorkflowRunner):
 					]
 				)
 		else:
-			run_result = BGRRLModuleRunner(
-				"bgasm", 
-				self.config_manager, 
-				self.config_manager.exe_env, 
-				self.config_manager.hpc_config_file, 
-				config=self.config_manager._config
-			).run() 
+			run_result = BGRRLModuleRunner.run("bgasm", self.config_manager)
 			if run_result:
 				run_result = asm_stage_report_main(
 					[
@@ -274,13 +208,7 @@ class BGRRLRunner(WorkflowRunner):
 				"WARNING: Prokka annotation selected\n" + \
 				"If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails)."
 			)
-			run_result = BGRRLModuleRunner(
-				"bgann", 
-				self.config_manager, 
-				self.config_manager.exe_env, 
-				self.config_manager.hpc_config_file,
-				config=self.config_manager._config
-			).run()
+			run_result = BGRRLModuleRunner.run("bgann",	self.config_manager)
 			if not run_result:
 				print("ANNOTATION RUN FAILED?")
 			else:
@@ -356,13 +284,7 @@ class BGRRLRunner(WorkflowRunner):
 		else:
 			self.config_manager._config["enterobase_groups"] = list()
 
-		run_result = BGRRLModuleRunner(
-			"bgpackage", 
-			self.config_manager,
-			self.config_manager.exe_env,
-			self.config_manager.hpc_config_file, 
-			config=self.config_manager._config
-		).run()
+		run_result = BGRRLModuleRunner.run("bgpackage", self.config_manager)
 		return run_result
 
 	def __run_all(self):
