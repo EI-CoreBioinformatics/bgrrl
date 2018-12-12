@@ -44,7 +44,7 @@ setup(
 	packages=find_packages(exclude=["test"]),
 	scripts=[
 		path.join("bgrrl/bin/slurm", script) for script in ["bgsurvey_sub", "bgasm_sub", "bgann_sub", "bgpack_sub"]
-	] + ["bgrrl/bin/bginit"	],
+	],
 	install_requires=[
 		"snakemake>=4.4.0",
 		"drmaa"
@@ -56,6 +56,7 @@ setup(
 			"bgasm=bgrrl.__main__:main",
 			"bgann=bgrrl.__main__:main",
 			"bgpack=bgrrl.__main__:main",
+			"bginit=bgrrl.bin.bginit:main",
 			"qc_eval=bgrrl.bin.qc_eval:main",
 			"asm_report=bgrrl.bin.asm_report:main",
 			"ann_report=bgrrl.bin.ann_report:main",
