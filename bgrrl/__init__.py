@@ -90,12 +90,13 @@ class BGRRLRunner(WorkflowRunner):
 		else:
 			run_result = BGRRLModuleRunner.run("bgsurvey", self.config_manager)
 			if run_result:
-				qaa_args = QAA_ArgumentManager.get_qaa_args(
-					self.config_manager, 
-					self.config_manager.config_file, 
-					self.config_manager.hpc_config_file,
-					stage="qc_survey"
-				)
+				qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
+				#qaa_args = QAA_ArgumentManager.get_qaa_args(
+				#	self.config_manager, 
+				#	self.config_manager.config_file, 
+				#	self.config_manager.hpc_config_file,
+				#	stage="qc_survey"
+				#)
 				qaa_run = QAA_Runner(qaa_args).run()					
 				if qaa_run:
 					run_result = qc_eval_main(
@@ -115,12 +116,13 @@ class BGRRLRunner(WorkflowRunner):
 					)
 
 					if run_result and self.config_manager.full_qaa_analysis:
-						qaa_args = QAA_ArgumentManager.get_qaa_args(
-							self.config_manager,
-							self.config_manager.config_file,
-							self.config_manager.hpc_config_file,
-							stage="qc_report"
-						)
+						qaa_args = self.config_manager.create_qaa_args(stage="qc_report")
+						#qaa_args = QAA_ArgumentManager.get_qaa_args(
+						#	self.config_manager,
+						#	self.config_manager.config_file,
+						#	self.config_manager.hpc_config_file,
+						#	stage="qc_report"
+						#)
 						run_result = QAA_Runner(qaa_args).run()
 
 					if run_result and not self.config_manager.no_packaging:
@@ -159,12 +161,13 @@ class BGRRLRunner(WorkflowRunner):
 					]
 				)
 				if run_result:
-						qaa_args = QAA_ArgumentManager.get_qaa_args(
-							self.config_manager, 
-							self.config_manager.config_file,
-							self.config_manager.hpc_config_file,
-							stage="asm"
-						)
+						qaa_args = self.config_manager.create_qaa_args(stage="asm")
+						#qaa_args = QAA_ArgumentManager.get_qaa_args(
+						#	self.config_manager, 
+						#	self.config_manager.config_file,
+						#	self.config_manager.hpc_config_file,
+						#	stage="asm"
+						#)
 						run_result = QAA_Runner(qaa_args).run()
 						if run_result:
 							if self.config_manager.enterobase_groups:
@@ -224,12 +227,13 @@ class BGRRLRunner(WorkflowRunner):
 						"Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))), 
 					)
 
-				qaa_args = QAA_ArgumentManager.get_qaa_args(
-					self.config_manager, 
-					self.config_manager.config_file,
-					self.config_manager.hpc_config_file,
-					stage="ann"
-				)
+				qaa_args = self.config_manager.create_qaa_args(stage="ann")
+				#qaa_args = QAA_ArgumentManager.get_qaa_args(
+				#	self.config_manager, 
+				#	self.config_manager.config_file,
+				#	self.config_manager.hpc_config_file,
+				#	stage="ann"
+				#)
 				qaa_run = QAA_Runner(qaa_args).run()
 
 				if qaa_run and hasattr(self.config_manager, "ratt_reference") and self.config_manager.ratt_reference is not None:

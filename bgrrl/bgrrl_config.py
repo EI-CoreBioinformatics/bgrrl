@@ -70,6 +70,11 @@ class ConfigurationManager(OrderedDict):
 			print("Config dir does not exist. Creating " + self.config_dir + " now ...", end="", flush=True)
 		print("done.")
 
+		self.report_dir = join(output_dir, "reports")
+		if not exists(self.config_dir):
+			print("Report dir does not exist. Creating " + self.report_dir + " now ...", end="", flush=True)
+		print("done.")
+
 		self.package_dir = "Data_Package"
 		if not exists(self.package_dir):
 			print("Package dir does not exist. Creating " + self.package_dir + " now ...", end="", flush=True)
@@ -182,7 +187,8 @@ class BGRRLConfigurationManager(ConfigurationManager):
 		self._config.update(cfg_d)
 		
 		if hasattr(self, "project_prefix"):
-			self._config["project_prefix"] = self._config["misc"]["project"] = self.project_prefix if self.project_prefix is not None else ""
+			prefix = self.project_prefix if self.project_prefix is not None else ""
+			self._config["project_prefix"] = self._config["misc"]["project"] = prefix 
 		
 		if hasattr(self, "prokka_package_style"):
 			self._config["prokka_package_style"] = self.prokka_package_style
@@ -207,6 +213,37 @@ class BGRRLConfigurationManager(ConfigurationManager):
 		super(BGRRLConfigurationManager, self).__init__(ap_args)
 
 		self.__manage()
+
+	def create_qaa_args(self, stage="init"):
+		from qaa.qaa_args import QAA_ArgumentsAdapter as QAA_Args
+		from .qaa_helpers import STAGE_QAA_ARGS
+
+		qaa_args = QAA_Args(**STAGE_QAA_ARGS["init"])
+		qaa_args.update(
+			quast_mincontiglen=1000,
+			project_prefix=self.project_prefix,
+			config=self.config_file,
+			hpc_config=self.hpc_config_file,
+			normalized=not self.no_normalization,
+			multiqc_dir=join(self.report_dir, "multiqc", stage.split("_")[0]) 
+		)
+
+		if not stage == "init":
+			qaa_args.update(**vars(self))
+
+			try:
+				qaa_args.update(**STAGE_QAA_ARGS[stage])
+			except:
+				raise ValueError("Invalid stage '{}' in BCM::create_qaa_args().".format(stage))
+		
+		return qaa_args
+
+
+
+
+
+
+		
 
 
 		
