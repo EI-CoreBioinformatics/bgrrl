@@ -237,13 +237,3 @@ class BGRRLConfigurationManager(ConfigurationManager):
 				raise ValueError("Invalid stage '{}' in BCM::create_qaa_args().".format(stage))
 		
 		return qaa_args
-
-
-
-
-
-
-		
-
-
-		
