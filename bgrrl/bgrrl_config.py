@@ -59,26 +59,40 @@ class ConfigurationManager(OrderedDict):
 		else:
 			pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-		self.logs_dir = join(output_dir, "hpc_logs")
-		if not exists(self.logs_dir):
-			print("HPC log dir doesn't exist. Creating " + self.logs_dir + " now ... ", end="", flush=True)
-			pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
-		print("done.")
 
-		self.config_dir = join(output_dir, "config")
-		if not exists(self.config_dir):
-			print("Config dir does not exist. Creating " + self.config_dir + " now ...", end="", flush=True)
-		print("done.")
+		def _create_subdir(subdir, name):		
+			if not exists(subdir):
+				print(name + " does not exist. Creating " + subdir + " now ... ", end="", flush=True)
+				pathlib.Path(subdir).mkdir(parents=True, exist_ok=True)
+				print("done.")
+			return subdir
 
-		self.report_dir = join(output_dir, "reports")
-		if not exists(self.config_dir):
-			print("Report dir does not exist. Creating " + self.report_dir + " now ...", end="", flush=True)
-		print("done.")
+		self.logs_dir = _create_subdir(join(output_dir, "hpc_logs"), "HPC log dir")
+		self.config_dir = _create_subdir(join(output_dir, "config"), "Config dir")
+		self.report_dir = _create_subdir(join(output_dir, "reports"), "Report dir")
+		self.package_dir = _create_subdir("Data_Package", "Package dir")
+		#if not exists(self.logs_dir):
+		#	print("HPC log dir doesn't exist. Creating " + self.logs_dir + " now ... ", end="", flush=True)
+		#	pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+		#	print("done.")
 
-		self.package_dir = "Data_Package"
-		if not exists(self.package_dir):
-			print("Package dir does not exist. Creating " + self.package_dir + " now ...", end="", flush=True)
-		print("done.")
+		#self.config_dir = join(output_dir, "config")
+		#if not exists(self.config_dir):
+		#	print("Config dir does not exist. Creating " + self.config_dir + " now ...", end="", flush=True)
+		#	pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+		#	print("done.")
+
+		#self.report_dir = join(output_dir, "reports")
+		#if not exists(self.config_dir):
+		#	print("Report dir does not exist. Creating " + self.report_dir + " now ...", end="", flush=True)
+		#	pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+		#	print("done.")
+
+		#self.package_dir = "Data_Package"
+		#if not exists(self.package_dir):
+		#	print("Package dir does not exist. Creating " + self.package_dir + " now ...", end="", flush=True)
+		#	pathlib.Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+		#	print("done.")
 
 		print()
 
@@ -108,6 +122,11 @@ class ConfigurationManager(OrderedDict):
 
 	def generate_config_file(self, module):
 		config_file = join(self.config_dir, module + ".conf.yaml")
+
+		#if not exists(dirname(config_file)):
+		#	print("Could not find config-dir, creating ... ", end="", flush=True)
+		#	pathlib.Path(dirname(config_file)).mkdir(exist_ok=True, parents=True)
+		#	print("done.")	
 
 		with open(config_file, "wt") as cfg_out:
 			config_d = OrderedDict(self._config)
@@ -180,11 +199,12 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			"etc": join(dirname(__file__), "etc"),
 			"cwd": os.getcwd(),
 			"reapr_correction": False,
-			"run_prokka": True,
+			"run_prokka": hasattr(self, "run_annotation") and self.run_annotation,
 			"run_ratt": False,
 			"package_dir": self.package_dir,			
 		}
 		self._config.update(cfg_d)
+
 		
 		if hasattr(self, "project_prefix"):
 			prefix = self.project_prefix if self.project_prefix is not None else ""
@@ -224,16 +244,24 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			project_prefix=self.project_prefix,
 			config=self.config_file,
 			hpc_config=self.hpc_config_file,
-			normalized=not self.no_normalization,
-			multiqc_dir=join(self.report_dir, "multiqc", stage.split("_")[0]) 
+			normalized=not self.no_normalization if hasattr(self, "no_normalization") else True,
+			multiqc_dir=join(self.report_dir, "multiqc", stage.split(",")[0]) 
 		)
 
 		if not stage == "init":
+
 			qaa_args.update(**vars(self))
 
-			try:
-				qaa_args.update(**STAGE_QAA_ARGS[stage])
-			except:
-				raise ValueError("Invalid stage '{}' in BCM::create_qaa_args().".format(stage))
+			if stage == "asm,ann":
+				qaa_args.update(**STAGE_QAA_ARGS["asm"])
+				qaa_args.update(**{
+					"qaa_mode": "genome,transcriptome,proteome", 
+					"runmode": "asm,ann"
+				})
+			else:			
+				try:
+					qaa_args.update(**STAGE_QAA_ARGS[stage])
+				except:
+					raise ValueError("Invalid stage '{}' in BCM::create_qaa_args().".format(stage))
 		
 		return qaa_args

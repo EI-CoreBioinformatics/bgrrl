@@ -5,7 +5,7 @@
     "c": "8",
     "J": "bgrrl",
     "time": "24:00:00",
-    "exclude": ""
+    "exclude": "t128n84"
   },
   "ann_ratt": {
     "J": "bg-ann",
@@ -91,7 +91,7 @@
   },
   "qaa_blastn": {
     "J": "qaa-blastn",
-    "memory": "32000"
+    "memory": "40000"
   },
   "qaa_blobtools": {
     "J": "qaa-blobtools",

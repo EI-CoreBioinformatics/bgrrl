@@ -139,6 +139,26 @@ def add_asm_parser(subparsers):
     )
 
 	asm_parser.add_argument(
+		"--run-annotation",
+		action="store_true",
+		help="""Run annotation on assembly. If set, de novo annotation with prokka will be run. 
+				Additionally, you may enable annotation transfer by specifying a path to a reference annotation with --ratt-reference. [False]"""
+	)
+
+	asm_parser.add_argument(
+		"--custom-prokka-proteins",
+		type=str,
+		default="",
+		help="""If you have a custom protein database that you would like prokka to use (--proteins option), then specify the path to it here. [n/a]"""
+	)
+
+	asm_parser.add_argument(
+		"--ratt-reference",
+		type=str,
+		help="Path to reference data for ratt annotation transfer"
+	)
+
+	asm_parser.add_argument(
 		"--is-final-step",
 		action="store_true",
 		help="""If set, analysis packaging will take place after the assembly stage.
@@ -151,6 +171,14 @@ def add_asm_parser(subparsers):
 		help="""Disable automatic packaging. [False]"""
 	)
 
+	asm_parser.add_argument(
+		"--prokka-package-style",
+		type=str,
+		choices=["by_sample", "all_in_one"],
+		default="by_sample",
+		help="""Should the prokka annotation be packaged into one directory per sample (by_sample) or into one single directory (all_in_one)? [by_sample]"""
+	)
+
 	add_default_options(asm_parser)
 	asm_parser.set_defaults(runmode="assemble")
 	
@@ -160,6 +188,13 @@ def add_ann_parser(subparsers):
 		"annotate", 
 		help=BGANN_DESC,
 		description=BGANN_DESC
+	)
+
+	ann_parser.add_argument(
+		"--custom-prokka-proteins",
+		type=str,
+		default="",
+		help="""If you have a custom protein database that you would like prokka to use (--proteins option), then specify the path to it here. [n/a]"""
 	)
 
 	ann_parser.add_argument(

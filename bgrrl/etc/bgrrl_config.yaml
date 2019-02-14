@@ -1,9 +1,16 @@
+# singularity_env: "/ei/software/testing/bgrrl/dev_miniconda/src/ei_bgrrl/bgrrl/zzz/singularity/bgrrl_env.img"
+singularity_env: "/ei/software/testing/bgrrl/dev_miniconda/src/ei_bgrrl/singularity/bgrrl_exec.img"
+qaa_singularity_env: "/ei/software/testing/qaa/dev/src/qaa/qaa/zzz/singularity/qaa_exec.img"
+
+
 tools:
   fastqc: "/ei/software/testing/fastqc/0.11.5/x86_64/bin/fastqc"
   time: "/usr/bin/time -v"
 
 resources:
-  bb_adapters: "/ei/software/testing/bbmap/38.06/x86_64/bin/resources/adapters.fa"
+  # bb_adapters: "/ei/software/testing/bbmap/38.06/x86_64/bin/resources/adapters.fa"
+  # bb_adapters: "/opt/miniconda/opt/bbmap-38.22-0/resources/adapters.fa"
+  bb_adapters: "adapters"
   blob_blastdb: "/ei/public/databases/blast/ncbi/nt_20171013/nt"
   busco_databases: "/ei/workarea/group-pb/BUSCO_DATABASES/odb9"
   multiqc_config: "/ei/software/testing/bgrrl/0.1/src/ei_bgrrl/bgrrl/etc/multiqc_config.yaml"

@@ -15,7 +15,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 	description = long_description = description.read()
 
 name="bgrrl"
-version = "0.4.6"
+version = "0.6"
 
 if sys.version_info.major != 3:
 	raise EnvironmentError("""bgrrl is a python module that requires python3, and is not compatible with python2.""")
@@ -66,7 +66,9 @@ setup(
 			"create_samplesheet=bgrrl.bin.create_samplesheet:main",
 			"prokka_report=bgrrl.bin.prokka_report:main",
 			"asm_wrapper=bgrrl.bin.wrappers.asm_wrapper:main",
-			"prokka_wrapper=bgrrl.bin.wrappers.prokka_wrapper:main"
+			"prokka_wrapper=bgrrl.bin.wrappers.prokka_wrapper:main",
+			"ratt_wrapper=bgrrl.bin.wrappers.ratt_wrapper:main",
+			"qc2asm=bgrrl.bin.qc2asm:main"
 		]
 	},
 	package_data={
@@ -76,7 +78,8 @@ setup(
 	data_files=[
 		("bgrrl/etc", glob.glob("bgrrl/etc/*.*")),
 		("bgrrl/etc/wrappers", glob.glob("bgrrl/etc/wrappers/*")),
-		("bgrrl/etc/util", glob.glob("bgrrl/etc/util/*"))
+		("bgrrl/etc/util", glob.glob("bgrrl/etc/util/*")),
+		("bgrrl/etc/setup/", glob.glob("bgrrl/etc/setup/*.def"))
 	]
 )
 

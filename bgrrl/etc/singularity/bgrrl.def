@@ -1,0 +1,86 @@
+BootStrap: docker 
+From: centos:7
+OSVersion: 7
+# MirrorURL: http://yum-repos.hpccluster/centos/7/os/$basearch/
+MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
+Include: yum wget
+
+# If you want the updates (available at the bootstrap date) to be installed
+# inside the container during the bootstrap instead of the General Availability
+# point release (7.x) then uncomment the following line
+
+# UpdateURL: http://yum-repos.hpccluster/centos/7/updates/$basearch/
+
+%setup
+
+
+%environment
+    PATH=/opt/miniconda/bin:/opt/wrappers:$PATH
+    export PATH
+    PYTHONPATH=/opt/bgrrl/x86_64/lib/python3.6/site-packages
+    export PYTHONPATH
+
+%runscript
+    #!/bin/bash
+    arg="${1:-none}"
+
+    case "$arg" in
+      bbduk.sh)
+        echo "BBDUK"
+        source activate bgsurvey_env;
+        $@;;
+      *)    $@;;
+    esac
+
+
+%post
+    #mkdir /jic
+    #mkdir /nbi
+    #mkdir -p /tgac
+    #mkdir -p /ei
+    # mkdir /tsl
+    mkdir -p /opt/software
+	mkdir -p /opt/wrappers
+
+    ### Install your packages ###
+
+    # update yum
+    yum makecache fast && \
+    yum update -y
+
+    yum -y install git bzip2 wget which sudo vi source
+    yum -y group install "Development Tools"
+
+
+    mini_version=4.5.4
+    wget https://repo.anaconda.com/miniconda/Miniconda3-${mini_version}-Linux-x86_64.sh
+    bash Miniconda3-${mini_version}-Linux-x86_64.sh -b -p /opt/miniconda
+    echo "PATH=/opt/miniconda/bin:\$PATH" >> /root/.bashrc
+    echo "export PATH" >> /root/.bashrc
+    rm Miniconda3-${mini_version}-Linux-x86_64.sh
+    source /root/.bashrc
+
+	# if this is uncommented, build process will not proceed after this!
+    # conda update -n base conda
+
+    export PYTHONPATH=/opt/miniconda/lib/python3.6/site-packages
+
+    conda create -y --name bgsurvey_env
+    conda install -y -c bioconda --name bgsurvey_env bbmap fastqc
+
+	echo '#!/bin/bash' > /opt/wrappers/run_bbduk.sh
+	echo 'source activate bgsurvey_env' >> /opt/wrappers/run_bbduk.sh
+	echo 'bbduk.sh $@' >> /opt/wrappers/run_bbduk.sh
+	cat /opt/wrappers/run_bbduk.sh
+
+    #conda create -y --name bgasm_env
+    #conda install -y -c bioconda --name bgasm_env bbmap unicycler spades velvet perl-velvetoptimiser
+
+    #conda create -y --name bgann_env
+    #conda install -y -c bioconda --name bgann_env prokka
+
+    #conda create -y --name qaa_py2_env python=2.7
+    #conda install -y -c bioconda --name qaa_py2_env quast blobtools
+
+    #conda create -y --name qaa_py3_env
+    #conda install -y -c bioconda qualimap blast bwa bowtie2

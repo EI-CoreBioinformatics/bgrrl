@@ -55,7 +55,13 @@ def get_sample_files(wc):
 	return INPUTFILES[wc.sample].R1, INPUTFILES[wc.sample].R2
 
 
+def get_singularity_call(cfg, cmd):
+	assert "singularity_env" in cfg
+	return "singularity exec {0} {1}".format(cfg.get("singularity_env"), cmd)
+
+
 ### RULES ###
+
 
 localrules: all
 
@@ -75,12 +81,11 @@ rule qc_bbduk:
 	threads:
 		8
 	params:
-		load = loadPreCmd(config["load"]["bbmap"]),
-		bbduk = "bbduk.sh", 
+		bbduk = get_singularity_call(config, "bbduk.sh"), 
 		adapters = config["resources"]["bb_adapters"],
 		bbduk_params = config["params"]["bbduk"]
 	shell:
-		"{params.load}" + TIME_CMD + " {params.bbduk}" + \
+		TIME_CMD + " {params.bbduk}" + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
 		" ref={params.adapters}" + \
 		" {params.bbduk_params}" + \
@@ -95,14 +100,13 @@ rule qc_fastqc_bbduk:
 		fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html")
 	params:
 		outdir = join(FASTQC_DIR, "bbduk", "{sample}"),
-		load = loadPreCmd(config["load"]["fastqc"]),
-		fastqc = config["tools"]["fastqc"]
+		fastqc = get_singularity_call(config, "fastqc"), 
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}_{mate}.qc_fastqc_bbduk.log")
 	threads:
 		2
 	shell:
-		"{params.load} (" + TIME_CMD + " {params.fastqc}" + \
+		"(" + TIME_CMD + " {params.fastqc}" + \
 		" --extract --threads={threads} --outdir={params.outdir} {input} " + \
 		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
@@ -119,15 +123,14 @@ if not SKIP_NORMALIZATION:
 			prehist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
 			posthist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
 		params:
-			load = loadPreCmd(config["load"]["bbmap"]),
-			bbnorm = "bbnorm.sh", 
+			bbnorm = get_singularity_call(config, "bbnorm.sh"), 
 			bbnorm_params = config["params"]["bbnorm"]
 		log:
 			join(QC_LOGDIR, "{sample}", "{sample}.qc_bbnorm.log")
 		threads:
 			8
 		shell:
-			"{params.load}" + TIME_CMD + " {params.bbnorm}" + \
+			TIME_CMD + " {params.bbnorm}" + \
 			" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
 			" {params.bbnorm_params}" + \
 			" khist={output.prehist} khistout={output.posthist} &> {log}"
@@ -141,14 +144,13 @@ if not SKIP_NORMALIZATION:
 			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{sample}_{mate}.bbnorm_fastqc.html")
 		params:
 			outdir = join(FASTQC_DIR, "bbnorm", "{sample}"),
-			load = loadPreCmd(config["load"]["fastqc"]),
-			fastqc = config["tools"]["fastqc"]
+			fastqc = get_singularity_call(config, "fastqc")
 		log:
 			join(QC_LOGDIR, "{sample}", "{sample}_{mate}.qc_fastqc_bbnorm.log")
 		threads:
 			2
 		shell:
-			"{params.load} ({params.fastqc}" + \
+			"({params.fastqc}" + \
 			" --extract --threads={threads} --outdir={params.outdir} {input}" + \
 			" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
@@ -161,14 +163,13 @@ rule qc_tadpole:
 	output:
 		contigs = join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
 	params:
-		load = loadPreCmd(config["load"]["bbmap"]),
-		tadpole = "tadpole.sh"
+		tadpole = get_singularity_call(config, "tadpole.sh")
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}.qc_tadpole.log")
 	threads:
 		8
 	shell:
-		"{params.load}" + TIME_CMD + " {params.tadpole}" + \
+		TIME_CMD + " {params.tadpole}" + \
 		" -Xmx30g threads={threads} in={input.r1} in2={input.r2} out={output.contigs} &> {log}"
 
 rule qc_katgcp:
@@ -183,10 +184,9 @@ rule qc_katgcp:
 		join(KAT_DIR, "{sample}", "{sample}.kat")
 	params:
 		prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample), 
-		load = loadPreCmd(config["load"]["kat"])
+		kat = get_singularity_call(config, "kat")
 	threads:
 		2
 	shell:
-		"{params.load}" + \
-		" (kat gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
+		" ({params.kat} gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-source ratt-dev
-source emboss-6.6.0
+#source ratt-dev
+#source emboss-6.6.0
 
 outdir=$1
 contigs=$2

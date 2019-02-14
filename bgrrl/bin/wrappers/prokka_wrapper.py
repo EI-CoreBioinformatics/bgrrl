@@ -30,18 +30,24 @@ def main():
 	ap.add_argument("--seq-centre", type=str, default="EI")
 	ap.add_argument("--force", action="store_true")
 	ap.add_argument("--threads", type=int, default=8)
+	ap.add_argument("--singularity-container", type=str, default="")
+	ap.add_argument("--proteins", type=str, default="")
 
 	args = ap.parse_args()
+
+	singularity_prefix = ("singularity exec " + args.singularity_container + " ") if args.singularity_container else ""
 
 
 	cmd = "mkdir -p {1}" + \
 		" && cp -v {4} {1}/prokka_contigs.fasta" + \
-		" && prokka" + \
+		" && " + singularity_prefix + \
+		"prokka" + \
 		" --cpus {0}" + \
 		" --outdir {1}" + \
 		" --prefix {2}" + \
 		" --centre {3}" + \
 		(" --force" if args.force else "") + \
+		((" --proteins " + args.proteins) if args.proteins else "") + \
 		" {1}/prokka_contigs.fasta" + \
 		" && rm {1}/prokka_contigs.fasta"
 
@@ -81,7 +87,6 @@ def main():
 		).decode()
 	except subprocess.CalledProcessError as e:
 		prokka_msg = e.output.decode()
-		# files = ["err", "faa", "ffn", "ffn.16S", "fna", "fsa", "gbk", "gff", "log", "prokka.gff", "sqn", "tbl", "tsv", "txt"]
 		files = ["log", "faa", "ffn", "gff"]
 		for sfx in files:
 			open(join(args.outdir, args.prefix + "." + sfx), "wt").close()
