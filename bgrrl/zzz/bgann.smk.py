@@ -92,7 +92,7 @@ if True:
 			load = loadPreCmd(config["load"]["prokka"]),
 			centre = config["misc"]["seqcentre"],
 			container = ("--singularity-container " + config["singularity_env"]) if "singularity_env" in config else "",
-			custom_proteins = ("--proteins " + config["custom_prokka_proteins"]) if "custom_prokka_proteins" in config else ""
+			custom_proteins = ("--proteins " + config["custom_prokka_proteins"]) if config.get("custom_prokka_proteins", "") else ""
 		threads:
 			8
 		shell:
