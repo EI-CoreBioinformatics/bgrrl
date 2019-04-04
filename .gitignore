@@ -15,3 +15,4 @@ kat_test/
 bgrrl/zzz/singularity/
 singularity/
 bgrrl/zzz/bgasm.smk.py.old
+docs/_build
