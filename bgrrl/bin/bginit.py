@@ -42,9 +42,10 @@ def main():
 		pathlib.Path(config_dir).mkdir(parents=True, exist_ok=True)
 		print("done.")
 
+	etc_dir = os.path.join(os.path.dirname(__file__), "..", "etc")
+	print("Configuration templates are located in " + etc_dir)
 	print("Copying configuration files to {} ... ".format(config_dir), end="", flush=True)
 
-	etc_dir = os.path.join(os.path.dirname(__file__), "..", "etc")
 	for f in CONFIG_FILES:
 		try:
 			shutil.copyfile(os.path.join(etc_dir, f), os.path.join(config_dir, f))

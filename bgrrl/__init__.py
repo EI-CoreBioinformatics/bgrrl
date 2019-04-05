@@ -28,8 +28,6 @@ from bgrrl.bgrrl_config import BGRRLConfigurationManager
 from qaa import QAA_Runner, QAA_ID
 print("QAA_ID="+QAA_ID)
 
-TIME_CMD = " /usr/bin/time -v"
-
 
 class BGRRLModuleRunner(object):
 	def __init__(self, module, config_manager):
@@ -59,6 +57,7 @@ class BGRRLModuleRunner(object):
 			self.config_manager._config["samplesheet"] = self.config_manager.input_sheet
 
 		config_file = self.config_manager.generate_config_file(self.module)
+		print("Run configuration file: " + config_file)
 
 		print("Running " + self.module)
 		snake = join(dirname(__file__), "zzz", self.module + ".smk.py")

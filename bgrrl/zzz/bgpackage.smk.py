@@ -4,7 +4,6 @@ import os
 from os.path import join, basename, dirname
 import glob
 
-from bgrrl import TIME_CMD
 from bgrrl.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)
@@ -42,7 +41,7 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 		NUM_BATCHES = ceil((len(list(row for row in csv.reader(open(annotation_report), delimiter="\t"))) - 1)/30)
 
 		TARGETS.extend(
-			join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch." + batch_id + ".tar.gz") 
+			join(OUTPUTDIR, config["project_prefix"] + "_ratt_annotation_batch." + batch_id + ".tar.gz") 
 			for batch_id in range(1, NUM_BATCHES + 1)
 		)
 
@@ -172,9 +171,9 @@ if config["package_mode"] == "asm" or "asm" in config["package_mode"]:
 		output:
 			done = join(OUTPUTDIR, "ASSEMBLY_PKG_DONE") 
 		params:
-			package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_assemblies"),
+			package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_assemblies"),
 			outdir = basename(INPUTDIR),
-			prefix = config["misc"]["project"]
+			prefix = config["project_prefix"]
 		shell:
 			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(tail -n +2 {input.samples} | cut -f 1 | grep -v _broken); do" + \
@@ -215,9 +214,9 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 			output:
 				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
 			params:
-				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_prokka_denovo_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_prokka_denovo_annotation"),
 				outdir = basename(INPUTDIR),
-				prefix = config["misc"]["project"],
+				prefix = config["project_prefix"],
 				lcmd = link_command
 			shell:
 				"mkdir -p {params.package_dir}" + \
@@ -240,9 +239,9 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 			output:
 				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
 			params:
-				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
 				outdir = basename(INPUTDIR),
-				prefix = config["misc"]["project"]
+				prefix = config["project_prefix"]
 			shell:
 				"mkdir -p {params.package_dir}/ratt/{{reports,gff}}" + \
 				" && ln -sf ../../{params.outdir}/annotation/prokka {params.package_dir}/prokka" + \
@@ -264,11 +263,11 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 			input:
 				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
-				batches = expand(join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}", "good_to_go"), batch_id=list(range(1, NUM_BATCHES + 1)))
+				batches = expand(join(OUTPUTDIR, config["project_prefix"] + "_ratt_annotation_batch.{batch_id}", "good_to_go"), batch_id=list(range(1, NUM_BATCHES + 1)))
 			params:
-				package_dir = lambda wildcards: join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation"),
+				package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_ratt_annotation"),
 				outdir = basename(INPUTDIR),
-				prefix = config["misc"]["project"]
+				prefix = config["project_prefix"]
 			run:
 				import pathlib
 				batchid = 0
@@ -286,12 +285,12 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 			message:
 				"Packaging ratt annotations..."
 			input:
-				goflag = join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}", "good_to_go")
+				goflag = join(OUTPUTDIR, config["project_prefix"] + "_ratt_annotation_batch.{batch_id}", "good_to_go")
 			output:
-				tarball = join(OUTPUTDIR, config["misc"]["project"] + "_ratt_annotation_batch.{batch_id}.tar.gz")
+				tarball = join(OUTPUTDIR, config["project_prefix"] + "_ratt_annotation_batch.{batch_id}.tar.gz")
 			params:
 				outdir = OUTPUTDIR, 
-				prefix = config["misc"]["project"],
+				prefix = config["project_prefix"],
 				indir = dirname("{input.goflag}")
 			shell:
 				"""

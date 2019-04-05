@@ -26,6 +26,9 @@ class RunMode(Enum):
 	VALIDATE = 3
 	DRYRUN = 4
 
+def get_cmd_call(cfg, container):
+    call = cfg.get("singularity", dict()).get(container, "")
+    return "singularity exec {0} ".format(call) if call and cfg.get("singularity", dict()).get("use_singularity", False) else ""
 
 def make_exeenv_arg_group(parser, default_hpc_config_file=DEFAULT_HPC_CONFIG_FILE, allow_mode_selection=True, silent=False):  
 	"""

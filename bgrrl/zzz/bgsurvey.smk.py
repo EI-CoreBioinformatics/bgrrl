@@ -3,9 +3,10 @@ import csv
 import os
 from os.path import join
 
-from bgrrl import TIME_CMD
 from bgrrl.samplesheet import readSamplesheet, Samplesheet 
-from bgrrl.snakemake_helper import loadPreCmd
+from bgrrl.snakemake_helper import get_cmd_call
+
+TIME_V = config.get("tools", dict()).get("time", "time")
 
 DEBUG = config.get("debugmode", False)
 
@@ -54,14 +55,10 @@ if DEBUG:
 def get_sample_files(wc):
 	return INPUTFILES[wc.sample].R1, INPUTFILES[wc.sample].R2
 
-
-def get_singularity_call(cfg, cmd):
-	assert "singularity_env" in cfg
-	return "singularity exec {0} {1}".format(cfg.get("singularity_env"), cmd)
+CMD_CALL = get_cmd_call(config, "bgrrl_container")
 
 
 ### RULES ###
-
 
 localrules: all
 
@@ -81,11 +78,11 @@ rule qc_bbduk:
 	threads:
 		8
 	params:
-		bbduk = get_singularity_call(config, "bbduk.sh"), 
+		cmd = CMD_CALL + "bbduk.sh",
 		adapters = config["resources"]["bb_adapters"],
 		bbduk_params = config["params"]["bbduk"]
 	shell:
-		TIME_CMD + " {params.bbduk}" + \
+		TIME_V + " {params.cmd}" + \
 		" -Xmx30g t={threads} in1={input[0]} in2={input[1]} out1={output.r1} out2={output.r2}" + \
 		" ref={params.adapters}" + \
 		" {params.bbduk_params}" + \
@@ -100,13 +97,13 @@ rule qc_fastqc_bbduk:
 		fqc = join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html")
 	params:
 		outdir = join(FASTQC_DIR, "bbduk", "{sample}"),
-		fastqc = get_singularity_call(config, "fastqc"), 
+		cmd = CMD_CALL + "fastqc" 
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}_{mate}.qc_fastqc_bbduk.log")
 	threads:
 		2
 	shell:
-		"(" + TIME_CMD + " {params.fastqc}" + \
+		"(" + TIME_V + " {params.cmd}" + \
 		" --extract --threads={threads} --outdir={params.outdir} {input} " + \
 		" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
@@ -123,14 +120,14 @@ if not SKIP_NORMALIZATION:
 			prehist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.pre.hist"),
 			posthist = join(BBNORM_DIR, "{sample}", "{sample}.bbnorm.post.hist")
 		params:
-			bbnorm = get_singularity_call(config, "bbnorm.sh"), 
+			cmd = CMD_CALL + "bbnorm.sh",
 			bbnorm_params = config["params"]["bbnorm"]
 		log:
 			join(QC_LOGDIR, "{sample}", "{sample}.qc_bbnorm.log")
 		threads:
 			8
 		shell:
-			TIME_CMD + " {params.bbnorm}" + \
+			TIME_V + " {params.cmd}" + \
 			" -Xmx30g t={threads} in={input.r1} in2={input.r2} out={output.r1} out2={output.r2}" + \
 			" {params.bbnorm_params}" + \
 			" khist={output.prehist} khistout={output.posthist} &> {log}"
@@ -144,13 +141,13 @@ if not SKIP_NORMALIZATION:
 			fqc = join(FASTQC_DIR, "bbnorm", "{sample}", "{sample}_{mate}.bbnorm_fastqc.html")
 		params:
 			outdir = join(FASTQC_DIR, "bbnorm", "{sample}"),
-			fastqc = get_singularity_call(config, "fastqc")
+			cmd = CMD_CALL + "fastqc"
 		log:
 			join(QC_LOGDIR, "{sample}", "{sample}_{mate}.qc_fastqc_bbnorm.log")
 		threads:
 			2
 		shell:
-			"({params.fastqc}" + \
+			"({params.cmd}" + \
 			" --extract --threads={threads} --outdir={params.outdir} {input}" + \
 			" || mkdir -p {params.outdir} && touch {output.fqc}) &> {log}"
 
@@ -163,13 +160,13 @@ rule qc_tadpole:
 	output:
 		contigs = join(TADPOLE_DIR, "{sample}", "{sample}_tadpole_contigs.fasta")
 	params:
-		tadpole = get_singularity_call(config, "tadpole.sh")
+		cmd = CMD_CALL + "tadpole.sh"
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}.qc_tadpole.log")
 	threads:
 		8
 	shell:
-		TIME_CMD + " {params.tadpole}" + \
+		TIME_V + " {params.cmd}" + \
 		" -Xmx30g threads={threads} in={input.r1} in2={input.r2} out={output.contigs} &> {log}"
 
 rule qc_katgcp:
@@ -184,9 +181,9 @@ rule qc_katgcp:
 		join(KAT_DIR, "{sample}", "{sample}.kat")
 	params:
 		prefix = lambda wildcards: join(KAT_DIR, wildcards.sample, wildcards.sample), 
-		kat = get_singularity_call(config, "kat")
+		cmd = CMD_CALL + "kat"
 	threads:
 		2
 	shell:
-		" ({params.kat} gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
+		" ({params.cmd} gcp -o {params.prefix} -t {threads} -v {input.r1} {input.r2} || touch {output.katgcp}) &> {log}"
 

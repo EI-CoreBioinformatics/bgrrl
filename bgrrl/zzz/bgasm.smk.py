@@ -4,13 +4,14 @@ import os
 from os.path import join, basename, dirname
 from collections import Counter
 
-from bgrrl import TIME_CMD
 from bgrrl.samplesheet import readSamplesheet, Samplesheet, ASM_Sample
-from bgrrl.snakemake_helper import loadPreCmd
+from bgrrl.snakemake_helper import get_cmd_call
 
 DEBUG = config.get("debugmode", False)
 CWD = os.getcwd()
 SKIP_NORMALIZATION = config.get("no_normalization", False)
+
+TIME_V = config.get("tools", dict()).get("time", "time")
 
 # set up i/o
 OUTPUTDIR = config["out_dir"]
@@ -27,15 +28,11 @@ RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
 
 INPUTFILES = Samplesheet(config["samplesheet"], sampletype=ASM_Sample)
 
-#INPUTFILES = set(row[0] for row in csv.reader(open(config["samplesheet"]), delimiter=","))
-#INPUTFILES = {row[0]: row[2] for row in csv.reader(open(config["samplesheet"]), delimiter=",")}
-
 
 # generate target list
 TARGETS = list()
 
 if config["run_prokka"]:
-	#TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".prokka.gff"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".gff"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".fna"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".ffn.16S"), INPUTFILES))
@@ -93,10 +90,8 @@ def get_ref(wc):
 def get_assembly(wc):
     return INPUTFILES[wc.sample]
 
+CMD_CALL = get_cmd_call(config, "bgrrl_container")
 
-def get_singularity_call(cfg, cmd):
-    assert "singularity_env" in cfg
-    return "singularity exec {0} {1}".format(cfg.get("singularity_env"), cmd)
 
 ### RULES ###
 
@@ -123,7 +118,7 @@ rule asm_assembly:
 		assembler = config["assembler"],
 		r1 = lambda wildcards: get_sample_files(wildcards)[0] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[:2]),
 		r2 = lambda wildcards: get_sample_files(wildcards)[1] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[2:]),
-		container = ("--singularity-container " + config["singularity_env"]) if "singularity_env" in config else ""
+		container = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
 	threads:
 		8
 	shell:
@@ -140,11 +135,11 @@ rule asm_postprocess:
 		join(ASSEMBLY_DIR, "log", "{sample}.asm_postprocess.log")
 	params:
 		minlen = int(config["asm_lengthfilter_contig_minlen"]),
-		reformat = get_singularity_call(config, "reformat.sh")
+		cmd = CMD_CALL + "reformat.sh"
 	threads:
 		1
 	shell:
-		TIME_CMD + " {params.reformat}" + \
+		TIME_V + " {params.cmd}" + \
 		" in={input.assembly} out={output[0]} minlength={params.minlen}"
 
 
@@ -153,7 +148,6 @@ if config["run_prokka"]:
 		message:
 			"Running de novo gene/functional annotation with prokka (incl. barrnap)..."
 		input:
-			#contigs = get_assembly
 			contigs = join(config["cwd"], ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 		output:
 			log = join(PROKKA_DIR, "{sample}", "{sample}.log"),
@@ -166,9 +160,8 @@ if config["run_prokka"]:
 		params:
 			outdir = lambda wildcards: join(PROKKA_DIR, wildcards.sample),
 			prefix = lambda wildcards: wildcards.sample,
-			load = loadPreCmd(config["load"]["prokka"]),
 			centre = config["misc"]["seqcentre"],
-			container = ("--singularity-container " + config["singularity_env"]) if "singularity_env" in config else "",
+			container = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else "",
 			custom_proteins = ("--proteins " + config["custom_prokka_proteins"]) if config.get("custom_prokka_proteins", "") else ""
 		threads:
 			8
@@ -176,20 +169,6 @@ if config["run_prokka"]:
 			"prokka_wrapper {input.contigs} {params.container} --prefix {params.prefix} --outdir {params.outdir} --seq-centre {params.centre} --force --threads {threads}" + \
             " {params.custom_proteins}" + \
 			" &> {log}"
-
-	# obsolete if using prokka.fna as assembly fasta
-	#rule ann_prokka_gffconvert:
-	#	message:
-	#		"Renaming contig/scaffold names in prokka-generated gff..." # !TODO might need to do that with .gbk, too?
-	#	input:
-	#		gff = join(PROKKA_DIR, "{sample}", "{sample}.gff")
-	#	output:
-	#		gff = join(PROKKA_DIR, "{sample}", "{sample}.prokka.gff")
-	#	shell:
-	#		"awk -v OFS=\"\\t\" -v FS=\"\\t\"" + \
-	#		" 'BEGIN {{ print \"##gff-version 3\"; }}" + \
-	#		" /^[^#]/ {{ $1=gensub(\"[^>_]+_\", \"\", \"g\", $1); }}" + \
-	#		" {{ if (NF > 1) print $0; }}' {input.gff} > {output.gff}"
 
 	rule ann_prokka_16S:
 		message:
@@ -199,9 +178,9 @@ if config["run_prokka"]:
 		output:
 			ffn = join(PROKKA_DIR, "{sample}", "{sample}.ffn.16S")
 		params:
-			seqtk = get_singularity_call(config, "seqtk")
+			cmd = CMD_CALL + "seqtk"
 		shell:
-			"{params.seqtk} subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d \" \" | cut -f 2 -d \>) > {output.ffn}"
+			"{params.cmd} subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d \" \" | cut -f 2 -d \>) > {output.ffn}"
 
 
 if config["run_ratt"]:
@@ -213,14 +192,11 @@ if config["run_ratt"]:
 		output:
 			join(config["ratt_reference"], "{ref_ann}", "gff", "{prefix}.parts_gff")
 		params:
-			load = loadPreCmd(config["load"]["ratt"]),
 			refdir = join(config["cwd"], config["ratt_reference"], "{ref_ann}"),
-			cmd = get_singularity_call(config, "seqret")
+			cmd = CMD_CALL + "seqret"
 		threads:
 			1
 		shell:
-			#"set +u && " + \
-			#"source deactivate && source activate ratt_env && " + \
 			"cd {params.refdir} && " + \
 			"{params.cmd} -sequence {input.embl_ref} -outseq $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff -offormat gff -feature && " + \
 			"rm $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff && " + \
@@ -246,7 +222,6 @@ if config["run_ratt"]:
 		message:
 			"Running annotation-transfer with ratt..."
 		input:
-			#contigs = get_assembly,
 			contigs = join(PROKKA_DIR, "{sample}", "{sample}.ffn"),
 			reference = join(config["ratt_reference"], "{ref_ann}")
 		output:
@@ -255,14 +230,12 @@ if config["run_ratt"]:
 			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_{ref_ann}.ann_ratt.log")
 		params:	
 			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann),
-			load = loadPreCmd(config["load"]["ratt"]),
 			done = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann, wildcards.sample + "_" + wildcards.ref_ann + ".done"),
-			path_to_ratt = "DUMMYPATH", #"/tgac/software/testing/ratt/dev_no_defined/x86_64/bin",
-			container = ("--singularity-container " + config["singularity_env"]) if "singularity_env" in config else ""
+			path_to_ratt = "DUMMYPATH", 
+			container = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
 		threads:
 			1
 		shell:
-			#"set +u && source deactivate && source activate ratt_env && source ratt-dev_no_defined && " + \
 			"ratt_wrapper {params.container} -o {params.outdir} " + \
 			join(config["cwd"], "{input.contigs}") + " " + \
 			"{input.reference} {params.path_to_ratt} &> {log}"

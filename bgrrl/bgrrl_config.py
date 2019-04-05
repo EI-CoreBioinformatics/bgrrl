@@ -25,16 +25,17 @@ class ConfigurationManager(OrderedDict):
 	
 	def __handle_config_file(self, config_file, config_type, file_pattern, warning=""):
 		try:
-			init_file = glob.glob(self.config_dir, file_pattern)[0]
+			init_file = glob.glob(join(self.config_dir, file_pattern))[0]
 		except:
 			init_file = ""
 
 		if hasattr(self, config_file) and exists(getattr(self, config_file)):
-			print("Custom {} file specified, overriding defaults.".format(config_type))
+			print("Custom {} file specified {}, overriding defaults.".format(config_type, getattr(self, config_file)))
 			setattr(self, config_file + "_file", getattr(self, config_file))
 		elif init_file:
 			print("Found {} file at init location, using this.".format(config_type))
 			setattr(self, config_file + "_file", init_file)
+			setattr(self, config_file, init_file)
 		else:
 			raise ValueError(
 				"No valid {} file specified.{}".format(
@@ -167,11 +168,11 @@ class ConfigurationManager(OrderedDict):
 		# hand this over to ExecutionEnvironment
 		self.__make_exe_env()
 
-		# handle main main configuration
+		# handle main configuration
 		self.__handle_config_file(
 			"config",
 			"configuration",
-			"*config.yaml",
+			"bgrrl_config.yaml",
 			warning=self.alt_config_warning if hasattr(self, "alt_config_warning") else "")
 
 		# Load/edit configuration
@@ -182,7 +183,13 @@ class ConfigurationManager(OrderedDict):
 
 		self._config["out_dir"] = self.output_dir
 
-
+		# get multiqc configuration for qaa
+		self.__handle_config_file(
+			"multiqc_config",
+			"MultiQC configuration",
+			"multiqc_config.yaml",
+			warning=self.alt_multiqc_config_warning if hasattr(self, "alt_multiqc_config_warning") else "")
+			
 	def __str__(self):
 		return super(ConfigurationManager, self).__str__() + "\n" + str(self.exe_env)
 
@@ -196,7 +203,7 @@ class BGRRLConfigurationManager(ConfigurationManager):
 	
 	def __manage(self):
 		cfg_d = {
-			"etc": join(dirname(__file__), "etc"),
+			"etc": join(dirname(__file__), "..", "etc"),
 			"cwd": os.getcwd(),
 			"reapr_correction": False,
 			"run_prokka": hasattr(self, "run_annotation") and self.run_annotation,
@@ -208,7 +215,7 @@ class BGRRLConfigurationManager(ConfigurationManager):
 		
 		if hasattr(self, "project_prefix"):
 			prefix = self.project_prefix if self.project_prefix is not None else ""
-			self._config["project_prefix"] = self._config["misc"]["project"] = prefix 
+			self._config["project_prefix"] = prefix
 		
 		if hasattr(self, "prokka_package_style"):
 			self._config["prokka_package_style"] = self.prokka_package_style
@@ -229,6 +236,7 @@ class BGRRLConfigurationManager(ConfigurationManager):
 
 		self.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
 		self.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
+		self.alt_multiqc_config_warning = "Please run bginit to obtain a valid MultiQC configuration file template."
 
 		super(BGRRLConfigurationManager, self).__init__(ap_args)
 
@@ -244,6 +252,7 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			project_prefix=self.project_prefix,
 			config=self.config_file,
 			hpc_config=self.hpc_config_file,
+			multiqc_config=self.multiqc_config_file,	
 			normalized=not self.no_normalization if hasattr(self, "no_normalization") else True,
 			multiqc_dir=join(self.report_dir, "multiqc", stage.split(",")[0]) 
 		)

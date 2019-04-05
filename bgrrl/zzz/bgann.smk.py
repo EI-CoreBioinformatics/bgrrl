@@ -5,11 +5,12 @@ from os.path import join, basename, dirname
 from collections import Counter
 
 from bgrrl.samplesheet import readSamplesheet
-from bgrrl import TIME_CMD
-from bgrrl.snakemake_helper import loadPreCmd
+from bgrrl.snakemake_helper import get_cmd_call
 
 DEBUG = config.get("debugmode", False)
 CWD = os.getcwd()
+
+TIME_V = config.get("tools", dict()).get("time", "time")
 
 # tools
 RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
@@ -64,6 +65,8 @@ def get_singularity_call(cfg, cmd):
     assert "singularity_env" in cfg
     return "singularity exec {0} {1}".format(cfg.get("singularity_env"), cmd)
 
+CMD_CALL = get_cmd_call(config, "bgrrl_container")
+
 
 ### RULES ###
 
@@ -77,7 +80,6 @@ if True:
 		message:
 			"Running de novo gene/functional annotation with prokka (incl. barrnap)..."
 		input:
-			# contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta")
 			contigs = get_assembly
 		output:
 			log = join(PROKKA_DIR, "{sample}", "{sample}.log"),
@@ -89,15 +91,12 @@ if True:
 		params:
 			outdir = lambda wildcards: join(PROKKA_DIR, wildcards.sample),
 			prefix = lambda wildcards: wildcards.sample,
-			load = loadPreCmd(config["load"]["prokka"]),
 			centre = config["misc"]["seqcentre"],
-			container = ("--singularity-container " + config["singularity_env"]) if "singularity_env" in config else "",
+			container = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
 			custom_proteins = ("--proteins " + config["custom_prokka_proteins"]) if config.get("custom_prokka_proteins", "") else ""
 		threads:
 			8
 		shell:
-			# "set +u && source deactivate && source activate prokka_env" + \
-			# " && " + \
 			"prokka_wrapper {input.contigs} {params.container} --prefix {params.prefix} --outdir {params.outdir} --seq-centre {params.centre} --force --threads {threads}" + \
 			" {params.custom_proteins}" + \
 			" &> {log}"
@@ -123,13 +122,9 @@ if True:
 		output:
 			ffn = join(PROKKA_DIR, "{sample}", "{sample}.ffn.16S")
 		params:
-			# load = loadPreCmd(config["load"]["seqtk"])
-			seqtk = get_singularity_call(config, "seqtk")
+			cmd = CMD_CALL + "seqtk"
 		shell:
-			# "{params.load} " + \
-			"{params.seqtk} subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d \" \" | cut -f 2 -d \>) > {output.ffn}"
-
-
+			"{params.cmd} subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d \" \" | cut -f 2 -d \>) > {output.ffn}"
 
 if config["run_ratt"]:
 	rule ann_ratt_prepref:
@@ -139,30 +134,16 @@ if config["run_ratt"]:
 			embl_ref = join(config["ratt_reference"], "{ref_ann}", "{prefix}.embl")
 		output:
 			join(config["ratt_reference"], "{ref_ann}", "gff", "{prefix}.parts_gff")
-		# log:
-		#	join(config["cwd"], ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_prepref.log")
 		params:
-			load = loadPreCmd(config["load"]["ratt"]),
-			refdir = join(config["cwd"], config["ratt_reference"], "{ref_ann}")				
+			refdir = join(config["cwd"], config["ratt_reference"], "{ref_ann}"),
+			cmd = CMD_CALL + "seqret"
 		threads:
 			1
 		shell:
-			#"{params.load}" + \
-			"set +u && " + \
-			"source deactivate && source activate ratt_env && " + \
 			"cd {params.refdir} && " + \
-			"seqret -sequence {input.embl_ref} -outseq $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff -offormat gff -feature && " + \
+			"{params.cmd} -sequence {input.embl_ref} -outseq $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff -offormat gff -feature && " + \
 			"rm $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff && " + \
 			"mkdir -p gff && mv $(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff gff/$(basename {input.embl_ref} .embl | sed 's/_x_/./g').parts_gff && cd " + CWD 
-			
-
-
-
-			#" set +u && source ratt-dev_no_defined && source deactivate && source activate ratt_env &&" + \
-			#" cd {params.refdir}" + \
-			#" && seqret -sequence {input.embl_ref} -outseq $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff -offormat gff -feature" + \
-			#" && rm $(basename {input.embl_ref} .embl).$(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff" + \
-			#" && mkdir -p gff && mv $(basename {input.embl_ref} .embl | sed 's/\./_x_/g').gff gff/$(basename {input.embl_ref} .embl | sed 's/_x_/./g').parts_gff && cd " + CWD 
 
 	rule ann_ratt_mergegff:
 		message:
@@ -184,7 +165,6 @@ if config["run_ratt"]:
 		message:
 			"Running annotation-transfer with ratt..."
 		input:
-			#contigs = join(ASSEMBLY_DIR, "{sample}", "{sample}.assembly.fasta"),
 			contigs = get_assembly,
 			reference = join(config["ratt_reference"], "{ref_ann}")
 		output:
@@ -193,19 +173,12 @@ if config["run_ratt"]:
 			join(config["cwd"], ANNOTATION_DIR, "log", "{sample}_{ref_ann}.ann_ratt.log")
 		params:	
 			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann),
-			load = loadPreCmd(config["load"]["ratt"]),
 			done = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann, wildcards.sample + "_" + wildcards.ref_ann + ".done"),
-			path_to_ratt = "/tgac/software/testing/ratt/dev_no_defined/x86_64/bin"
+			path_to_ratt = "DUMMYPATH",
+			container = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
 		threads:
 			1
 		shell:
-			#export RATT_HOME=/tgac/software/testing/ratt/dev_no_defined/x86_64/bin/
-			#export RATT_CONFIG=$RATT_HOME/RATT.config_bac
-			"set +u && source deactivate && source activate ratt_env && source ratt-dev_no_defined && " + \
-			"ratt_wrapper -o {params.outdir} " + \
+			"ratt_wrapper {params.container} -o {params.outdir} " + \
 			join(config["cwd"], "{input.contigs}") + " " + \
 			"{input.reference} {params.path_to_ratt} &> {log}"
-
-			# ratt_wrapper [-h] [--outdir OUTDIR] contigs reference path_to_ratt
-			#RATT_WRAPPER + " {params.outdir} " + join(config["cwd"], "{input.contigs}") + \
-			#" {input.reference} {params.done} &> {log}"
