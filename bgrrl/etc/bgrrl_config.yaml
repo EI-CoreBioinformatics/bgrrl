@@ -1,0 +1,19 @@
+singularity:
+  use_singularity: true
+  bgrrl_container: "/ei/software/testing/bgrrl/singularity/bgrrl_exec.img"
+  qaa_container: "/ei/software/testing/qaa/singularity/qaa_exec.img"
+
+tools:
+  time: "/usr/bin/time -v"
+
+resources:
+  bb_adapters: "adapters"
+  blob_blastdb: "/ei/public/databases/blast/ncbi/nt_20171013/nt"
+  busco_databases: "/ei/workarea/group-pb/BUSCO_DATABASES/odb9"
+
+params:
+  bbduk: "ktrim=r k=21 mink=7 hdist=1 qtrim=lr trimq=3 minlen=100 maq=20 tpe tbo"
+  bbnorm: "target=100 min=2 prefilter"
+
+misc:
+  seqcentre: "EI"  
