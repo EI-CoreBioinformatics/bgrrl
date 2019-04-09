@@ -56,11 +56,20 @@ class BGRRLModuleRunner(object):
 		if samplesheet.verifySampleData(fields=verify_fields):
 			self.config_manager._config["samplesheet"] = self.config_manager.input_sheet
 
+		self.config_manager.module = self.module
+
 		config_file = self.config_manager.generate_config_file(self.module)
 		print("Run configuration file: " + config_file)
 
+		snakes = {
+			"bgsurvey": "bgsurvey.smk.py",
+			"bgasm": "bgasm.smk.py",
+			"bgann": "bgasm.smk.py",
+			"bgpackage": "bgpackage.smk.py"
+		}
+
 		print("Running " + self.module)
-		snake = join(dirname(__file__), "zzz", self.module + ".smk.py")
+		snake = join(dirname(__file__), "zzz", snakes[self.module])
 		
 		return run_snakemake(
 			snake,

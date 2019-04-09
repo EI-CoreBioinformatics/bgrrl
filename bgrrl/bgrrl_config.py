@@ -206,7 +206,7 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			"etc": join(dirname(__file__), "..", "etc"),
 			"cwd": os.getcwd(),
 			"reapr_correction": False,
-			"run_prokka": hasattr(self, "run_annotation") and self.run_annotation,
+			"run_prokka": self.runmode == "annotate" or (hasattr(self, "run_annotation") and self.run_annotation),
 			"run_ratt": False,
 			"package_dir": self.package_dir,			
 		}
