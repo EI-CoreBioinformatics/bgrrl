@@ -36,10 +36,6 @@ else:
 
 INPUTFILES = Samplesheet(config["samplesheet"], sampletype=sampletype)
 
-
-RATT_REF_PATH = os.path.abspath(config.get("ratt_reference", "."))
-
-
 # generate target list
 TARGETS = list()
 
@@ -52,6 +48,7 @@ else:
 	
 REF_PREFIXES = dict()
 if config["run_ratt"]:
+	RATT_REF_PATH = os.path.abspath(config.get("ratt_reference", "."))
 	
 	for d in next(os.walk(RATT_REF_PATH))[1]:     
 		TARGETS.extend(map(lambda s:join(RATT_DIR, s, d, "{}_{}.final.gff".format(s, d)), INPUTFILES))
