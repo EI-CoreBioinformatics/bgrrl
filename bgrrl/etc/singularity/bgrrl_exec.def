@@ -24,7 +24,7 @@ Include: yum wget
     PATH=/opt/software/prokka/bin:/opt/software/samtools:/opt/software/ratt-code:/opt/miniconda/bin:$PATH
     export PATH
 
-
+#dummy
 
 
 %post
