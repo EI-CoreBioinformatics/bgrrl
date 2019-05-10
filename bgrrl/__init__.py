@@ -166,6 +166,12 @@ class BGAssemblyRunner(BGRRLModuleRunner):
 				if run_result:
 
 					if self.config_manager.run_annotation:
+						print(
+								"WARNING: Prokka annotation selected\n" + \
+								"If your jobs fail, you might have to update tbl2asn and/or exclude nodes " + \
+								"(hmmscan/GNU parallel fails)."
+						)
+
 						BGAnnotationRunner.check_prokka_nodes(
 							join(self.config_manager.output_dir, "annotation", "prokka"),
 							join(self.config_manager.output_dir, "reports", "ann_run_report.txt")
@@ -196,12 +202,7 @@ class BGAssemblyRunner(BGRRLModuleRunner):
 						if run_result and not self.config_manager.no_packaging:
 							package_mode = qaa_stage + (",analysis" if self.config_manager.is_final_step or self.config_manager.run_annotation else "")
 							self.config_manager.package_mode = package_mode # "asm"
-							# run_result = self.__run_package() 
 							run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
-							#if run_result and self.config_manager.is_final_step:
-							#	self.config_manager.package_mode = "analysis,asm"
-							#	# run_result = self.__run_package()
-							#	run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
 
 		return run_result
 
@@ -257,17 +258,6 @@ class BGAnnotationRunner(BGRRLModuleRunner):
 					join(self.config_manager.output_dir, "annotation", "prokka"),
 					join(self.config_manager.output_dir, "reports", "ann_run_report.txt")
 				)
-				#nodes = set()
-				#for f in glob.glob(join(self.config_manager.output_dir, "annotation", "prokka", "*", "PROKKA_FAILED")):
-				#	nodes.add(open(f).read().strip())
-				#if nodes:
-				#	with open(join(self.config_manager.output_dir, "reports", "ann_run_report.txt"), "at") as run_report:
-				#		for node in sorted(nodes):
-				#			print(node, file=run_report)
-				#	print(
-				#		"Failed prokka jobs were executed on nodes: {}.\n" + \
-				#		"Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))), 
-				#	)
 
 				qaa_args = self.config_manager.create_qaa_args(stage="ann")
 				run_result = QAA_Runner(qaa_args).run()
@@ -280,30 +270,11 @@ class BGAnnotationRunner(BGRRLModuleRunner):
 						join(self.config_manager.output_dir, "reports")
 					)
 
-				#if run_result and hasattr(self.config_manager, "ratt_reference") and self.config_manager.ratt_reference is not None:
-				#	ann_report_main(
-				#		[
-				#			"--ref-dir", self.config_manager.ratt_reference,
-				#			join(self.config_manager.output_dir, "annotation", "ratt")
-				#		]
-				#	)
-				#	annocmp_main(
-				#		[
-				#			join(self.config_manager.output_dir, "annotation", "prokka"),
-				#			join(self.config_manager.output_dir, "annotation", "ratt"), 
-				#			join(self.config_manager.output_dir, "reports")
-				#		]
-				#	)
-				#else:
-				#	open(join(self.config_manager.output_dir, "reports", "annotation_report.tsv"), "at").close()
-
 				if run_result and not self.config_manager.no_packaging:
 					self.config_manager.package_mode = "ann"
-					# run_result = self.__run_package()
 					run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
 					if run_result:
 						self.config_manager.package_mode = "analysis,ann"
-						# run_result = self.__run_package()
 						run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
 
 		return run_result
