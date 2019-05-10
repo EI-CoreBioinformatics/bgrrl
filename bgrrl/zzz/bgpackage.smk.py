@@ -210,7 +210,7 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 			message:
 				"Packaging prokka annotations (style={})...".format(config.get("prokka_package_style", "by_sample"))
 			input:
-				samples = join(INPUTDIR, "reports", "annotation_report.tsv")
+				samples = directory(os.path.join(INPUTDIR, "annotation", "prokka")) # join(INPUTDIR, "reports", "annotation_report.tsv")
 			output:
 				done = join(OUTPUTDIR, "ANNOTATION_PKG_DONE")
 			params:
