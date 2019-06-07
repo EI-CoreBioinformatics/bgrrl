@@ -133,7 +133,7 @@ if [[ -n "$dependency" ]]; then
     slurm_opts="${slurm_opts} --dependency $dependency"
 fi
 
-echo "Running submission command: sbatch ${slurm_opts} --wrap=\"$app $@\""
+echo "Running submission command: sbatch ${slurm_opts} --wrap=\"$app $bgmode $@\""
 
 rm -f ${app_cmd}.${output_dir}.command.sh
 echo "#!/bin/bash -e" >> ${app_cmd}.${output_dir}.command.sh
