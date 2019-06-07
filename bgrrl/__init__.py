@@ -92,7 +92,7 @@ class BGSurveyRunner(BGRRLModuleRunner):
 			run_result = qc_eval_main(
 				[
 					"--readtype", readtype, 
-					"--min_tadpolesize", min_tadpole_size, 
+					"--min_tadpole_size", min_tadpole_size, 
 					self.config_manager.input_sheet, 
 					self.config_manager.output_dir
 				]
@@ -106,7 +106,7 @@ class BGSurveyRunner(BGRRLModuleRunner):
 					run_result = qc_eval_main(
 						[
 							"--readtype", readtype, 
-							"--min_tadpolesize", min_tadpole_size, 
+							"--min_tadpole_size", min_tadpole_size, 
 							self.config_manager.input_sheet, 
 							self.config_manager.output_dir
 						]

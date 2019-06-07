@@ -281,7 +281,7 @@ def main(args_in=sys.argv[1:]):
     ap.add_argument("input", type=str)
     ap.add_argument("indir", type=str, default=".")
     ap.add_argument("--min_readcount", type=int, default=1000)
-    ap.add_argument("--min_tadpolesize", type=int, default=1e6)
+    ap.add_argument("--min_tadpole_size", type=int, default=1e6)
     ap.add_argument("--readtype", type=str, choices=["bbnorm", "bbduk"], default="bbnorm")
     ap.add_argument("--report-dir", type=str, default="")
     ap.add_argument("--override_survey", action="store_true")
@@ -327,6 +327,8 @@ def main(args_in=sys.argv[1:]):
             for test, testf, tdata, kwargs in TESTS:
                 if test == "FASTQC:READCOUNT":
                     kwargs["readtype"] = args.readtype
+                elif test == "TADPOLE:SIZE":
+                    kwargs["min_size"] = args.min_tadpole_size
                 results.append(testf(sample, **kwargs))
             # results = list(testf(sample, **kwargs) for test, testf, tdata, kwargs in TESTS)
             passed = all(result[1] == "PASS" for result in results)
