@@ -16,6 +16,7 @@ STAGE_QAA_ARGS = {
 		"run_qualimap": False,
 		"align_reads": False,
 		"run_busco": False,
+		"run_multiqc": True
 	},
 	"qc_report": {
 		"survey_assembly": True,

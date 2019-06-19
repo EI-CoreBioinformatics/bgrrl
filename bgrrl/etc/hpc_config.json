@@ -98,6 +98,12 @@
     "c": 1,
     "memory": "4000"
   },
+  "qaa_multiqc": {
+    "J": "qaa-multiqc",
+    "c": 1,
+    "memory": "2000"
+  },
+
   "fin_package_annotation_ratt_tarballs": {"J": "bg-pack", "c": "1", "memory": "4000"},
   "fin_package_annotation_make_ratt_batches": {"J": "bg-pack", "c": "1", "memory": "4000"},
   "fin_package_assembly": {"J": "bg-pack", "c": 1, "memory": "4000"},
