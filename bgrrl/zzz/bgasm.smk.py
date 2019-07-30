@@ -176,7 +176,9 @@ if config["run_prokka"]:
 			8
 		shell:
 			"prokka_wrapper {input.contigs} {params.container} --prefix {params.prefix} --outdir {params.outdir} --seq-centre {params.centre} --force --threads {threads}" + \
-            " {params.custom_proteins}" + \
+            " {params.custom_proteins} && " + \
+			" touch {PROKKA_DIR}/{wildcards.sample}/{wildcards.sample}.txt && " + \
+			" sed -i \"s/strain/{wildcards.sample}/\" {PROKKA_DIR}/{wildcards.sample}/{wildcards.sample}.txt" + \
 			" &> {log}"
 
 	rule ann_prokka_16S:
