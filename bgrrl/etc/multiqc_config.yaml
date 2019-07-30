@@ -43,6 +43,7 @@ extra_fn_clean_exts:
     - .bam
     - .sam
     - .sra
+    - .align_reads
     - _tophat
     - _star_aligned
     - _fastqc
