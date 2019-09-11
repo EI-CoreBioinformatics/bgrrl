@@ -87,10 +87,11 @@ class BGSurveyRunner(BGRRLModuleRunner):
 		qc_eval_args = [
 			"--readtype", readtype,
 			"--min_tadpole_size", min_tadpole_size,
-			"--single-cell" if self.config_manager.single_cell else "",
 			self.config_manager.input_sheet,
 			self.config_manager.output_dir
 		]
+		if self.config_manager.single_cell:
+			qc_eval_args.insert(0, "--single-cell")
 
 		if self.config_manager.report_only:
 			run_result = qc_eval_main(qc_eval_args)
