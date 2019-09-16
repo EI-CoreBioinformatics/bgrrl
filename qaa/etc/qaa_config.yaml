@@ -1,0 +1,19 @@
+load:
+  fastqc: "source fastqc-0.11.5"
+  seqtk: "source seqtk-git20160921"
+  bbmap: "source jre-8u144 && source bbmap-37.24"
+  quast: "source quast-4.3"
+  kat: "source kat-dev"
+  busco: "source busco-3.0"
+  blob_bwa: "source bwa-0.7.16a && source samtools-1.5"
+  blob_blast: "source blast-2.6.0"
+  blobtools: "source python_anaconda-2.5.0 && source blobtools-0.9.19 && source samtools-1.5"
+  multiqc: "source multiqc-1.5_ei"
+
+cmd:
+  quast: "python2 /ei/software/testing/quast/4.3/x86_64/bin/quast.py"
+
+resources:
+  blob_blastdb: "/ei/public/databases/blast/ncbi/nt_20171013/nt"
+  busco_databases: "/ei/workarea/group-pb/BUSCO_DATABASES/odb9"
+  multiqc_config: "/ei/software/testing/bgrrl/0.1/src/ei_bgrrl/bgrrl/etc/multiqc_config.yaml"
