@@ -25,8 +25,10 @@ from bgrrl.bin.annocmp import main as annocmp_main
 from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample, ANN_Sample
 from bgrrl.bgrrl_config import BGRRLConfigurationManager
 
-from qaa import QAA_Runner, QAA_ID
-print("QAA_ID="+QAA_ID)
+from qaa import QAA_Runner
+
+
+
 
 
 class BGRRLModuleRunner(object):
@@ -35,41 +37,35 @@ class BGRRLModuleRunner(object):
 		self.config_manager = config_manager
 
 	def run_module(self):
+
+		def get_smk_file(module):
+			return join(dirname(__file__), "zzz", module + ".smk.py")
 		
 		sampletype = BaseSample
-		verify_fields = ["R1", "R2"]
+		verify_fields = ["R1", "R2", "S"]
 		if self.module == "bgasm" or (self.module == "bgpackage" and self.config_manager.package_mode in ("processed_reads", "asm", "asm,analysis", "asm,ann,analysis")):
 			sampletype = ASM_Sample			
 		if self.module == "bgann" or (self.module == "bgpackage" and self.config_manager.package_mode in ("ann", "ann,analysis", "analysis,ann")):
 			sampletype = ANN_Sample
 			verify_fields=["Assembly"]
 		
-		#if hasattr(self.config_manager, "package_mode"):
-		#	self.config_manager.package_mode = self.config_manager.package_mode.split(",")[0]
-	
-		# print("CONFIGPACKAGE:", self.config_manager.input_sheet, sampletype, sep="\n", file=sys.stderr)	
 		samplesheet = Samplesheet(
 			self.config_manager.input_sheet, 
 			sampletype=sampletype
 		)
 
-		if samplesheet.verifySampleData(fields=verify_fields):
-			self.config_manager._config["samplesheet"] = self.config_manager.input_sheet
+		# this will die with error message if it fails
+		samplesheet.verifySampleData(fields=verify_fields)
+
+		self.config_manager._config["samplesheet"] = self.config_manager.input_sheet
 
 		self.config_manager.module = self.module
 
 		config_file = self.config_manager.generate_config_file(self.module)
 		print("Run configuration file: " + config_file)
 
-		snakes = {
-			"bgsurvey": "bgsurvey.smk.py",
-			"bgasm": "bgasm.smk.py",
-			"bgann": "bgasm.smk.py",
-			"bgpackage": "bgpackage.smk.py"
-		}
-
 		print("Running " + self.module)
-		snake = join(dirname(__file__), "zzz", snakes[self.module])
+		snake = get_smk_file(self.module)
 		
 		return run_snakemake(
 			snake,
@@ -88,29 +84,24 @@ class BGSurveyRunner(BGRRLModuleRunner):
 		readtype = "bbduk" if self.config_manager.no_normalization else "bbnorm"
 		min_tadpole_size = str(int(self.config_manager.minimum_survey_assembly_size))
 
+		qc_eval_args = [
+			"--readtype", readtype,
+			"--min_tadpole_size", min_tadpole_size,
+			self.config_manager.input_sheet,
+			self.config_manager.output_dir
+		]
+		if self.config_manager.single_cell:
+			qc_eval_args.insert(0, "--single-cell")
+
 		if self.config_manager.report_only:
-			run_result = qc_eval_main(
-				[
-					"--readtype", readtype, 
-					"--min_tadpole_size", min_tadpole_size, 
-					self.config_manager.input_sheet, 
-					self.config_manager.output_dir
-				]
-			)
+			run_result = qc_eval_main(qc_eval_args)
 		else:
 			run_result = self.run_module()
 			if run_result:
 				qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
 				run_result = QAA_Runner(qaa_args).run()					
 				if run_result:
-					run_result = qc_eval_main(
-						[
-							"--readtype", readtype, 
-							"--min_tadpole_size", min_tadpole_size, 
-							self.config_manager.input_sheet, 
-							self.config_manager.output_dir
-						]
-					)
+					run_result = qc_eval_main(qc_eval_args)
 					
 					self.config_manager.input_sheet = join(
 						self.config_manager.output_dir, 

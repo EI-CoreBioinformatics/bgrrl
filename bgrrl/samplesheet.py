@@ -50,11 +50,11 @@ class BaseSample(object):
 			 raise ValueError("SAMPLE ERROR: Number of arguments ({}) does not match number of fields ({}).".format(len(args), len(sampleFields)))
 		for argid, arg in zip(sampleFields, args):
 			setattr(self, argid, arg)
-	def verifyDatasets(self, fields=["R1", "R2"]):
+	def verifyDatasets(self, fields=["R1", "R2", "S"]):
 		for f in fields:
 			path = getattr(self, f)
 			if path and not os.path.exists(path):
-				raise ValueError("SAMPLE ERROR: Sample {}. Cannot find {} data at {}.".format(s, f, path))	   
+				raise ValueError("SAMPLE ERROR: Sample {}. Cannot find {} data at {}.".format(self.sampleID, f, path)) 
 	def upgrade(self, sampleFields, sampleData):
 		if not len(sampleFields) == len(sampleData):
 			raise ValueError("SAMPLE UPGRADE ERROR: Number of fields ({}) does not match expected number of fields ({}).".format(len(sampleData), len(sampleFields)))
@@ -102,7 +102,7 @@ class Samplesheet(OrderedDict):
 			if _filter is None or s in _filter:
 				print(*tuple(self[s]), sep=",", file=stream)
 				print("")
-	def verifySampleData(self, fields=["R1", "R2", "R1trim", "R2trim", "R1norm", "R2norm"]):
+	def verifySampleData(self, fields=["R1", "R2", "S", "R1trim", "R2trim", "Strim", "R1norm", "R2norm", "Snorm"]):
 		for s in self:
 			self[s].verifyDatasets(fields=fields)
 		return True

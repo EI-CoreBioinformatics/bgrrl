@@ -9,6 +9,7 @@ from bgrrl.snakemake_helper import get_cmd_call
 
 DEBUG = config.get("debugmode", False)
 SKIP_NORMALIZATION = config.get("no_normalization", False)
+SINGLE_CELL_MODE = config.get("single_cell_mode", False)
 
 TIME_V = config.get("tools", dict()).get("time", "time")
 
@@ -80,10 +81,19 @@ if DEBUG:
 def get_sample_files(wc):
 	s = INPUTFILES[wc.sample]
 	# default case is with normalization, i.e. if --no-normalization option isn't present, it should be "False"
+	return (get_r1(wc).split(",") + get_r2(wc).split(",")) if not SINGLE_CELL_MODE else get_r1(wc).split(",")
 	if SKIP_NORMALIZATION:
 		return s.R1trim, s.R2trim
 	else:
 		return s.R1norm, s.R1trim, s.R2norm, s.R2trim
+
+def get_r1(wc):
+	s = INPUTFILES[wc.sample]
+	return ",".join((s.R1norm, s.R1trim)) if not SKIP_NORMALIZATION else s.R1trim
+
+def get_r2(wc):
+	s = INPUTFILES[wc.sample]
+	return ",".join((s.R2norm, s.R2trim)) if not SKIP_NORMALIZATION else s.R2trim
 
 def get_ref_index(wc):
 	return REF_PREFIXES.get(wc.ref_ann)
@@ -124,14 +134,15 @@ if config["module"] == "bgasm":
 		params:
 			outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 			assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
-			assembler = config["assembler"],
+			assembler = config["assembler"] if not SINGLE_CELL_MODE else "spades_sc",
+			reads = lambda wildcards: (get_r1(wildcards) + " " + get_r2(wildcards)) if not SINGLE_CELL_MODE else get_r1(wildcards),
 			r1 = lambda wildcards: get_sample_files(wildcards)[0] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[:2]),
 			r2 = lambda wildcards: get_sample_files(wildcards)[1] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[2:]),
 			container = CONTAINER_PARAM
 		threads:
 			8
 		shell:
-			"asm_wrapper --threads {threads} {params.container} {params.assembler} {params.r1} {params.r2} {params.outdir} &> {log}"
+			"asm_wrapper --threads {threads} {params.container} {params.assembler} {params.outdir} {params.reads} &> {log}"
 
 	rule asm_postprocess:
 		message:

@@ -133,7 +133,7 @@ class ConfigurationManager(OrderedDict):
 			config_d = OrderedDict(self._config)
 			for k, v in sorted(vars(self).items()):
 				if not k in self._config and k != "_config":
-					print("WRITING {}: {} -> CONFIG".format(k, v))
+					# print("WRITING {}: {} -> CONFIG".format(k, v))
 					config_d[k] = v
 			print("Writing configuration to file {} ... ".format(config_file), end="", flush=True)
 			yaml.dump(config_d, cfg_out, default_flow_style=False)
@@ -208,7 +208,8 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			"reapr_correction": False,
 			"run_prokka": self.runmode == "annotate" or (hasattr(self, "run_annotation") and self.run_annotation),
 			"run_ratt": False,
-			"package_dir": self.package_dir,			
+			"package_dir": self.package_dir,
+			"single_cell_mode": self.single_cell	
 		}
 		self._config.update(cfg_d)
 
@@ -254,7 +255,8 @@ class BGRRLConfigurationManager(ConfigurationManager):
 			hpc_config=self.hpc_config_file,
 			multiqc_config=self.multiqc_config_file,	
 			normalized=not self.no_normalization if hasattr(self, "no_normalization") else True,
-			multiqc_dir=join(self.report_dir, "multiqc", stage.split(",")[0]) 
+			multiqc_dir=join(self.report_dir, "multiqc", stage.split(",")[0]),
+			single_cell_mode = self.single_cell 
 		)
 
 		if not stage == "init":

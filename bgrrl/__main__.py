@@ -11,8 +11,6 @@ min_version("4.0")
 from . import __version__, BGRRLRunner
 from .snakemake_helper import make_exeenv_arg_group
 
-# __version__ = "0.4.5"
-
 BGSURVEY_DESC = "This is the quality control stage at which samples are tested for their assemble-ability."
 BGASM_DESC = "This stage performs (short-read) assembly of samples passing the survey stage."
 BGANN_DESC = "This stage performs de-novo (and on demand reference-based) gene/functional annotation."
@@ -70,6 +68,12 @@ def add_default_options(parser):
 				The set of assemblies is tested against organism-specific criteria and assemblies are 
 				packaged according to their species. [NEEDS REWORDING!]. 
 				By default, the enterobase mode is disabled."""
+	)
+
+	common_group.add_argument(
+		"--single-cell",
+		action="store_true",
+		help="""Support for single-cell data"""
 	)
 
 	make_exeenv_arg_group(parser, default_hpc_config_file="", allow_mode_selection=False, silent=True)
@@ -259,6 +263,8 @@ def add_package_parser(subparsers):
 
 def main():
 	print("Starting EI bgrr| V " + __version__)
+	from qaa import QAA_ID
+	print("Using qaa " + QAA_ID)
 	print()
 
 	if len(sys.argv) == 1:
@@ -282,22 +288,6 @@ def main():
 	
 
 	args = bgrrl_parser.parse_args()
-	print("ARGS", args)
-
-	print(vars(args))
-
-
-#	from bgrrl.bgrrl_config import BGRRLConfigurationManager as CM
-#	print("CM:ARGS")
-#	for k, v in CM(args).items():
-#		print(k, v, sep="\t")
-#
-#	print("CM:ARGS_FULL")
-#	print(CM(args))
-#
-#	print("CM:ARGS_END")
-
-
 	BGRRLRunner(args).run()
 
 

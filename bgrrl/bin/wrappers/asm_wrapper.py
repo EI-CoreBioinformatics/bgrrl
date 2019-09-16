@@ -14,21 +14,27 @@ class ASM_Wrapper(object):
 			return not reads or os.path.exists(reads)
 
 		r1_reads, r2_reads = args.r1.split(","), args.r2.split(",")
-	
+			
 		self.reads_r1 = os.path.abspath(r1_reads.pop(0))
 		self.fb_reads_r1 = os.path.abspath(r1_reads.pop(0)) if r1_reads else ""
 		
 		if not check_reads(self.reads_r1) and not check_reads(self.fb_reads_r1):
 			raise ValueError("Cannot locate r1 reads.")
 
-		self.reads_r2 = os.path.abspath(r2_reads.pop(0))
-		self.fb_reads_r2 = os.path.abspath(r2_reads.pop(0)) if r2_reads else ""
+		if r2_reads:
+			self.reads_r2 = os.path.abspath(r2_reads.pop(0))
+			self.fb_reads_r2 = os.path.abspath(r2_reads.pop(0)) if r2_reads else ""
 
-		if not check_reads(self.reads_r2) and not check_reads(self.fb_reads_r2):
-			raise ValueError("Cannot locate r2 reads.")
+			if not check_reads(self.reads_r2) and not check_reads(self.fb_reads_r2):
+				raise ValueError("Cannot locate r2 reads.")
+		else:
+			self.reads_r2, self.fb_reads_r2 = None, None
 		
 		self.outdir = args.outdir
 		self.threads = args.threads
+
+		self.singularity_prefix = ("singularity exec " + args.singularity_container + " ") if args.singularity_container else ""
+		self.fallback_queue = list()
 
 
 	def run(self, env="bgasm_env"):
@@ -77,10 +83,8 @@ class VelvetWrapper(ASM_Wrapper):
 
 		cwd = os.getcwd()
 
-		singularity_prefix = ("singularity exec " + args.singularity_container + " ") if args.singularity_container else ""
-
 		cmd = "cd {0}" + \
-			" && " + singularity_prefix + \
+			" && " + self.singularity_prefix + \
 			"VelvetOptimiser.pl -v -s 19 -e 191 -x 2 -t {1} -d ../velvet_assembly -f '-shortPaired -fastq.gz -separate {2} {3}'" + \
 			" && cd .." + \
 			" && mv -v velvet_assembly/* ." + \
@@ -124,6 +128,33 @@ class VelvetWrapper(ASM_Wrapper):
 					)
 				)
 			]
+
+
+class SpadesSCWrapper(ASM_Wrapper):
+	def __init__(self, args):
+		super().__init__(args)
+
+		spades_params = "--careful --cov-cutoff auto --sc"
+		spades_cmd = self.singularity_prefix + "spades.py -s {0} -t {1} -o {2} -m 64 {3} && ln -s scaffolds.fasta {2}/assembly.fasta"
+
+		if not self.fb_reads_r1:
+			self.fallback.queue.extend(
+				[
+					("asm_main_scspt", spades_cmd.format(self.reads_r1, self.threads, self.outdir, spades_params))
+				]
+			)
+		else:
+			self.fallback_queue.extend(
+				[
+					("asm_main_scspn", spades_cmd.format(self.reads_r1, self.threads, self.outdir, spades_params)),
+					("asm_fb1_scspt", spades_cmd.format(self.fb_reads_r1, self.threads, self.outdir, spades_params))
+				]
+			)
+		
+						
+		
+		
+
 		
 class UnicyclerWrapper(ASM_Wrapper):
 	def __init__(self, args):
@@ -132,13 +163,9 @@ class UnicyclerWrapper(ASM_Wrapper):
 		spades_params = "--careful --cov-cutoff auto"
 		unicycler_params = "--min_polish_size 1000"
 
-		singularity_prefix = ("singularity exec " + args.singularity_container + " ") if args.singularity_container else ""
+		unicycler_cmd = self.singularity_prefix + "unicycler -1 {0} -2 {1} -t {2} -o {3} {4}"
+		spades_cmd = self.singularity_prefix + "spades.py -1 {0} -2 {1} -t {2} -o {3} -m 64 {4} && ln -s scaffolds.fasta {3}/assembly.fasta" 
 
-		unicycler_cmd = singularity_prefix + "unicycler -1 {0} -2 {1} -t {2} -o {3} {4}"
-		spades_cmd = singularity_prefix + "spades.py -1 {0} -2 {1} -t {2} -o {3} -m 64 {4} && ln -s scaffolds.fasta {3}/assembly.fasta" 
-
-
-		self.fallback_queue = list()
 		if not (self.fb_reads_r1 and self.fb_reads_r2):
 			self.fallback_queue = [
 				(
@@ -210,20 +237,26 @@ class UnicyclerWrapper(ASM_Wrapper):
 
 def main():
 	ap = argparse.ArgumentParser()
-	ap.add_argument("assembler", type=str, choices=["unicycler", "spades", "velvet"], default="unicycler")
-	ap.add_argument("r1", type=str)
-	ap.add_argument("r2", type=str)
+	ap.add_argument("assembler", type=str, choices=["unicycler", "spades", "velvet", "spades_sc"], default="unicycler")
 	ap.add_argument("outdir", type=str)
+	ap.add_argument("r1", type=str, nargs="?", default="")
+	ap.add_argument("r2", type=str, nargs="?", default="")
 	ap.add_argument("--threads", type=int, default=8)
 	ap.add_argument("--singularity-container", type=str, default="")
 
 	args = ap.parse_args()
+	if not args.r1:
+		raise ValueError("Missing reads input")
 
 	asm = None
 	if args.assembler == "unicycler":
 		asm = UnicyclerWrapper(args)
 	elif args.assembler == "velvet":
 		asm = VelvetWrapper(args)
+	elif args.assembler == "spades_sc":
+		asm = SpadesSCWrapper(args)
+	elif args.assembler == "spades":
+		raise ValueError("spades not supported yet")
 	
 	if not asm is None:
 		asm.run()		

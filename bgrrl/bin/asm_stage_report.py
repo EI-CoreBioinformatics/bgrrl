@@ -16,6 +16,9 @@ ASSEMBLY_STAGES = OrderedDict([
 	("asm_main_ven", "Main,Velvet,normalized"),
 	("asm_fb1_vet", "Fallback1,Velvet,trimmed"),
 	("asm_main_vet", "Main,Velvet,trimmed"),
+	("asm_main_scspn", "Main,SpadesSC,normalized"),
+	("asm_fb1_scspt", "Fallback1,SpadesSC,trimmed"),
+	("asm_main_scspt", "Main,SpadesSC,trimmed"),
 	("NA", "not_assembled")])
 
 
