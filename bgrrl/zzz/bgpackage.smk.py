@@ -106,17 +106,17 @@ if EB_ORGANISMS:
 
 
 elif config["package_mode"] == "processed_reads" or "processed_reads" in config["package_mode"]:
-	read_pkg_cmd = "mkdir -p {params.outdir}" + \
-		" && (for r in $(cut -f 11 -d , {input.samplesheet}); do" + \
-		" ln -sf ../../$r {params.outdir}/$(basename $r);" + \
+	read_pkg_cmd = "mkdir -p {{params.outdir}}" + \
+		" && (for r in $(cut -f 11 -d , {{input.samplesheet}}); do" + \
+		" ln -sf ../../$r {{params.outdir}}/$(basename $r);" + \
 		" r=$(dirname $r)/$(basename $r _R1.bbduk.fastq.gz)_R2.bbduk.fastq.gz;" + \
 		" {}" + \
 		" done)" + \
 		" && cd " + OUTPUTDIR + \
-		" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+		" && tar chvzf $(basename {{params.outdir}}).tar.gz $(basename {{params.outdir}})" + \
 		" && cd " + CWD + \
-		" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
-		" && touch {output.done}"
+		" && md5sum {{params.outdir}}.tar.gz > {{params.outdir}}.tar.gz.md5" + \
+		" && touch {{output.done}}"
 
 	rule fin_package_processed_reads:
 		message:
