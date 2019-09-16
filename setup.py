@@ -15,7 +15,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 	description = long_description = description.read()
 
 name="bgrrl"
-version = "0.7"
+version = "0.8"
 
 if sys.version_info.major != 3:
 	raise EnvironmentError("""bgrrl is a python module that requires python3, and is not compatible with python2.""")
@@ -44,7 +44,7 @@ setup(
 	packages=find_packages(exclude=["test"]),
 	scripts=[
 		path.join("bgrrl/bin/slurm", script) for script in ["bgsurvey_sub", "bgasm_sub", "bgann_sub", "bgpack_sub"]
-	],
+	] + ["qaa/bin/qaa_sub"],
 	install_requires=[
 		"snakemake>=4.4.0",
 		"drmaa",
@@ -69,18 +69,21 @@ setup(
 			"asm_wrapper=bgrrl.bin.wrappers.asm_wrapper:main",
 			"prokka_wrapper=bgrrl.bin.wrappers.prokka_wrapper:main",
 			"ratt_wrapper=bgrrl.bin.wrappers.ratt_wrapper:main",
-			"qc2asm=bgrrl.bin.qc2asm:main"
+			"qc2asm=bgrrl.bin.qc2asm:main",
+			"qaa=qaa.__main__:main"
 		]
 	},
 	package_data={
-		"bgrrl.zzz": ["*.smk*"]
+		"bgrrl.zzz": ["*.smk*"],
+		"qaa.zzz": ["*.smk.py"]
 	},
 	include_package_data=True,
 	data_files=[
 		("bgrrl/etc", glob.glob("bgrrl/etc/*.*")),
 		("bgrrl/etc/wrappers", glob.glob("bgrrl/etc/wrappers/*")),
 		("bgrrl/etc/util", glob.glob("bgrrl/etc/util/*")),
-		("bgrrl/etc/singularity", glob.glob("bgrrl/etc/singularity/*.def"))
+		("bgrrl/etc/singularity", glob.glob("bgrrl/etc/singularity/*.def")),
+		("qaa/etc", ["qaa/etc/qaa_config.yaml", "qaa/etc/hpc_config.json"]),
+		("qaa/etc/util", ["qaa/etc/util/busco_init_dir"])
 	]
 )
-
