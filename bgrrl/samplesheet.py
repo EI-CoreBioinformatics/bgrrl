@@ -54,7 +54,7 @@ class BaseSample(object):
 		for f in fields:
 			path = getattr(self, f)
 			if path and not os.path.exists(path):
-				raise ValueError("SAMPLE ERROR: Sample {}. Cannot find {} data at {}.".format(s, f, path))	   
+				raise ValueError("SAMPLE ERROR: Sample {}. Cannot find {} data at {}.".format(self.sampleID, f, path)) 
 	def upgrade(self, sampleFields, sampleData):
 		if not len(sampleFields) == len(sampleData):
 			raise ValueError("SAMPLE UPGRADE ERROR: Number of fields ({}) does not match expected number of fields ({}).".format(len(sampleData), len(sampleFields)))
