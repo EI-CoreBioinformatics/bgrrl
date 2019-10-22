@@ -11,7 +11,7 @@ import pathlib
 from copy import copy
 import glob
 
-from .snakemake_helper import *
+from eicore.snakemake_helper import *
 
 
 
@@ -101,7 +101,7 @@ class WorkflowRunner(object):
 			raise ValueError("No valid configuration specified ({}). {}".format(args.config, args.alt_config_warning if hasattr(args, "alt_config_warning") else ""))
 
 		print("Loading configuration from {} ... ".format(self.config_file), end="", flush=True)
-		self.config = yaml.load(open(self.config_file))
+		self.config = yaml.load(open(self.config_file), Loader=yaml.SafeLoader)
 		print("done.")
 		print()
 
