@@ -1,3 +1,4 @@
+import yaml
 import sys
 import csv
 import os
@@ -5,7 +6,7 @@ from os.path import join, basename, dirname
 from collections import Counter
 
 from bgrrl.samplesheet import readSamplesheet, Samplesheet, ASM_Sample, ANN_Sample
-from bgrrl.snakemake_helper import get_cmd_call
+from eicore.snakemake_helper import get_cmd_call
 
 DEBUG = config.get("debugmode", False)
 SKIP_NORMALIZATION = config.get("no_normalization", False)
@@ -24,7 +25,7 @@ PROKKA_DIR = join(ANNOTATION_DIR, "prokka")
 RATT_DIR = join(ANNOTATION_DIR, "ratt")
 
 # tools
-RATT_WRAPPER = join(config["etc"], "wrappers", "ratt_wrapper")
+RATT_WRAPPER = join(config["etc"], "misc", "ratt_wrapper")
 
 if config["module"] == "bgasm":
 	sampletype = ASM_Sample
@@ -35,7 +36,7 @@ elif config["module"] == "bgann":
 else:
 	raise ValueError("Module not recognized as bgasm/bgann: " + config["module"])
 
-INPUTFILES = Samplesheet(config["samplesheet"], sampletype=sampletype)
+INPUTFILES = yaml.load(open(config["samplesheet"]), Loader=yaml.SafeLoader) 
 
 # generate target list
 TARGETS = list()
@@ -77,9 +78,11 @@ if DEBUG:
 		print(*TARGETS, sep="\n", file=targets_out)
 
 
+
 # helpers
 def get_sample_files(wc):
 	s = INPUTFILES[wc.sample]
+	return s["bbmerge_ur1"], s["bbmerge_ur2"], s["bbmerge"], s["tadpole_singles"], s["uc_singles"]
 	# default case is with normalization, i.e. if --no-normalization option isn't present, it should be "False"
 	return (get_r1(wc).split(",") + get_r2(wc).split(",")) if not SINGLE_CELL_MODE else get_r1(wc).split(",")
 	if SKIP_NORMALIZATION:
@@ -105,7 +108,7 @@ def get_ref(wc):
 		return [join(RATT_REF_PATH, wc.ref_ann, "gff", "{}.parts_gff".format(wc.ref_ann))]
 
 def get_assembly(wc):
-    return INPUTFILES[wc.sample]
+    return INPUTFILES[wc.sample]["assembly"]
 
 CMD_CALL = get_cmd_call(config, "bgrrl_container")
 CONTAINER_PARAM = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
@@ -135,10 +138,13 @@ if config["module"] == "bgasm":
 			outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample),
 			assembly = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "assembly.fasta"),
 			assembler = config["assembler"] if not SINGLE_CELL_MODE else "spades_sc",
-			reads = lambda wildcards: (get_r1(wildcards) + " " + get_r2(wildcards)) if not SINGLE_CELL_MODE else get_r1(wildcards),
-			r1 = lambda wildcards: get_sample_files(wildcards)[0] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[:2]),
-			r2 = lambda wildcards: get_sample_files(wildcards)[1] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[2:]),
+			#reads = lambda wildcards: (get_r1(wildcards) + " " + get_r2(wildcards)) if not SINGLE_CELL_MODE else get_r1(wildcards),
+			reads = lambda wildcards: " ".join(get_sample_files(wildcards)),
+			#r1 = lambda wildcards: get_sample_files(wildcards)[0] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[:2]),
+			#r2 = lambda wildcards: get_sample_files(wildcards)[1] if SKIP_NORMALIZATION else ",".join(get_sample_files(wildcards)[2:]),
 			container = CONTAINER_PARAM
+		resources:
+			mem_mb = 64000 # 32000 + (attempt + 1) * 8000
 		threads:
 			8
 		shell:
@@ -156,6 +162,8 @@ if config["module"] == "bgasm":
 		params:
 			minlen = int(config["asm_lengthfilter_contig_minlen"]),
 			cmd = CMD_CALL + "reformat.sh"
+		resources:
+			mem_mb = 2000
 		threads:
 			1
 		shell:
@@ -183,6 +191,8 @@ if config["run_prokka"]:
 			centre = config["misc"]["seqcentre"],
 			container = CONTAINER_PARAM,
 			custom_proteins = ("--proteins " + config["custom_prokka_proteins"]) if config.get("custom_prokka_proteins", "") else ""
+		resources:
+			mem_mb = 8000
 		threads:
 			8
 		shell:
@@ -201,6 +211,8 @@ if config["run_prokka"]:
 			ffn = join(PROKKA_DIR, "{sample}", "{sample}.ffn.16S")
 		params:
 			cmd = CMD_CALL + "seqtk"
+		resources:
+			mem_mb = 2000
 		shell:
 			"{params.cmd} subseq {input.ffn} <(grep -o \">[^ ]\+ 16S ribosomal RNA\" {input.ffn} | cut -f 1 -d \" \" | cut -f 2 -d \>) > {output.ffn}"
 
@@ -216,6 +228,8 @@ if config["run_ratt"]:
 		params:
 			refdir = join(RATT_REF_PATH, "{ref_ann}"),
 			cmd = CMD_CALL + "seqret"			
+		resources:
+			mem_mb = 2000
 		threads:
 			1
 		shell:
@@ -235,6 +249,8 @@ if config["run_ratt"]:
 			join(ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_mergegff.log")
 		params:
 			gffdir = join(RATT_REF_PATH, "{ref_ann}", "gff")
+		resources:
+			mem_mb = 2000
 		threads:
 			1
 		shell:
@@ -253,6 +269,8 @@ if config["run_ratt"]:
 		params:	
 			outdir = lambda wildcards: join(RATT_DIR, wildcards.sample, wildcards.ref_ann),
 			container = CONTAINER_PARAM, 
+		resources:
+			mem_mb = 8000
 		threads:
 			1
 		shell:
