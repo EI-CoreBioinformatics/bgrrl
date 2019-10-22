@@ -15,7 +15,7 @@ with open(path.join(here, "DESCRIPTION.md"), encoding="utf-8") as description:
 	description = long_description = description.read()
 
 name="bgrrl"
-version = "0.8"
+version = "1.0"
 
 if sys.version_info.major != 3:
 	raise EnvironmentError("""bgrrl is a python module that requires python3, and is not compatible with python2.""")
@@ -59,6 +59,7 @@ setup(
 			"bgpack=bgrrl.__main__:main",
 			"bginit=bgrrl.bin.bginit:main",
 			"qc_eval=bgrrl.bin.qc_eval:main",
+			"survey_stage_eval=bgrrl.bin.survey_stage_evaluation:main",
 			"asm_report=bgrrl.bin.asm_report:main",
 			"ann_report=bgrrl.bin.ann_report:main",
 			"bg_datasum=bgrrl.bin.bg_datasum:main",
@@ -79,11 +80,8 @@ setup(
 	},
 	include_package_data=True,
 	data_files=[
-		("bgrrl/etc", glob.glob("bgrrl/etc/*.*")),
-		("bgrrl/etc/wrappers", glob.glob("bgrrl/etc/wrappers/*")),
-		("bgrrl/etc/util", glob.glob("bgrrl/etc/util/*")),
-		("bgrrl/etc/singularity", glob.glob("bgrrl/etc/singularity/*.def")),
-		("qaa/etc", ["qaa/etc/qaa_config.yaml", "qaa/etc/hpc_config.json"]),
-		("qaa/etc/util", ["qaa/etc/util/busco_init_dir"])
+		("etc", glob.glob("etc/*.*")),
+		("etc/busco", glob.glob("etc/busco/*")),
+		("etc/container_definitions", glob.glob("etc/container_definitions/*")),
 	]
 )
