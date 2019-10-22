@@ -42,7 +42,7 @@ def main():
 		pathlib.Path(config_dir).mkdir(parents=True, exist_ok=True)
 		print("done.")
 
-	etc_dir = os.path.join(os.path.dirname(__file__), "..", "etc")
+	etc_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "etc")
 	print("Configuration templates are located in " + etc_dir)
 	print("Copying configuration files to {} ... ".format(config_dir), end="", flush=True)
 
