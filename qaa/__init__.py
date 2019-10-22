@@ -17,7 +17,7 @@ import sys
 from copy import copy
 import pathlib
 
-from .snakemake_helper import *
+from eicore.snakemake_helper import *
 from .workflow_runner import WorkflowRunner
 from .qaa_environment import QAA_Environment
 
@@ -26,7 +26,7 @@ from qaa.reporting.quast_report import compileQUASTReport
 from qaa.reporting.blobtools_report import compileBlobReport
 from qaa.reporting.sixteen_s_reporter import SixteenSReporter, HEADER as sixteenS_header
 
-ETC_DIR = join(dirname(__file__), "etc")
+ETC_DIR = join(dirname(__file__), "..", "..", "..", "etc")
 DEFAULT_HPC_CONFIG_FILE = join(ETC_DIR, "hpc_config.json")
 DEFAULT_CONFIG_FILE = join(ETC_DIR, "qaa_config.yaml")
 QAA_ID = str(__version__) + "XXX"
@@ -36,30 +36,37 @@ class QAA_Runner(WorkflowRunner):
 
 	@staticmethod
 	def create_samplesheet_stream(args, annotation="prokka"):
-		stream, asm_path = list(), ""
-		for row in csv.reader(open(args.input), delimiter=","):
-			if args.runmode == "asm":
-				asm_path = join(args.output_dir, "assembly", row[0], row[0] + ".assembly.fasta")
-			elif args.runmode == "survey":
-				asm_path = join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta")
-			elif args.runmode == "asm,ann":
-				asm_path = join(args.output_dir, "annotation", "prokka", row[0], row[0] + ".fna")
+		stream, asm_path = dict(), ""
+		annotation_path = join(args.output_dir, "annotation", annotation)
+		if args.runmode == "survey" or args.runmode == "ann":
+			for row in csv.reader(open(args.input), delimiter=","):
+				stream[row[0]] = {
+					"assembly": join(args.output_dir, "qc", "tadpole", row[0], row[0] + "_tadpole_contigs.fasta"),
+					"busco_db": args.busco_db
+				}
+				if args.runmode == "survey":
+					stream[row[0]]["r1"] = row[2]
+					stream[row[0]]["r2"] = row[3]
+				else:
+					stream[row[0]]["transcripts"] = join(annotation_path, row[0], row[0] + ".ffn")
+					stream[row[0]]["proteins"] = join(annotation_path, row[0], row[0] + ".faa")
+		else:
+			sample_data = yaml.load(open(args.input), Loader=yaml.SafeLoader)
+			for sample, sdata in sample_data.items():
+				if args.runmode == "asm":
+					stream[sample] = {
+						"assembly": join(args.output_dir, "assembly", sample, sample + ".assembly.fasta")
+					}
+				elif args.runmode == "asm,ann":
+					stream[sample] = {
+						"assembly": join(args.output_dir, "annotation", "prokka", sample, sample + ".fna"),
+						"transcripts": join(annotation_path, sample, sample + ".ffn"),
+						"proteins": join(annotation_path, sample, sample + ".faa"),
+						"busco_db": args.busco_db
+					}
+				stream[sample]["r1"] = sdata["bbduk_r1"]
+				stream[sample]["r2"] = sdata["bbduk_r2"]
 			
-			if len(row) == 3: # ann-formatted sheet
-				r1, r2 = "", ""
-			else:
-				r1, r2 = row[2:4]
-		
-			new_row = [row[0], asm_path, "", r1, r2, args.busco_db]
-
-			annotation_path = join(args.output_dir, "annotation", annotation)
-			
-			if args.runmode in ("ann", "asm,ann"):
-				new_row.extend([
-					join(annotation_path, row[0], row[0] + ".ffn"), 
-					join(annotation_path, row[0], row[0] + ".faa")
-				])
-			stream.append(new_row)
 		return stream
 
 
@@ -67,7 +74,7 @@ class QAA_Runner(WorkflowRunner):
 		# from eimethyl: Extract qualimap mem setting from hpc_config, convert to gigabytes and subtract a bit to account for memory above
 		# java heap
 		import json
-		print("HPCCONFIG", self.hpc_config_file, file=sys.stderr)
+		# print("HPCCONFIG", self.hpc_config_file, file=sys.stderr)
 		data = json.load(open(self.hpc_config_file))
 		try:
 			qmem = str((int(int(data["qaa_qualimap"]["memory"]) / 1000)) - 2) + "G"
@@ -153,7 +160,7 @@ class QAA_Runner(WorkflowRunner):
 
 	def __clean_blobtools_trash(self):
 		import glob	
-		print("QAA_CLEANUP:", os.getcwd())	
+		# print("QAA_CLEANUP:", os.getcwd())	
 		for f in glob.glob(join(os.getcwd(), "*.bam.cov")):
 			try:
 				if os.path.isfile(f):
@@ -163,7 +170,7 @@ class QAA_Runner(WorkflowRunner):
 
 	def run(self):
 		run_result = run_snakemake(join(dirname(__file__), "zzz", "qaa.smk.py"), self.output_dir, self.new_config_file, self.exe_env, dryrun=False, unlock=self.unlock)
-		print("QAA_RUN_RESULT=", run_result)
+		# print("QAA_RUN_RESULT=", run_result)
 		self.report()
 		self.__clean_blobtools_trash()
 		return run_result
@@ -173,8 +180,8 @@ class QAA_Runner(WorkflowRunner):
 			with open(report_out, "w") as rep_out:
 				rfunc(qa_dir, out=rep_out)
 
-		print("QAA_CONFIG_!!!")
-		print(self.config)
+		#print("QAA_CONFIG_!!!")
+		#print(self.config)
 
 		if self.runmode == "survey":
 			report_func(self.qaa_env.quast_dir, join(self.report_dir, "quast_survey_report.tsv"), compileQUASTReport)
