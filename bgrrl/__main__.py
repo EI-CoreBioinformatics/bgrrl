@@ -8,8 +8,9 @@ from argparse import ArgumentParser
 from snakemake.utils import min_version
 min_version("4.0")
 
-from . import __version__, BGRRLRunner
-from .snakemake_helper import make_exeenv_arg_group
+from . import __version__
+from bgrrl.runners import BgrrlRunner
+from eicore.snakemake_helper import make_exeenv_arg_group
 
 BGSURVEY_DESC = "This is the quality control stage at which samples are tested for their assemble-ability."
 BGASM_DESC = "This stage performs (short-read) assembly of samples passing the survey stage."
@@ -288,7 +289,7 @@ def main():
 	
 
 	args = bgrrl_parser.parse_args()
-	BGRRLRunner(args).run()
+	BgrrlRunner(args).run()
 
 
 
