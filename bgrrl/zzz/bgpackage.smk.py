@@ -4,7 +4,7 @@ import os
 from os.path import join, basename, dirname
 import glob
 
-from bgrrl.snakemake_helper import loadPreCmd
+from eicore.snakemake_helper import loadPreCmd
 
 DEBUG = config.get("debugmode", False)
 # needed for tar-ball generation
@@ -70,6 +70,8 @@ if EB_ORGANISMS:
 			package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_" + wildcards.organism + "_assemblies"),
 			outdir = basename(INPUTDIR),
 			prefix = config["project_prefix"]
+		resources:
+			mem_mb = 2000
 		shell:
 			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(cat {input.eb_samples}); do" + \
@@ -92,6 +94,8 @@ if EB_ORGANISMS:
 		params:
 			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_" + wildcards.organism + "_rawreads"),
 			prefix = config["project_prefix"]
+		resources:
+			mem_mb = 2000
 		shell:
 			"mkdir -p {params.outdir} &&" + \
 			" (for r in $(grep -F -f {input.eb_samples} {input.samplesheet} | cut -f 3 -d ,); do" + \
@@ -128,6 +132,8 @@ elif config["package_mode"] == "processed_reads" or "processed_reads" in config[
 		params:
 			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_processed_reads"),
 			prefix = config["project_prefix"]
+		resources:
+			mem_mb = 8000
 		shell:
 			read_pkg_cmd.format(" ln -sf ../../$r {params.outdir}/$(basename $r);" if not config.get("single_cell_mode", False) else "")
 
@@ -144,6 +150,8 @@ if config["package_mode"] == "analysis" or "analysis" in config["package_mode"]:
 		params:
 			outdir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_analysis"),
 			prefix = config["project_prefix"]
+		resources:
+			mem_mb = 2000
 		shell:
 			"mkdir -p {params.outdir}" + \
 			" && cd {params.outdir}" + \
@@ -176,6 +184,8 @@ if config["package_mode"] == "asm" or "asm" in config["package_mode"]:
 			package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_assemblies"),
 			outdir = basename(INPUTDIR),
 			prefix = config["project_prefix"]
+		resources:
+			mem_mb = 4000
 		shell:
 			"mkdir -p {params.package_dir} &&" + \
 			" (for s in $(tail -n +2 {input.samples} | cut -f 1 | grep -v _broken); do" + \
@@ -220,6 +230,8 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 				outdir = basename(INPUTDIR),
 				prefix = config["project_prefix"],
 				lcmd = link_command
+			resources:
+				mem_mb = 4000
 			shell:
 				"mkdir -p {params.package_dir}" + \
 				" && cwd=$(pwd)" + \
@@ -244,6 +256,8 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 				package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_annotation"),
 				outdir = basename(INPUTDIR),
 				prefix = config["project_prefix"]
+			resources:
+				mem_mb = 4000
 			shell:
 				"mkdir -p {params.package_dir}/ratt/{{reports,gff}}" + \
 				" && ln -sf ../../{params.outdir}/annotation/prokka {params.package_dir}/prokka" + \
@@ -270,6 +284,8 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 				package_dir = lambda wildcards: join(OUTPUTDIR, config["project_prefix"] + "_ratt_annotation"),
 				outdir = basename(INPUTDIR),
 				prefix = config["project_prefix"]
+			resources:
+				mem_mb = 4000
 			run:
 				import pathlib
 				batchid = 0
@@ -294,6 +310,8 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 				outdir = OUTPUTDIR, 
 				prefix = config["project_prefix"],
 				indir = dirname("{input.goflag}")
+			resources:
+				mem_mb = 4000
 			shell:
 				"""
 				cd {params.outdir} &&
