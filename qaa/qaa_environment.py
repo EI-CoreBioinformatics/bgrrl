@@ -21,7 +21,7 @@ class QAA_Environment(object):
 		self.busco_geno_dir = join(self.busco_dir, "geno")
 		self.busco_tran_dir = join(self.busco_dir, "tran")
 		self.busco_prot_dir = join(self.busco_dir, "prot")
-		self.busco_init_dir = join(config["etc"], "util", "busco_init_dir")
+		self.busco_init_dir = join(config["etc"], "busco", "busco_init_dir")
 		self.busco_data_dir = config["resources"]["busco_databases"]
 		
 		# tool dirs
