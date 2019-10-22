@@ -12,23 +12,25 @@ class ASM_Wrapper(object):
 		# self.assembler = args.assembler
 		def check_reads(reads):
 			return not reads or os.path.exists(reads)
-
-		r1_reads, r2_reads = args.r1.split(","), args.r2.split(",")
-			
-		self.reads_r1 = os.path.abspath(r1_reads.pop(0))
-		self.fb_reads_r1 = os.path.abspath(r1_reads.pop(0)) if r1_reads else ""
 		
-		if not check_reads(self.reads_r1) and not check_reads(self.fb_reads_r1):
-			raise ValueError("Cannot locate r1 reads.")
+		self.ur1, self.ur2, self.merged, self.singles, self.uc_singles = args.ur1, args.ur2, args.merged, args.singles, args.uc_singles
 
-		if r2_reads:
-			self.reads_r2 = os.path.abspath(r2_reads.pop(0))
-			self.fb_reads_r2 = os.path.abspath(r2_reads.pop(0)) if r2_reads else ""
+		#r1_reads, r2_reads = args.r1.split(","), args.r2.split(",")
+			
+		#self.reads_r1 = os.path.abspath(r1_reads.pop(0))
+		#self.fb_reads_r1 = os.path.abspath(r1_reads.pop(0)) if r1_reads else ""
+		
+		#if not check_reads(self.reads_r1) and not check_reads(self.fb_reads_r1):
+		#	raise ValueError("Cannot locate r1 reads.")
 
-			if not check_reads(self.reads_r2) and not check_reads(self.fb_reads_r2):
-				raise ValueError("Cannot locate r2 reads.")
-		else:
-			self.reads_r2, self.fb_reads_r2 = None, None
+		#if r2_reads:
+		#	self.reads_r2 = os.path.abspath(r2_reads.pop(0))
+		#	self.fb_reads_r2 = os.path.abspath(r2_reads.pop(0)) if r2_reads else ""
+
+		#	if not check_reads(self.reads_r2) and not check_reads(self.fb_reads_r2):
+		#		raise ValueError("Cannot locate r2 reads.")
+		#else:
+		#	self.reads_r2, self.fb_reads_r2 = None, None
 		
 		self.outdir = args.outdir
 		self.threads = args.threads
@@ -161,77 +163,33 @@ class UnicyclerWrapper(ASM_Wrapper):
 		super().__init__(args)
 
 		spades_params = "--careful --cov-cutoff auto"
-		unicycler_params = "--min_polish_size 1000"
+		unicycler_params = "--min_polish_size 1000 --no_correct"
 
-		unicycler_cmd = self.singularity_prefix + "unicycler -1 {0} -2 {1} -t {2} -o {3} {4}"
-		spades_cmd = self.singularity_prefix + "spades.py -1 {0} -2 {1} -t {2} -o {3} -m 64 {4} && ln -s scaffolds.fasta {3}/assembly.fasta" 
+		unicycler_cmd = self.singularity_prefix + "unicycler -1 {0} -2 {1} -s {2} -t {3} -o {4} {5}"
+		spades_cmd = self.singularity_prefix + "spades.py -1 {0} -2 {1} --merged {2}  -s {3} -t {4} -o {5} -m 64 {6} && ln -s scaffolds.fasta {5}/assembly.fasta" 
 
-		if not (self.fb_reads_r1 and self.fb_reads_r2):
-			self.fallback_queue = [
-				(
-					"asm_main_uct", 
-					unicycler_cmd.format(
-						self.reads_r1, 
-						self.reads_r2, 
-						self.threads, 
-						self.outdir, 
-						unicycler_params
-					)
-				),
-				(
-					"asm_fb1_spt", 
-					spades_cmd.format(
-						self.reads_r1, 
-						self.reads_r2, 
-						self.threads, 
-						self.outdir, 
-						spades_params
-					)
-				)
-			]
-		else:
-			self.fallback_queue = [
-				(
-					"asm_main_ucn", 
-					unicycler_cmd.format(
-						self.reads_r1, 
-						self.reads_r2, 
-						self.threads, 
-						self.outdir, 
-						unicycler_params
-					)
-				),
-				(
-					"asm_fb1_uct", 
-					unicycler_cmd.format(
-						self.fb_reads_r1, 
-						self.fb_reads_r2, 
-						self.threads, 
-						self.outdir, 
-						unicycler_params
-					)
-				),
-				(
-					"asm_fb2_spn", 
-					spades_cmd.format(
-						self.reads_r1, 
-						self.reads_r2, 
-						self.threads, 
-						self.outdir, 
-						spades_params
-					)
-				),
-				(
-					"asm_fb3_spt", 
-					spades_cmd.format(
-						self.fb_reads_r1, 
-						self.fb_reads_r2, 
-						self.threads, 
-						self.outdir, 
-						spades_params
-					)
-				)
-			]
+		self.fallback_queue = [(
+			"asm_main_uc",
+			unicycler_cmd.format(
+				self.ur1,
+				self.ur2,
+				self.uc_singles,
+				self.threads,
+				self.outdir,
+				unicycler_params
+			)), 
+			(
+				"asm_fb1_sp",
+				spades_cmd.format(
+					self.ur1,
+					self.ur2,
+					self.merged,
+					self.singles,
+					self.threads,
+					self.outdir,
+					spades_params
+			))		
+		]
 
 
 
@@ -239,14 +197,17 @@ def main():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("assembler", type=str, choices=["unicycler", "spades", "velvet", "spades_sc"], default="unicycler")
 	ap.add_argument("outdir", type=str)
-	ap.add_argument("r1", type=str, nargs="?", default="")
-	ap.add_argument("r2", type=str, nargs="?", default="")
+	ap.add_argument("ur1", type=str)
+	ap.add_argument("ur2", type=str)
+	ap.add_argument("merged", type=str)
+	ap.add_argument("singles", type=str)
+	ap.add_argument("uc_singles", type=str)
 	ap.add_argument("--threads", type=int, default=8)
 	ap.add_argument("--singularity-container", type=str, default="")
 
 	args = ap.parse_args()
-	if not args.r1:
-		raise ValueError("Missing reads input")
+	#if not args.r1:
+	#	raise ValueError("Missing reads input")
 
 	asm = None
 	if args.assembler == "unicycler":
