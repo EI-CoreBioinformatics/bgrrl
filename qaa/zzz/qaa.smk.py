@@ -2,6 +2,7 @@ import sys
 import csv
 import os
 from os.path import join, basename, dirname
+import yaml
 
 from qaa.samplesheet import readQAASamplesheet
 from qaa.qaa_environment import QAA_Environment
@@ -15,9 +16,11 @@ runmode = "survey" if config["survey_assembly"] else "asm"
 
 # setup i/o
 if type(config["samplesheet"]) is str:
-	INPUTFILES = dict(readQAASamplesheet(csv.reader(open(config["samplesheet"]), delimiter=",")))
+	#INPUTFILES = dict(readQAASamplesheet(csv.reader(open(config["samplesheet"]), delimiter=",")))
+	INPUTFILES = yaml.load(open(config["samplesheet"]), Loader=yaml.SafeLoader)
 else:
-	INPUTFILES = dict(readQAASamplesheet(config["samplesheet"]))
+	# INPUTFILES = dict(readQAASamplesheet(config["samplesheet"]))
+	INPUTFILES = config["samplesheet"]
 
 SINGLE_CELL_MODE = config.get("single_cell_mode", False)
 
@@ -52,17 +55,17 @@ if DEBUG:
 
 # helpers
 def getBUSCOData(sample):
-	return join(qaa_env.busco_data_dir, INPUTFILES[sample].busco_id)
+	return join(qaa_env.busco_data_dir, INPUTFILES[sample]["busco_db"])
 def getBAM(wildcards):
 	return INPUTFILES[wildcards.sample].bamfile
 def getReads(wildcards):
-	return (INPUTFILES[wildcards.sample].r1, INPUTFILES[wildcards.sample].r2) if not SINGLE_CELL_MODE else (INPUTFILES[wildcards.sample].r1,)
+	return (INPUTFILES[wildcards.sample]["r1"], INPUTFILES[wildcards.sample]["r2"]) if not SINGLE_CELL_MODE else (INPUTFILES[wildcards.sample]["r1"],)
 def getAssembly(wildcards):
-	return INPUTFILES[wildcards.sample].assembly
+	return INPUTFILES[wildcards.sample]["assembly"]
 def getTranscripts(wildcards):
-	return INPUTFILES[wildcards.sample].transcripts
+	return INPUTFILES[wildcards.sample]["transcripts"]
 def getProteins(wildcards):
-	return INPUTFILES[wildcards.sample].proteins
+	return INPUTFILES[wildcards.sample]["proteins"]
 
 def get_cmd_call(cfg, container):
 	call = cfg.get("singularity", dict()).get(container, "")
@@ -70,7 +73,8 @@ def get_cmd_call(cfg, container):
 
 CMD_CALL = get_cmd_call(config, "qaa_container")
 
-
+DEFAULT_MEMORY_MB = 8000
+DEFAULT_LOW_MEMORY_MB = 2000
 ### RULES ###
 
 localrules: all, qaa_compile_multiqc_inputs
@@ -92,6 +96,8 @@ if config["run_multiqc"]:
 			quastdir = qaa_env.quast_dir,
 			qualimapdir = qaa_env.qualimap_dir,
 			samplesheet = config["full_samplesheet"],
+		resources:
+			mem_mb = DEFAULT_LOW_MEMORY_MB
 		run:
 			import os
 			import sys
@@ -145,8 +151,6 @@ if config["run_multiqc"]:
 
 			valid_samples = set(row[0] for row in csv.reader(open(params.samplesheet), delimiter=",") if row[0])
 
-			# print("THESE ARE VALID SAMPLES", *valid_samples, sep="\n", file=sys.stderr)
-			# print("THESE ARE INPUT FILES", *input_files, sep="\n", file=sys.stderr)
 			with open(output[0], "w") as out:
 				for f in input_files:
 					if (os.path.basename(os.path.dirname(f)) in valid_samples or os.path.basename(os.path.dirname(os.path.dirname(f)))) and os.stat(f).st_size > 0:
@@ -166,50 +170,13 @@ if config["run_multiqc"]:
 			cmd = CMD_CALL + "multiqc"
 		log:
 			join(qaa_env.log_dir, runmode + "_readqc_multiqc.log")
+		resources:
+			mem_mb = lambda wildcards, attempt: DEFAULT_MEMORY_MB * attempt
 		shell:
 			"{params.cmd} -f -n {params.prefix}_multiqc_report -i {params.prefix}" + \
 			" -z -c {params.mqc_config} -o {params.outdir}" + \
 			" --file-list {input}" + \
 			" &> {log}"
-	"""
-	rule qaa_multiqc_old:
-		input:
-			TARGETS[:-1]
-		output:
-			join(config["multiqc_dir"], config["project_prefix"] + "_" + runmode + "_multiqc_report.html")
-		params:
-			mqc_config = config["multiqc_config"],
-			datadir = qaa_env.output_dir,
-			outdir = config["multiqc_dir"],
-			prefix = config["project_prefix"] + "_" + runmode,
-			mqc_files = runmode + "_MQC_LIST.txt",
-			fastqcdir = join(qaa_env.qc_dir, "fastqc", "bbnorm" if config["normalized"] else "bbduk"),
-			katdir = join(qaa_env.qc_dir, "kat"),
-			buscodir = qaa_env.busco_geno_dir,
-			quastdir = qaa_env.quast_dir,
-			qualimapdir = qaa_env.qualimap_dir,
-			samplesheet = config["full_samplesheet"],
-			mode = runmode,
-			cmd = CMD_CALL + "multiqc"
-		log:
-			join(qaa_env.log_dir, runmode + "_readqc_multiqc.log")
-		shell:
-			" find {params.buscodir} -name '*short_summary.txt' > {params.mqc_files}.tmp" + \
-			" && find {params.quastdir} -name 'report.tsv' >> {params.mqc_files}.tmp" + \
-			" && if [[ -d \"{params.katdir}\" && {params.mode} == \"survey\" ]]; then" + \
-			"   find {params.katdir} -name '*.json' >> {params.mqc_files}.tmp; fi" + \
-			" && if [[ -d \"{params.fastqcdir}\" && {params.mode} == \"survey\" ]]; then" + \
-			"   find {params.fastqcdir} -name 'fastqc_data.txt' >> {params.mqc_files}.tmp; fi" + \
-			" && find {params.qualimapdir} -name '*.txt' >> {params.mqc_files}.tmp" + \
-			" && grep -F -f <(cut -f 1 -d , {params.samplesheet}) {params.mqc_files}.tmp" + \
-			" > {params.mqc_files}" + \
-			" && rm {params.mqc_files}.tmp" + \
-			" && {params.cmd} -f -n {params.prefix}_multiqc_report -i {params.prefix}" + \
-			" -z -c {params.mqc_config} -o {params.outdir}" + \
-			" --file-list {params.mqc_files}" + \
-			" && rm {params.mqc_files}" + \
-			" &> {log}"
-	"""
 
 BUSCO_CMD = "" + \
 	"mkdir -p {params.outdir} && cd {params.outdir} && cd .. && " + \
@@ -243,6 +210,8 @@ if config["run_proteome_module"]:
 			cp_init = CMD_CALL + "cp -r",
 			cmd = CMD_CALL + "run_BUSCO.py",
 			configdir = lambda wildcards: join(qaa_env.busco_prot_dir, "config", wildcards.sample)
+		resources:
+			mem_mb = DEFAULT_MEMORY_MB		
 		threads:
 			8
 		shell:
@@ -266,6 +235,8 @@ if config["run_transcriptome_module"]:
 			cp_init = CMD_CALL + "cp -r",
 			cmd = CMD_CALL + "run_BUSCO.py",
 			configdir = lambda wildcards: join(qaa_env.busco_tran_dir, "config", wildcards.sample)
+		resources:
+			mem_mb = DEFAULT_MEMORY_MB
 		threads:
 			8
 		shell:
@@ -290,6 +261,8 @@ if config["run_genome_module"]:
 				cp_init = CMD_CALL + "cp -r",
 				cmd = CMD_CALL + "run_BUSCO.py",
 				configdir = lambda wildcards: join(qaa_env.busco_geno_dir, "config", wildcards.sample)
+			resources:
+				mem_mb = DEFAULT_MEMORY_MB
 			threads:
 				8
 			shell:
@@ -306,6 +279,8 @@ if config["run_genome_module"]:
 				contiglen = config["quast_mincontiglen"]
 		log:
 				join(qaa_env.log_dir, "{sample}.asm_quast_assembly.log")
+		resources:
+			mem_mb = DEFAULT_MEMORY_MB
 		threads:
 				2
 		shell:				
@@ -351,6 +326,8 @@ if config["run_genome_module"]:
 				samtools_cmd = CMD_CALL + "samtools",
 				markdup_cmd = CMD_CALL + "picard MarkDuplicates",
 				sample = lambda wildcards: wildcards.sample
+			resources:
+				mem_mb = 32000
 			threads:
 				BAM_THREADS
 			shell:
@@ -380,6 +357,8 @@ if config["run_genome_module"]:
 				mem = config["qualimap_mem"]  # this is coming from within qaa/__init__.py
 			log: 
 				join(qaa_env.log_dir, "{sample}.qualimap.log")
+			resources:
+				mem_mb = 10000
 			threads: 2
 			message: "Using qualimap to collect stats for: {input.bam}"
 			shell: 
@@ -397,6 +376,8 @@ if config["run_genome_module"]:
 				outdir = lambda wildcards: join(qaa_env.blast_dir, wildcards.sample),
 				cmd = CMD_CALL + "blastn",
 				blastdb = config["resources"]["blob_blastdb"]
+			resources:
+				mem_mb = 40000
 			threads:
 				8
 			shell: 
@@ -422,6 +403,8 @@ if config["run_genome_module"]:
 				taxlevel = "genus",
 				cmd = CMD_CALL + "blobtools",
 				min_contiglen = config["quast_mincontiglen"] # 1000
+			resources:
+				mem_mb = DEFAULT_MEMORY_MB
 			threads:
 				1
 			shell:
