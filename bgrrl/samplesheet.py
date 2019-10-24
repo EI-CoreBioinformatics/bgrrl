@@ -92,16 +92,16 @@ class Samplesheet(OrderedDict):
 		super(Samplesheet, self).__init__()
 		if type(_input) is str:
 			if not os.path.exists(_input):
-				raise ValueError("SAMPLESHEET ERORR: input file {} does not exist.".format(_input))
+				raise ValueError("SAMPLESHEET ERROR: input file {} does not exist.".format(_input))
 			with open(_input) as _in:
 				for r in csv.reader(_in, delimiter=","):
-					print(r)
+					# print(r)
 					self[r[0]] = sampletype(*r)
 	def write(self, stream, _filter=None):
 		for s in self:
 			if _filter is None or s in _filter:
 				print(*tuple(self[s]), sep=",", file=stream)
-				print("")
+				# print("")
 	def verifySampleData(self, fields=["R1", "R2", "S", "R1trim", "R2trim", "Strim", "R1norm", "R2norm", "Snorm"]):
 		for s in self:
 			self[s].verifyDatasets(fields=fields)
