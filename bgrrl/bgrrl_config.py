@@ -44,14 +44,12 @@ class BgrrlConfigurationManager(ConfigurationManager):
 
 
 	def __init__(self, ap_args):
-
 		self.alt_hpc_config_warning = "Please run bginit or provide a valid HPC configuration file with --hpc_config."
 		self.alt_config_warning = "Please run bginit or provide a valid configuration file with --bgrrl_config/--config."
 		self.alt_multiqc_config_warning = "Please run bginit to obtain a valid MultiQC configuration file template."
-
 		self.job_suffix_prefix = "bgrrl"
 
-		super(BgrrlConfigurationManager, self).__init__(ap_args)
+		super().__init__(ap_args)
 
 		# check for input
 		if not hasattr(self, "input"):
@@ -59,8 +57,6 @@ class BgrrlConfigurationManager(ConfigurationManager):
 				self.input = self.input_sheet
 			except:
 				raise ValueError("Configuration has neither 'input' nor 'input_sheet' attribute.")
-
-
 
 		self.__manage()
 
