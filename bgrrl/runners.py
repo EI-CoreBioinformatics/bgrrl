@@ -17,38 +17,27 @@ from bgrrl.bin.annocmp import main as annocmp_main
 from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample, ANN_Sample
 from bgrrl.bgrrl_config import BgrrlConfigurationManager
 
-from qaa import QAA_Runner
+from qaa import QaaRunner
 
 class BgrrlModuleRunner:
 	def __init__(self, module, config_manager):
 		self.module = module
 		self.config_manager = config_manager
+		self.cols_to_verify = list()
+		self.sampletype = BaseSample
+
+	def verify_data(self, sheet, cols_to_verify, sampletype):
+		if cols_to_verify:
+			return Samplesheet(sheet, sampletype=sampletype).verifySampleData(fields=cols_to_verify)
+		return True
 
 	def run_module(self):
 
 		def get_smk_file(module):
 			return join(dirname(__file__), "zzz", module + ".smk.py")
-		
-		sampletype = BaseSample
-		verify_fields = ["R1", "R2", "S"]
-		if self.module == "bgasm" or (self.module == "bgpackage" and self.config_manager.package_mode in ("processed_reads", "asm", "asm,analysis", "asm,ann,analysis")):
-			sampletype = ASM_Sample
-			verify_fields = list() 
-		if self.module == "bgann" or (self.module == "bgpackage" and self.config_manager.package_mode in ("ann", "ann,analysis", "analysis,ann")):
-			sampletype = ANN_Sample
-			verify_fields=["Assembly"]
-		
-		if verify_fields:
-			samplesheet = Samplesheet(
-				self.config_manager.input_sheet, 
-				sampletype=sampletype
-			)
 
-			# this will die with error message if it fails
-			samplesheet.verifySampleData(fields=verify_fields)
-
+		self.verify_data(self.config_manager.input_sheet, self.cols_to_verify, self.sampletype)
 		self.config_manager._config["samplesheet"] = self.config_manager.input_sheet
-
 		self.config_manager.module = self.module
 
 		config_file = self.config_manager.generate_config_file(self.module)
@@ -69,6 +58,8 @@ class BgrrlModuleRunner:
 class BGSurveyRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
 		super(BGSurveyRunner, self).__init__(module, config_manager)
+		self.cols_to_verify = ["R1", "R2", "S"]
+		self.sampletype = BaseSample
 
 	def run(self):
 		readtype = "bbduk" if self.config_manager.no_normalization else "bbnorm"
@@ -89,7 +80,7 @@ class BGSurveyRunner(BgrrlModuleRunner):
 			run_result = self.run_module()
 			if run_result:
 				qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
-				run_result = QAA_Runner(qaa_args).run()					
+				run_result = QaaRunner(qaa_args).run()					
 				if run_result:
 					run_result = survey_eval_main(qc_eval_args)
 					
@@ -102,7 +93,7 @@ class BGSurveyRunner(BgrrlModuleRunner):
 
 					if run_result and self.config_manager.full_qaa_analysis:
 						qaa_args = self.config_manager.create_qaa_args(stage="qc_report")
-						run_result = QAA_Runner(qaa_args).run()
+						run_result = QaaRunner(qaa_args).run()
 
 					if run_result and not self.config_manager.no_packaging:
 						# print("SHEET:", self.config_manager.input_sheet, file=sys.stderr)
@@ -116,6 +107,8 @@ class BGSurveyRunner(BgrrlModuleRunner):
 class BGAssemblyRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
 		super(BGAssemblyRunner, self).__init__(module, config_manager)
+		self.cols_to_verify = list()
+		self.sampletype = ASM_Sample
 
 	def run(self):
 		eb_criteria = self.config_manager._config.get("enterobase_criteria", "")
@@ -163,7 +156,7 @@ class BGAssemblyRunner(BgrrlModuleRunner):
 						qaa_stage = "asm"
 				
 					qaa_args = self.config_manager.create_qaa_args(stage=qaa_stage)
-					run_result = QAA_Runner(qaa_args).run()
+					run_result = QaaRunner(qaa_args).run()
 					if run_result:
 						if self.config_manager.enterobase_groups:
 							run_result = asm_report_main(asm_report_args)
@@ -178,6 +171,8 @@ class BGAssemblyRunner(BgrrlModuleRunner):
 class BGAnnotationRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
 		super(BGAnnotationRunner, self).__init__(module, config_manager)
+		self.cols_to_verify = ["Assembly"]
+		self.sampletype = ANN_Sample
 
 	@staticmethod
 	def check_prokka_nodes(prokka_path, prokka_run_report):
@@ -228,7 +223,7 @@ class BGAnnotationRunner(BgrrlModuleRunner):
 				)
 
 				qaa_args = self.config_manager.create_qaa_args(stage="ann")
-				run_result = QAA_Runner(qaa_args).run()
+				run_result = QaaRunner(qaa_args).run()
 
 				if self.config_manager._config["run_ratt"]: 
 					BGAnnotationRunner.run_ratt_report(
@@ -251,6 +246,13 @@ class BGAnnotationRunner(BgrrlModuleRunner):
 class BGPackageRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
 		super(BGPackageRunner, self).__init__(module, config_manager)
+		if self.config_manager.package_mode in ("processed_reads", "asm", "asm,analysis", "asm,ann,analysis"):
+			self.cols_to_check = list()
+			self.sampletype = ASM_Sample
+		elif self.config_manager.package_mode in ("ann", "ann,analysis", "analysis,ann"):
+			self.cols_to_check = ["Assembly"]
+			self.sampletype = ANN_Sample
+
 
 	def run(self):
 		req_pmodes = set(self.config_manager.package_mode.split(","))
