@@ -18,7 +18,6 @@ from copy import copy
 import pathlib
 
 from eicore.snakemake_helper import *
-from .workflow_runner import WorkflowRunner
 from .qaa_environment import QaaEnvironment
 from .qaa_config import QaaConfigurationManager
 
