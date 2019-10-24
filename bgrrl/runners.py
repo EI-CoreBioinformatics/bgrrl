@@ -17,7 +17,7 @@ from bgrrl.bin.annocmp import main as annocmp_main
 from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample, ANN_Sample
 from bgrrl.bgrrl_config import BgrrlConfigurationManager
 
-from qaa import QaaRunner
+from qaa.runners import QaaRunner
 
 class BgrrlModuleRunner:
 	def __init__(self, module, config_manager):

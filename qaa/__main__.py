@@ -10,7 +10,8 @@ import yaml
 from snakemake.utils import min_version
 
 from eicore.snakemake_helper import *
-from . import DEFAULT_CONFIG_FILE, DEFAULT_HPC_CONFIG_FILE, __version__, QAA_Runner
+from . import __version__
+from qaa.runners import QaaRunner
 
 min_version("4.0")
 
@@ -111,7 +112,7 @@ def main():
 
 	args = parser.parse_args()
 
-	qaa_runner = QAA_Runner(args)
+	qaa_runner = QaaRunner(args)
 	run_result = qaa_runner.run()
 	qaa_runner.report() 
 
