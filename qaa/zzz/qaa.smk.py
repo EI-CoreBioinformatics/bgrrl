@@ -1,17 +1,17 @@
 import sys
 import csv
 import os
-from os.path import join, basename, dirname
+from os.path import join, basename, dirname, abspath
 import yaml
 
 from qaa.samplesheet import readQAASamplesheet
-from qaa.qaa_environment import QAA_Environment
+from qaa.qaa_environment import QaaEnvironment
 
 DEBUG = config.get("debugmode", False)
 
 TIME_CMD = config.get("tools", dict()).get("time", "/usr/bin/time -v")
 
-qaa_env = QAA_Environment(config)
+qaa_env = QaaEnvironment(config)
 runmode = "survey" if config["survey_assembly"] else "asm"
 
 # setup i/o
@@ -42,7 +42,12 @@ for sample in INPUTFILES:
 
 if config["run_multiqc"]:
 	# this always needs to be last!
-	TARGETS.append(join(config["multiqc_dir"], config["project_prefix"] + "_" + runmode + "_multiqc_report.html"))
+	TARGETS.append(join(
+		config["multiqc_dir"], 
+		"_".join([config.get("project_prefix", ""), runmode, "multiqc_report.html"]).strip("_")
+		)
+	)
+	
 
 
 if DEBUG:
@@ -95,7 +100,7 @@ if config["run_multiqc"]:
 			buscodir = qaa_env.busco_geno_dir,
 			quastdir = qaa_env.quast_dir,
 			qualimapdir = qaa_env.qualimap_dir,
-			samplesheet = config["full_samplesheet"],
+			samplesheet = config["samplesheet"],
 		resources:
 			mem_mb = DEFAULT_LOW_MEMORY_MB
 		run:
@@ -149,7 +154,10 @@ if config["run_multiqc"]:
 				except:
 					print("Could not find {} output in {}".format(tool, tool_params["path"]), file=log)
 
-			valid_samples = set(row[0] for row in csv.reader(open(params.samplesheet), delimiter=",") if row[0])
+			if type(params.samplesheet) is str:
+				valid_samples = set(row[0] for row in csv.reader(open(params.samplesheet), delimiter=",") if row[0])
+			else:
+				valid_samples = set(k for k in params.samplesheet)
 
 			with open(output[0], "w") as out:
 				for f in input_files:
@@ -179,17 +187,17 @@ if config["run_multiqc"]:
 			" &> {log}"
 
 BUSCO_CMD = "" + \
-	"mkdir -p {params.outdir} && cd {params.outdir} && cd .. && " + \
+	"(mkdir -p {params.outdir} && cd {params.outdir} && cd .. && " + \
 	"export AUGUSTUS_CONFIG_PATH={params.configdir} && mkdir -p $(dirname {params.configdir}) && " + \
 	"{params.cp_init} /opt/miniconda/config {params.configdir} && " + \
 	"{params.cmd} -i {params.inputpath} -c {threads} -m {params.busco_mode} " + \
 	"--force -t {params.tmp} -l {params.busco_data} -o {wildcards.sample} && " + \
-	"touch {params.outdir}/short_summary_{wildcards.sample}.txt &> {log} && " + \
+	"touch {params.outdir}/short_summary_{wildcards.sample}.txt && " + \
 	"mkdir -p {params.final_outdir} && mv -v {params.outdir}/* {params.final_outdir}/ && " + \
 	"rm -rvf {params.outdir} {params.configdir} && " + \
 	"(mv {params.final_outdir}/short_summary_{wildcards.sample}.txt " + \
 	"{params.final_outdir}/{wildcards.sample}_short_summary.txt || " + \
-	"touch {params.final_outdir}/{wildcards.sample}_short_summary.txt)"
+	"touch {params.final_outdir}/{wildcards.sample}_short_summary.txt)) &> {log}"
 
 
 if config["run_proteome_module"]:
@@ -201,15 +209,15 @@ if config["run_proteome_module"]:
 		log:
 			join(qaa_env.log_dir, "{sample}_busco_prot.log")
 		params:
-			outdir = lambda wildcards: join(qaa_env.busco_prot_dir, "run_" + wildcards.sample),
-			final_outdir = lambda wildcards: join(qaa_env.busco_prot_dir, wildcards.sample),
-			tmp = lambda wildcards: join(qaa_env.busco_prot_dir, "tmp", wildcards.sample),
+			outdir = lambda wildcards: abspath(join(qaa_env.busco_prot_dir, "run_" + wildcards.sample)),
+			final_outdir = lambda wildcards: abspath(join(qaa_env.busco_prot_dir, wildcards.sample)),
+			tmp = lambda wildcards: abspath(join(qaa_env.busco_prot_dir, "tmp", wildcards.sample)),
 			busco_data = lambda wildcards: getBUSCOData(wildcards.sample),
 			busco_mode = "prot",
-			inputpath = lambda wildcards: os.path.abspath(getProteins(wildcards)),
+			inputpath = lambda wildcards: abspath(getProteins(wildcards)),
 			cp_init = CMD_CALL + "cp -r",
 			cmd = CMD_CALL + "run_BUSCO.py",
-			configdir = lambda wildcards: join(qaa_env.busco_prot_dir, "config", wildcards.sample)
+			configdir = lambda wildcards: join(os.path.abspath(qaa_env.busco_prot_dir), "config", wildcards.sample)
 		resources:
 			mem_mb = DEFAULT_MEMORY_MB		
 		threads:
@@ -226,15 +234,15 @@ if config["run_transcriptome_module"]:
 		log:
 			join(qaa_env.log_dir, "{sample}_busco_tran.log")
 		params:
-			outdir = lambda wildcards: join(qaa_env.busco_tran_dir, "run_" + wildcards.sample),
-			final_outdir = lambda wildcards: join(qaa_env.busco_tran_dir, wildcards.sample),
-			tmp = lambda wildcards: join(qaa_env.busco_tran_dir, "tmp", wildcards.sample),
+			outdir = lambda wildcards: abspath(join(qaa_env.busco_tran_dir, "run_" + wildcards.sample)),
+			final_outdir = lambda wildcards: abspath(join(qaa_env.busco_tran_dir, wildcards.sample)),
+			tmp = lambda wildcards: abspath(join(qaa_env.busco_tran_dir, "tmp", wildcards.sample)),
 			busco_data = lambda wildcards: getBUSCOData(wildcards.sample),
 			busco_mode = "tran",
-			inputpath = lambda wildcards: os.path.abspath(getTranscripts(wildcards)),
+			inputpath = lambda wildcards: abspath(getTranscripts(wildcards)),
 			cp_init = CMD_CALL + "cp -r",
 			cmd = CMD_CALL + "run_BUSCO.py",
-			configdir = lambda wildcards: join(qaa_env.busco_tran_dir, "config", wildcards.sample)
+			configdir = lambda wildcards: join(os.path.abspath(qaa_env.busco_tran_dir), "config", wildcards.sample)
 		resources:
 			mem_mb = DEFAULT_MEMORY_MB
 		threads:
@@ -252,12 +260,12 @@ if config["run_genome_module"]:
 			log:
 				join(qaa_env.log_dir, "{sample}_busco_geno.log")
 			params:
-				outdir = lambda wildcards: join(qaa_env.busco_geno_dir, "run_" + wildcards.sample),
-				final_outdir = lambda wildcards: join(qaa_env.busco_geno_dir, wildcards.sample),
-				tmp = lambda wildcards: join(qaa_env.busco_geno_dir, "tmp", wildcards.sample),
+				outdir = lambda wildcards: abspath(join(qaa_env.busco_geno_dir, "run_" + wildcards.sample)),
+				final_outdir = lambda wildcards: abspath(join(qaa_env.busco_geno_dir, wildcards.sample)),
+				tmp = lambda wildcards: abspath(join(os.path.abspath(qaa_env.busco_geno_dir), "tmp", wildcards.sample)),
 				busco_data = lambda wildcards: getBUSCOData(wildcards.sample),
 				busco_mode = "geno",
-				inputpath = lambda wildcards: os.path.abspath(getAssembly(wildcards)),
+				inputpath = lambda wildcards: abspath(getAssembly(wildcards)),
 				cp_init = CMD_CALL + "cp -r",
 				cmd = CMD_CALL + "run_BUSCO.py",
 				configdir = lambda wildcards: join(qaa_env.busco_geno_dir, "config", wildcards.sample)
