@@ -166,7 +166,8 @@ rule qc_tadpole_error_correction:
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}.qc_tadpole_errc.log")
 	resources:
-		mem_mb = lambda wildcards, attempt: 8000 * attempt
+		mem_mb = lambda wildcards, attempt: 16000 * attempt,
+		mem_gb = lambda wildcards, attempt: (16000 * attempt) // 1000
 	threads:
 		8
 	params:
@@ -174,10 +175,10 @@ rule qc_tadpole_error_correction:
 	shell:
 		TIME_V + \
 		" {params.cmd}" + \
-		" -Xmx30g threads={threads}" + \
+		" -Xmx{resources.mem_gb}g threads={threads}" + \
 		"  in={input.r1} in2={input.r2} out={output.r1} out2={output.r2} outd={output.discarded_pairs} mode=correct &&" + \
 		" {params.cmd}" + \
-		" -Xmx30g threads={threads}" + \
+		" -Xmx{resources.mem_gb}g threads={threads}" + \
 		" in={input.singles} out={output.singles} outd={output.discarded_singles} mode=correct" + \
 		" &> {log}"
 
@@ -195,7 +196,8 @@ rule qc_bbmerge:
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}.qc_bbmerge.log")
 	resources:
-		mem_mb = lambda wildcards, attempt: 8000 * attempt
+		mem_mb = lambda wildcards, attempt: 8000 * attempt,
+		mem_gb = lambda wildcards, attempt: (8000 * attempt) // 1000
 	threads:
 		8
 	params:
@@ -204,7 +206,7 @@ rule qc_bbmerge:
 		ext_iterations = 5
 	shell:
 		TIME_V + " {params.cmd}" + \
-		" -Xmx30g threads={threads}" + \
+		" -Xmx{resources.mem_gb}g threads={threads}" + \
 		" in={input.r1} in2={input.r2}" + \
 		" out={output.merged} outu1={output.ur1} outu2={output.ur2}" + \
 		" rsem=t extend2={params.extend2} iterations={params.ext_iterations} ecct vstrict"
@@ -267,7 +269,7 @@ rule qc_katgcp:
 	threads:
 		2
 	shell:
-		"({params.cmd} -o {params.prefix} -t {threads} -v '{input.ur1} {input.ur2}' {input.merged} {input.singles}" + \
+		"({params.cmd} -o {params.prefix} -t {threads} -v {input.ur1} {input.ur2} {input.merged} {input.singles}" + \
 		" || touch {output.katgcp}) &> {log}"
 
 
