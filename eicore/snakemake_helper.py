@@ -212,7 +212,8 @@ def run_snakemake(snakefile, out_dir, cfg_file, exe_env, dryrun=False, unlock=Fa
 						use_conda=True,
 						use_singularity=True,
 						restart_times=3,
-						max_status_checks_per_second=30
+						max_status_checks_per_second=30,
+						keepgoing=True
 						# allowed_rules=args.allowed_rules
 						)
 	return res
