@@ -110,17 +110,17 @@ if EB_ORGANISMS:
 
 
 elif config["package_mode"] == "processed_reads" or "processed_reads" in config["package_mode"]:
-	read_pkg_cmd = "mkdir -p {params.outdir}" + \
-		" && (for r in $(cut -f 11 -d , {input.samplesheet}); do" + \
-		" ln -sf ../../$r {params.outdir}/$(basename $r);" + \
+	read_pkg_cmd = "mkdir -p {{params.outdir}}" + \
+		" && (for r in $(cut -f 11 -d , {{input.samplesheet}}); do" + \
+		" ln -sf ../../$r {{params.outdir}}/$(basename $r);" + \
 		" r=$(dirname $r)/$(basename $r _R1.bbduk.fastq.gz)_R2.bbduk.fastq.gz;" + \
 		" {}" + \
 		" done)" + \
 		" && cd " + OUTPUTDIR + \
-		" && tar chvzf $(basename {params.outdir}).tar.gz $(basename {params.outdir})" + \
+		" && tar chvzf $(basename {{params.outdir}}).tar.gz $(basename {{params.outdir}})" + \
 		" && cd " + CWD + \
-		" && md5sum {params.outdir}.tar.gz > {params.outdir}.tar.gz.md5" + \
-		" && touch {output.done}"
+		" && md5sum {{params.outdir}}.tar.gz > {{params.outdir}}.tar.gz.md5" + \
+		" && touch {{output.done}}"
 
 	rule fin_package_processed_reads:
 		message:
@@ -203,15 +203,15 @@ if config["package_mode"] == "ann" or "ann" in config["package_mode"]:
 	if not config["run_ratt"]:
 
 		shell_str = "" + \
-			"mkdir -p {params.package_dir}" + \
+			"mkdir -p {{params.package_dir}}" + \
 			" && cwd=$(pwd)" + \
-			" && cd {params.package_dir}" + \
+			" && cd {{params.package_dir}}" + \
 			" && {0}" + \
 			" && cd .." + \
-			" && tar chvzf $(basename {params.package_dir}).tar.gz $(basename {params.package_dir})" + \
-			" && md5sum $(basename {params.package_dir}).tar.gz > $(basename {params.package_dir}).tar.gz.md5" + \
+			" && tar chvzf $(basename {{params.package_dir}}).tar.gz $(basename {{params.package_dir}})" + \
+			" && md5sum $(basename {{params.package_dir}}).tar.gz > $(basename {{params.package_dir}}).tar.gz.md5" + \
 			" && cd $cwd" + \
-			" && touch {output.done}"
+			" && touch {{output.done}}"
 
 		if config.get("prokka_package_style", "by_sample") == "by_sample":
 			link_command = "ln -sf ../../{0}/annotation/prokka".format(basename(INPUTDIR))
