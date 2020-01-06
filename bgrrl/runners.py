@@ -68,7 +68,6 @@ class BGSurveyRunner(BgrrlModuleRunner):
 		qc_eval_args = [
 			"--readtype", readtype,
 			"--min_tadpole_size", min_tadpole_size,
-			# self.config_manager.input_sheet,
 			self.config_manager.output_dir
 		]
 		if self.config_manager.single_cell:
@@ -79,26 +78,21 @@ class BGSurveyRunner(BgrrlModuleRunner):
 		else:
 			run_result = self.run_module()
 			if run_result:
-				qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
-				run_result = QaaRunner(qaa_args).run()					
-				if run_result:
-					run_result = survey_eval_main(qc_eval_args)
-					
-					self.config_manager.input_sheet = join(
-						self.config_manager.output_dir, 
-						"reports", 
-						"samplesheets", 
-						"samplesheet.survey_pass.yaml"
-					)
+				#qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
+				self.config_manager.input_sheet = join(
+					self.config_manager.output_dir, 
+					"reports", 
+					"samplesheets", 
+					"samplesheet.survey_pass.yaml"
+				)
 
-					if run_result and self.config_manager.full_qaa_analysis:
-						qaa_args = self.config_manager.create_qaa_args(stage="qc_report")
-						run_result = QaaRunner(qaa_args).run()
+				if run_result and self.config_manager.full_qaa_analysis:
+					qaa_args = self.config_manager.create_qaa_args(stage="qc_report")
+					run_result = QaaRunner(qaa_args).run()
 
-					if run_result and not self.config_manager.no_packaging:
-						# print("SHEET:", self.config_manager.input_sheet, file=sys.stderr)
-						self.config_manager.package_mode = "processed_reads"
-						run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()						
+				if run_result and not self.config_manager.no_packaging:
+					self.config_manager.package_mode = "processed_reads"
+					run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()						
 
 
 		return run_result

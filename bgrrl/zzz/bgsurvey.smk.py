@@ -38,6 +38,11 @@ TARGETS.extend(map(lambda s:join(KAT_DIR, s, s + ".dist_analysis.json"), INPUTFI
 TARGETS.extend(map(lambda s:join(BBDUK_DIR, s, s + ".merged.fastq.gz"), INPUTFILES))
 TARGETS.extend(map(lambda s:join(BBDUK_DIR, s, s + ".uc_singles.fastq.gz"), INPUTFILES))
 
+TARGETS.append(join(OUTPUTDIR, "reports", "quast_survey_report.tsv"))
+TARGETS.append(join(OUTPUTDIR, "reports", "survey_stage_evaluation.tsv"))
+
+
+print(config)
 
 
 # define normalization/no-normalization behaviour
@@ -71,11 +76,12 @@ def get_r2(wc):
 	return INPUTFILES[wc.sample].R2
 
 CMD_CALL = get_cmd_call(config, "bgrrl_container")
+QAA_CMD_CALL = get_cmd_call(config, "qaa_container")
 
 
 ### RULES ###
 
-localrules: all
+localrules: all, survey_evaluate, collate_quast_reports
 
 rule all:
 	input: TARGETS
@@ -224,6 +230,7 @@ rule qc_concat_singles:
 	shell:
 		"cat {input.singles} {input.merged} > {output.uc_single_reads}"
 
+
 rule qc_tadpole_survey_assembly:
 	message:
 		"Generating survey assemblies with tadpole..."
@@ -248,6 +255,67 @@ rule qc_tadpole_survey_assembly:
 		" -Xmx30g threads={threads}" + \
 		" in={input.ur1} in2={input.ur2} extra={input.merged},{input.singles}" + \
 		" out={output.contigs} &> {log}"
+
+
+rule qaa_quast:
+	input:
+		assembly = rules.qc_tadpole_survey_assembly.output.contigs
+	output:
+		join(TADPOLE_DIR, "{sample}", "quast", "transposed_report.tsv")
+	params:
+		outdir = lambda wildcards: join(TADPOLE_DIR, wildcards.sample, "quast"),
+		cmd = QAA_CMD_CALL + "quast.py",
+		contiglen = 0 #config["quast_mincontiglen"]
+	log:
+		join(QC_LOGDIR, "{sample}.quast_tadpole_assembly.log")
+	resources:
+		mem_mb = 8000
+	threads:
+		2
+	shell:
+		" ({params.cmd} -o {params.outdir} -t {threads} -L -s {input.assembly} --min-contig {params.contiglen}" + \
+		" || touch {params.outdir}/transposed_report.tsv {params.outdir}/report.tsv) 2> {log}" + \
+		" && cut -f 1,2 {params.outdir}/report.tsv > {params.outdir}/report.tsv.12" + \
+		" && mv {params.outdir}/report.tsv {params.outdir}/report.tsv.full" + \
+		" && mv {params.outdir}/report.tsv.12 {params.outdir}/report.tsv"
+
+
+rule survey_evaluate:
+	input:
+		assembly_stats = expand(join(TADPOLE_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES),
+		read_stats = expand(join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html"), sample=INPUTFILES, mate=["R1","R2"]),
+		seq_stats = expand(join(KAT_DIR, "{sample}", "{sample}.dist_analysis.json"), sample=INPUTFILES)
+	output:
+		join(OUTPUTDIR, "reports", "survey_stage_evaluation.tsv"),
+		join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.survey_pass.yaml")
+	run:
+		from bgrrl.bin.survey_stage_evaluation import main as survey_eval_main
+		readtype = "bbduk"
+		min_tadpole_size = config["minimum_survey_assembly_size"]
+		qc_eval_args = list(map(str, ["--readtype", readtype, "--min_tadpole_size", min_tadpole_size, OUTPUTDIR]))
+		survey_eval_main(qc_eval_args)
+
+
+rule collate_quast_reports:
+	input:
+		quast_reports = expand(join(TADPOLE_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES)
+	output:
+		report = join(OUTPUTDIR, "reports", "quast_survey_report.tsv")
+	run:
+		import os
+		import sys
+		import csv
+
+		header = ""
+		with open(output.report, "w") as report_out:
+			for f in input.quast_reports:
+				for i, row in enumerate(csv.reader(open(f), delimiter="\t")):
+					if i == 0 and not header:
+						header = row
+						print(*header, file=report_out, sep="\t")
+					elif i:
+						print(*row, file=report_out, sep="\t")
+
 
 rule qc_katgcp:
 	message:
