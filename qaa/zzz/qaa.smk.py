@@ -28,7 +28,7 @@ SINGLE_CELL_MODE = config.get("single_cell_mode", False)
 TARGETS = list()
 for sample in INPUTFILES:
 	if config["run_genome_module"]:
-		TARGETS.append(join(qaa_env.quast_dir, sample, "transposed_report.tsv"))
+		# TARGETS.append(join(qaa_env.quast_dir, sample, "transposed_report.tsv"))
 		if config["run_blobtools"]:
 			TARGETS.append(join(qaa_env.blob_dir, sample, sample + ".blobDB.table.txt"))
 		if config["run_qualimap"]:
@@ -276,28 +276,29 @@ if config["run_genome_module"]:
 			shell:
 				BUSCO_CMD
 
-	rule qaa_quast:
-		input:
-			assembly = getAssembly
-		output:
-				join(qaa_env.quast_dir, "{sample}", "transposed_report.tsv")
-		params:
-				outdir = lambda wildcards: join(qaa_env.quast_dir, wildcards.sample),
-				cmd = CMD_CALL + "quast.py",
-				contiglen = config["quast_mincontiglen"]
-		log:
-				join(qaa_env.log_dir, "{sample}.asm_quast_assembly.log")
-		resources:
-			mem_mb = DEFAULT_MEMORY_MB
-		threads:
-				2
-		shell:				
-				" ({params.cmd} -o {params.outdir} -t {threads} -L -s {input.assembly} --min-contig {params.contiglen}" + \
-				" || touch {params.outdir}/transposed_report.tsv {params.outdir}/report.tsv)" + \
-				" && cut -f 1,2 {params.outdir}/report.tsv > {params.outdir}/report.tsv.12" + \
-				" && mv {params.outdir}/report.tsv {params.outdir}/report.tsv.full" + \
-				" && mv {params.outdir}/report.tsv.12 {params.outdir}/report.tsv" + \
-				" 2> {log}"
+	if False:
+		rule qaa_quast:
+			input:
+				assembly = getAssembly
+			output:
+					join(qaa_env.quast_dir, "{sample}", "transposed_report.tsv")
+			params:
+					outdir = lambda wildcards: join(qaa_env.quast_dir, wildcards.sample),
+					cmd = CMD_CALL + "quast.py",
+					contiglen = config["quast_mincontiglen"]
+			log:
+					join(qaa_env.log_dir, "{sample}.asm_quast_assembly.log")
+			resources:
+				mem_mb = DEFAULT_MEMORY_MB
+			threads:
+					2
+			shell:
+					" ({params.cmd} -o {params.outdir} -t {threads} -L -s {input.assembly} --min-contig {params.contiglen}" + \
+					" || touch {params.outdir}/transposed_report.tsv {params.outdir}/report.tsv)" + \
+					" && cut -f 1,2 {params.outdir}/report.tsv > {params.outdir}/report.tsv.12" + \
+					" && mv {params.outdir}/report.tsv {params.outdir}/report.tsv.full" + \
+					" && mv {params.outdir}/report.tsv.12 {params.outdir}/report.tsv" + \
+					" 2> {log}"
 
 	if config["align_reads"]:
 		BAM_THREADS = 16
