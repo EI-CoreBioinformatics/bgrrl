@@ -27,8 +27,12 @@ RATT_DIR = join(ANNOTATION_DIR, "ratt")
 # tools
 RATT_WRAPPER = join(config["etc"], "misc", "ratt_wrapper")
 
+# generate target list
+TARGETS = list()
+
 if config["module"] == "bgasm":
 	sampletype = ASM_Sample
+	TARGETS.append(join(OUTPUTDIR, "reports", "quast_report.tsv"))
 	
 elif config["module"] == "bgann":
 	sampletype = ANN_Sample
@@ -38,8 +42,8 @@ else:
 
 INPUTFILES = yaml.load(open(config["samplesheet"]), Loader=yaml.SafeLoader) 
 
-# generate target list
-TARGETS = list()
+
+
 
 if config["run_prokka"]:
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".gff"), INPUTFILES))
@@ -47,6 +51,8 @@ if config["run_prokka"]:
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".ffn.16S"), INPUTFILES))
 else:
 	TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
+
+
 	
 REF_PREFIXES = dict()
 if config["run_ratt"]:
@@ -169,6 +175,49 @@ if config["module"] == "bgasm":
 		shell:
 			TIME_V + " {params.cmd}" + \
 			" in={input.assembly} out={output[0]} minlength={params.minlen}"
+
+	rule qaa_quast:
+		input:
+			assembly = rules.asm_postprocess.output.filtered_assembly
+		output:
+			join(ASSEMBLY_DIR, "{sample}", "quast", "transposed_report.tsv")
+		params:
+			outdir = lambda wildcards: join(ASSEMBLY_DIR, wildcards.sample, "quast"),
+			cmd = QAA_CMD_CALL + "quast.py",
+			contiglen = 0 #config["quast_mincontiglen"]
+		log:
+			join(ASSEMBLY_DIR, "log", "{sample}.quast_tadpole_assembly.log")
+		resources:
+			mem_mb = 8000
+		threads:
+			2
+		shell:
+			" ({params.cmd} -o {params.outdir} -t {threads} -L -s {input.assembly} --min-contig {params.contiglen}" + \
+			" || touch {params.outdir}/transposed_report.tsv {params.outdir}/report.tsv) 2> {log}" + \
+			" && cut -f 1,2 {params.outdir}/report.tsv > {params.outdir}/report.tsv.12" + \
+			" && mv {params.outdir}/report.tsv {params.outdir}/report.tsv.full" + \
+			" && mv {params.outdir}/report.tsv.12 {params.outdir}/report.tsv"
+
+
+	rule collate_quast_reports:
+		input:
+			quast_reports = expand(join(ASSEMBLY_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES)
+		output:
+			report = join(OUTPUTDIR, "reports", "quast_report.tsv")
+		run:
+			import os
+			import sys
+			import csv
+
+			header = ""
+			with open(output.report, "w") as report_out:
+				for f in input.quast_reports:
+					for i, row in enumerate(csv.reader(open(f), delimiter="\t")):
+						if i == 0 and not header:
+							header = row
+							print(*header, file=report_out, sep="\t")
+						elif i:
+							print(*row, file=report_out, sep="\t")
 
 
 if config["run_prokka"]:
