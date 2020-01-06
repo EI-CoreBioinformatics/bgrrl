@@ -90,7 +90,7 @@ def test_kat_peaks(sample, workdir, max_peak_volume_threshold=0.9, **kwargs):
 		except:
 			return(test, "PASS", "JSON_ERROR", data)
 
-		print(sample, kat_data)
+		#print(sample, kat_data)
 
 		cov_data = kat_data.get("coverage", dict())
 		kmer_peaks = cov_data.get("nb_peaks", None)
@@ -107,7 +107,7 @@ def test_kat_peaks(sample, workdir, max_peak_volume_threshold=0.9, **kwargs):
 		kmer_peak_table = list([peak[k] for k in keys] for peak in cov_data.get("peaks", dict(zip(keys, [None]*4))))
 
 
-		print(sample, kmer_peak_table)
+		#print(sample, kmer_peak_table)
 
 		VOLUME_INDEX = 3
 
@@ -167,7 +167,8 @@ def test_tadpole_size(sample, workdir, min_size=1e6, **kwargs):
 				return int(row[1])
 		return 0
 	test = "TADPOLE:SIZE"
-	quast_report = join(workdir, "qaa", "survey", "quast", sample, "report.tsv")
+	# quast_report = join(workdir, "qaa", "survey", "quast", sample, "report.tsv")
+	quast_report = join(workdir, "qc", "tadpole", sample, "quast", "report.tsv")
 
 	status, errmsg, assembly_size = "PASS", "", 0
 	if exists(quast_report):
