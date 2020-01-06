@@ -172,8 +172,7 @@ rule qc_tadpole_error_correction:
 	log:
 		join(QC_LOGDIR, "{sample}", "{sample}.qc_tadpole_errc.log")
 	resources:
-		mem_mb = lambda wildcards, attempt: 16000 * attempt,
-		mem_gb = lambda wildcards, attempt: (16000 * attempt) // 1000
+		mem_mb = lambda wildcards, attempt: 16000 * attempt
 	threads:
 		8
 	params:
@@ -181,10 +180,10 @@ rule qc_tadpole_error_correction:
 	shell:
 		TIME_V + \
 		" {params.cmd}" + \
-		" -Xmx{resources.mem_gb}g threads={threads}" + \
+		" -Xmx{resources.mem_mb}m threads={threads}" + \
 		"  in={input.r1} in2={input.r2} out={output.r1} out2={output.r2} outd={output.discarded_pairs} mode=correct &&" + \
 		" {params.cmd}" + \
-		" -Xmx{resources.mem_gb}g threads={threads}" + \
+		" -Xmx{resources.mem_mb}m threads={threads}" + \
 		" in={input.singles} out={output.singles} outd={output.discarded_singles} mode=correct" + \
 		" &> {log}"
 
@@ -280,22 +279,6 @@ rule qaa_quast:
 		" && mv {params.outdir}/report.tsv.12 {params.outdir}/report.tsv"
 
 
-rule survey_evaluate:
-	input:
-		assembly_stats = expand(join(TADPOLE_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES),
-		read_stats = expand(join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html"), sample=INPUTFILES, mate=["R1","R2"]),
-		seq_stats = expand(join(KAT_DIR, "{sample}", "{sample}.dist_analysis.json"), sample=INPUTFILES)
-	output:
-		join(OUTPUTDIR, "reports", "survey_stage_evaluation.tsv"),
-		join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.survey_pass.yaml")
-	run:
-		from bgrrl.bin.survey_stage_evaluation import main as survey_eval_main
-		readtype = "bbduk"
-		min_tadpole_size = config["minimum_survey_assembly_size"]
-		qc_eval_args = list(map(str, ["--readtype", readtype, "--min_tadpole_size", min_tadpole_size, OUTPUTDIR]))
-		survey_eval_main(qc_eval_args)
-
-
 rule collate_quast_reports:
 	input:
 		quast_reports = expand(join(TADPOLE_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES)
@@ -315,6 +298,22 @@ rule collate_quast_reports:
 						print(*header, file=report_out, sep="\t")
 					elif i:
 						print(*row, file=report_out, sep="\t")
+
+
+rule survey_evaluate:
+	input:
+		assembly_stats = expand(join(TADPOLE_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES),
+		read_stats = expand(join(FASTQC_DIR, "bbduk", "{sample}", "{sample}_{mate}.bbduk_fastqc.html"), sample=INPUTFILES, mate=["R1","R2"]),
+		seq_stats = expand(join(KAT_DIR, "{sample}", "{sample}.dist_analysis.json"), sample=INPUTFILES)
+	output:
+		join(OUTPUTDIR, "reports", "survey_stage_evaluation.tsv"),
+		join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.survey_pass.yaml")
+	run:
+		from bgrrl.bin.survey_stage_evaluation import main as survey_eval_main
+		readtype = "bbduk"
+		min_tadpole_size = config["minimum_survey_assembly_size"]
+		qc_eval_args = list(map(str, ["--readtype", readtype, "--min_tadpole_size", min_tadpole_size, OUTPUTDIR]))
+		survey_eval_main(qc_eval_args)
 
 
 rule qc_katgcp:
