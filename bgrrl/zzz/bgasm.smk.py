@@ -206,6 +206,9 @@ if config["module"] == "bgasm":
 		output:
 			report = join(OUTPUTDIR, "reports", "quast_report.tsv")
 		run:
+			from bgrrl.reporters import collate_quast_reports as report
+			report(output.report, *input.quast_reports)
+"""
 			import os
 			import sys
 			import csv
@@ -219,7 +222,7 @@ if config["module"] == "bgasm":
 							print(*header, file=report_out, sep="\t")
 						elif i:
 							print(*row, file=report_out, sep="\t")
-
+"""
 
 if config["run_prokka"]:
 	rule ann_prokka:

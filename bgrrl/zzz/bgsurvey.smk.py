@@ -285,6 +285,9 @@ rule collate_quast_reports:
 	output:
 		report = join(OUTPUTDIR, "reports", "quast_survey_report.tsv")
 	run:
+		from bgrrl.reporters import collate_quast_reports as report
+		report(output.report, *input.quast_reports)
+"""
 		import os
 		import sys
 		import csv
@@ -298,7 +301,7 @@ rule collate_quast_reports:
 						print(*header, file=report_out, sep="\t")
 					elif i:
 						print(*row, file=report_out, sep="\t")
-
+"""
 
 rule survey_evaluate:
 	input:

@@ -36,11 +36,11 @@ class QaaRunner:
 				rfunc(qa_dir, out=rep_out)
 
 		if self.config_manager.runmode == "survey":
-			report_func(
-				self.qaa_env.quast_dir, 
-				join(self.config_manager.report_dir, "quast_survey_report.tsv"), 
-				compileQUASTReport
-			)
+			#report_func(
+			#	self.qaa_env.quast_dir, 
+			#	join(self.config_manager.report_dir, "quast_survey_report.tsv"), 
+			#	compileQUASTReport
+			#)
 			if self.config["run_busco"]:
 				report_func(
 					self.qaa_env.busco_geno_dir, 
@@ -56,11 +56,12 @@ class QaaRunner:
 		else:
 			if "asm" in self.config_manager.runmode:
 				if self.config["run_genome_module"]:
-					report_func(
-						self.qaa_env.quast_dir,
-						join(self.config_manager.report_dir, "quast_report.tsv"),
-						compileQUASTReport
-					)
+					#report_func(
+					#	self.qaa_env.quast_dir,
+					#	join(self.config_manager.report_dir, "quast_report.tsv"),
+					#	compileQUASTReport
+					#)
+					pass
 				if self.config["run_busco"]:
 					report_func(
 						self.qaa_env.busco_geno_dir,
