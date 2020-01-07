@@ -119,11 +119,12 @@ def get_assembly(wc):
 CMD_CALL = get_cmd_call(config, "bgrrl_container")
 CONTAINER_PARAM = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
 
+QAA_CMD_CALL = get_cmd_call(config, "qaa_container")
 
 ### RULES ###
 
 if config["run_prokka"]:
-	localrules: all, ann_prokka_gffconvert, ann_prokka_16S
+	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, collate_quast_reports
 else:
 	localrules: all
 
