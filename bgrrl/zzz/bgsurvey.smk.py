@@ -285,7 +285,7 @@ rule collate_quast_reports:
 	output:
 		report = join(OUTPUTDIR, "reports", "quast_survey_report.tsv")
 	run:
-		from bgrrl.reporters import collate_quast_reports as report
+		from bgrrl.reporters.reporters import collate_quast_reports as report
 		report(output.report, *input.quast_reports)
 
 
@@ -298,7 +298,7 @@ rule survey_evaluate:
 		join(OUTPUTDIR, "reports", "survey_stage_evaluation.tsv"),
 		join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.survey_pass.yaml")
 	run:
-		from bgrrl.bin.survey_stage_evaluation import main as survey_eval_main
+		from bgrrl.reporters.survey_stage_evaluation import main as survey_eval_main
 		readtype = "bbduk"
 		min_tadpole_size = config["minimum_survey_assembly_size"]
 		qc_eval_args = list(map(str, ["--readtype", readtype, "--min_tadpole_size", min_tadpole_size, OUTPUTDIR]))
