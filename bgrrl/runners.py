@@ -8,11 +8,8 @@ import glob
 from eicore.snakemake_helper import *
 
 from bgrrl.enterobase_helpers import validateEnterobaseInput, loadEnterobaseCriteria 
-from bgrrl.bin.qc_eval import main as qc_eval_main
-from bgrrl.bin.survey_stage_evaluation import main as survey_eval_main
 from bgrrl.bin.asm_report import main as asm_report_main
 from bgrrl.bin.ann_report import main as ann_report_main
-from bgrrl.bin.asm_stage_report import main as asm_stage_report_main
 from bgrrl.bin.annocmp import main as annocmp_main
 from bgrrl.samplesheet import verifySamplesheet, Samplesheet, BaseSample, ASM_Sample, ANN_Sample
 from bgrrl.bgrrl_config import BgrrlConfigurationManager
@@ -55,132 +52,87 @@ class BgrrlModuleRunner:
 			unlock=self.config_manager.unlock
 		)
 
-class BGSurveyRunner(BgrrlModuleRunner):
+class BgrrlSurveyRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
-		super(BGSurveyRunner, self).__init__(module, config_manager)
+		super().__init__(module, config_manager)
 		self.cols_to_verify = ["R1", "R2", "S"]
 		self.sampletype = BaseSample
 
 	def run(self):
-		readtype = "bbduk" if self.config_manager.no_normalization else "bbnorm"
-		min_tadpole_size = str(int(self.config_manager.minimum_survey_assembly_size))
+		run_result = self.run_module()
+		if run_result:
+			#qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
+			self.config_manager.input_sheet = join(
+				self.config_manager.output_dir, 
+				"reports", 
+				"samplesheets", 
+				"samplesheet.survey_pass.yaml"
+			)
 
-		qc_eval_args = [
-			"--readtype", readtype,
-			"--min_tadpole_size", min_tadpole_size,
-			self.config_manager.output_dir
-		]
-		if self.config_manager.single_cell:
-			qc_eval_args.insert(0, "--single-cell")
+			if self.config_manager.full_qaa_analysis:
+				qaa_args = self.config_manager.create_qaa_args(stage="qc_report")
+				run_result = QaaRunner(qaa_args).run()
 
-		if self.config_manager.report_only:
-			run_result = survey_eval_main(qc_eval_args)
-		else:
-			run_result = self.run_module()
-			if run_result:
-				#qaa_args = self.config_manager.create_qaa_args(stage="qc_survey")
-				self.config_manager.input_sheet = join(
-					self.config_manager.output_dir, 
-					"reports", 
-					"samplesheets", 
-					"samplesheet.survey_pass.yaml"
-				)
-
-				if run_result and self.config_manager.full_qaa_analysis:
-					qaa_args = self.config_manager.create_qaa_args(stage="qc_report")
-					run_result = QaaRunner(qaa_args).run()
-
-				if run_result and not self.config_manager.no_packaging:
-					self.config_manager.package_mode = "processed_reads"
-					run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()						
+			if run_result and not self.config_manager.no_packaging:
+				self.config_manager.package_mode = "processed_reads"
+				run_result = BgrrlPackageRunner("bgpackage", self.config_manager).run_module()						
 
 
 		return run_result
 
 
-class BGAssemblyRunner(BgrrlModuleRunner):
+class BgrrlAssemblyRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
-		super(BGAssemblyRunner, self).__init__(module, config_manager)
+		super().__init__(module, config_manager)
 		self.cols_to_verify = list()
 		self.sampletype = ASM_Sample
 
 	def run(self):
 		eb_criteria = self.config_manager._config.get("enterobase_criteria", "")
-		asm_stage_report_args = [
-			self.config_manager.output_dir,
-			join(self.config_manager.output_dir, "reports")	
-		]
 		asm_report_args = [
 			self.config_manager.output_dir, 
 			self.config_manager.enterobase_groups, 
 			eb_criteria
 		]
 
-		if self.config_manager.report_only:
-			run_result = asm_stage_report_main(asm_stage_report_args)
-			if self.config_manager.enterobase_groups: # needs validation?
-				run_result = asm_report_main(asm_report_args)
-		else:
-			run_result = self.run_module()
-			if run_result:
-				#run_result = asm_stage_report_main(asm_stage_report_args)
-				if run_result:
-
-					if self.config_manager.run_annotation:
-						print(
-								"WARNING: Prokka annotation selected\n" + \
-								"If your jobs fail, you might have to update tbl2asn and/or exclude nodes " + \
-								"(hmmscan/GNU parallel fails)."
-						)
-
-						BGAnnotationRunner.check_prokka_nodes(
-							join(self.config_manager.output_dir, "annotation", "prokka"),
-							join(self.config_manager.output_dir, "reports", "ann_run_report.txt")
-						)
-						qaa_stage = "asm,ann"
+		run_result = self.run_module()
+		if run_result:
+			if self.config_manager.run_annotation:
+				print(
+					"WARNING: Prokka annotation selected\n" + \
+					"If your jobs fail, you might have to update tbl2asn and/or exclude nodes " + \
+					"(hmmscan/GNU parallel fails)."
+				)
+				qaa_stage = "asm,ann"
 						
-						if self.config_manager._config["run_ratt"]: 
-							BGAnnotationRunner.run_ratt_report(
-								self.config_manager.ratt_reference,
-								join(self.config_manager.output_dir, "annotation", "ratt"),
-								join(self.config_manager.output_dir, "annotation", "prokka"),
-                        	   	join(self.config_manager.output_dir, "reports")
-							)
-					else:
-						qaa_stage = "asm"
+				if self.config_manager._config["run_ratt"]: 
+					BgrrlAnnotationRunner.run_ratt_report(
+						self.config_manager.ratt_reference,
+						join(self.config_manager.output_dir, "annotation", "ratt"),
+						join(self.config_manager.output_dir, "annotation", "prokka"),
+                   	   	join(self.config_manager.output_dir, "reports")
+					)
+				else:
+					qaa_stage = "asm"
 				
-					qaa_args = self.config_manager.create_qaa_args(stage=qaa_stage)
-					run_result = QaaRunner(qaa_args).run()
-					if run_result:
-						if self.config_manager.enterobase_groups:
-							run_result = asm_report_main(asm_report_args)
-						if run_result and not self.config_manager.no_packaging:
-							package_mode = qaa_stage + (",analysis" if self.config_manager.is_final_step or self.config_manager.run_annotation else "")
-							self.config_manager.package_mode = package_mode # "asm"
-							run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
+				qaa_args = self.config_manager.create_qaa_args(stage=qaa_stage)
+				run_result = QaaRunner(qaa_args).run()
+				if run_result:
+					if self.config_manager.enterobase_groups:
+						run_result = asm_report_main(asm_report_args)
+					if run_result and not self.config_manager.no_packaging:
+						package_mode = qaa_stage + (",analysis" if self.config_manager.is_final_step or self.config_manager.run_annotation else "")
+						self.config_manager.package_mode = package_mode # "asm"
+						run_result = BgrrlPackageRunner("bgpackage", self.config_manager).run_module()
 
 		return run_result
 
 
-class BGAnnotationRunner(BgrrlModuleRunner):
+class BgrrlAnnotationRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
-		super(BGAnnotationRunner, self).__init__(module, config_manager)
+		super(BgrrlAnnotationRunner, self).__init__(module, config_manager)
 		self.cols_to_verify = ["Assembly"]
 		self.sampletype = ANN_Sample
-
-	@staticmethod
-	def check_prokka_nodes(prokka_path, prokka_run_report):
-		nodes = set()
-		for f in glob.glob(join(prokka_path, "*", "PROKKA_FAILED")):
-			nodes.add(open(f).read().strip())
-		if nodes:
-			with open(prokka_run_report, "at") as run_report:
-				for node in sorted(nodes):
-					print(node, file=run_report)
-			print(
-				"Failed prokka jobs were executed on nodes: {}.\n" + \
-				"Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))), 
-			)                                                                                                  			
 
 	@staticmethod
 	def run_ratt_report(ratt_reference, ratt_dir, prokka_dir, report_dir):
@@ -196,7 +148,7 @@ class BGAnnotationRunner(BgrrlModuleRunner):
 		if self.config_manager.report_only:
 			run_result = False
 			if self.config_manager._config["run_ratt"]: 
-				BGAnnotationRunner.run_ratt_report(
+				BgrrlAnnotationRunner.run_ratt_report(
 					self.config_manager.ratt_reference,
 					join(self.config_manager.output_dir, "annotation", "ratt"),
 					join(self.config_manager.output_dir, "annotation", "prokka"),
@@ -211,16 +163,11 @@ class BGAnnotationRunner(BgrrlModuleRunner):
 			if not run_result:
 				print("ANNOTATION RUN FAILED?")
 			else:
-				BGAnnotationRunner.check_prokka_nodes(
-					join(self.config_manager.output_dir, "annotation", "prokka"),
-					join(self.config_manager.output_dir, "reports", "ann_run_report.txt")
-				)
-
 				qaa_args = self.config_manager.create_qaa_args(stage="ann")
 				run_result = QaaRunner(qaa_args).run()
 
 				if self.config_manager._config["run_ratt"]: 
-					BGAnnotationRunner.run_ratt_report(
+					BgrrlAnnotationRunner.run_ratt_report(
 						self.config_manager.ratt_reference,                          				
 						join(self.config_manager.output_dir, "annotation", "ratt"),
 						join(self.config_manager.output_dir, "annotation", "prokka"),
@@ -229,17 +176,17 @@ class BGAnnotationRunner(BgrrlModuleRunner):
 
 				if run_result and not self.config_manager.no_packaging:
 					self.config_manager.package_mode = "ann"
-					run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
+					run_result = BgrrlPackageRunner("bgpackage", self.config_manager).run_module()
 					if run_result:
 						self.config_manager.package_mode = "analysis,ann"
-						run_result = BGPackageRunner("bgpackage", self.config_manager).run_module()
+						run_result = BgrrlPackageRunner("bgpackage", self.config_manager).run_module()
 
 		return run_result
 
 
-class BGPackageRunner(BgrrlModuleRunner):
+class BgrrlPackageRunner(BgrrlModuleRunner):
 	def __init__(self, module, config_manager):
-		super(BGPackageRunner, self).__init__(module, config_manager)
+		super(BgrrlPackageRunner, self).__init__(module, config_manager)
 		if self.config_manager.package_mode in ("processed_reads", "asm", "asm,analysis", "asm,ann,analysis"):
 			self.cols_to_check = list()
 			self.sampletype = ASM_Sample
@@ -276,33 +223,33 @@ class BGPackageRunner(BgrrlModuleRunner):
 		run_result = self.run_module()
 		return run_result
 
-
 class BgrrlRunner:
+	modules = {
+		"survey": ("bgsurvey", BgrrlSurveyRunner),
+		"assemble": ("bgasm", BgrrlAssemblyRunner),
+		"annotate": ("bgann", BgrrlAnnotationRunner),
+		"package": ("bgpackage", BgrrlPackageRunner),
+	}
 	def __init__(self, args):
 		self.config_manager = BgrrlConfigurationManager(args)
-
-	def __run_all(self):
-		raise ValueError("Wrong runmode: (ATTEMPT_FULL is not implemented yet)")
-
 	def run(self):
+		runner = self.modules.get(self.config_manager.runmode, None)
+		if runner is None and self.config_manager.runmode != "auto":
+			raise ValueError("Not a valid runmode: {}".format(self.config_manager.runmode))
+		elif self.config_manager.runmode == "auto":
+			module, runner = self.modules["survey"]
+			run_result = runner(module, self.config_manager).run()
+			if run_result:
+				module, runner = self.modules["assemble"]
+				run_result = runner(module, self.config_manager).run()
+		else:
+			module, runner = runner
+			run_result = runner(module, self.config_manager).run()
 
-		modules = {
-			"survey": ("bgsurvey", BGSurveyRunner),
-			"assemble": ("bgasm", BGAssemblyRunner),
-			"annotate": ("bgann", BGAnnotationRunner),
-			"package": ("bgpackage", BGPackageRunner)
-		}
-		
-		runner = modules.get(self.config_manager.runmode, None)
-		if runner is None:
-			raise ValueError("Not a valid runmode: " + self.config_manager.runmode)
-		module, runner = runner
-		run_result = runner(module, self.config_manager).run()
-	
 		print()
 		if run_result:
-			print("BGRR| completed successfully.")
+			print("Bgrr| completed successfully.")
 		else:
-			raise ValueError("BGRR| failed.  Please consult logs to debug run.")
+			raise ValueError("Bgrr| failed in module:{}. Please consult logs to troubleshoot run.".format(module))
 
 		return True
