@@ -8,7 +8,8 @@ CONFIG_FILES = [
 	"bgrrl_config.yaml", 
 	"hpc_config.json", 
 	"multiqc_config.yaml", 
-	"enterobase.yaml"
+	"enterobase.yaml",
+	"assembly_stages.yaml"
 ]
 
 def main():

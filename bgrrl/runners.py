@@ -123,7 +123,7 @@ class BGAssemblyRunner(BgrrlModuleRunner):
 		else:
 			run_result = self.run_module()
 			if run_result:
-				run_result = asm_stage_report_main(asm_stage_report_args)
+				#run_result = asm_stage_report_main(asm_stage_report_args)
 				if run_result:
 
 					if self.config_manager.run_annotation:

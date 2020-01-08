@@ -33,6 +33,9 @@ TARGETS = list()
 if config["module"] == "bgasm":
 	sampletype = ASM_Sample
 	TARGETS.append(join(OUTPUTDIR, "reports", "quast_report.tsv"))
+	TARGETS.append(join(OUTPUTDIR, "reports", "assembly_stages.tsv"))
+	TARGETS.append(join(OUTPUTDIR, "reports", "assembly_stage_summary.tsv"))
+	TARGETS.append(join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.asm_pass.tsv"))
 	
 elif config["module"] == "bgann":
 	sampletype = ANN_Sample
@@ -124,7 +127,7 @@ QAA_CMD_CALL = get_cmd_call(config, "qaa_container")
 ### RULES ###
 
 if config["run_prokka"]:
-	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, collate_quast_reports
+	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, asm_collate_quast_reports, asm_collate_stage_reports
 else:
 	localrules: all
 
@@ -199,8 +202,19 @@ if config["module"] == "bgasm":
 			" && mv {params.outdir}/report.tsv {params.outdir}/report.tsv.full" + \
 			" && mv {params.outdir}/report.tsv.12 {params.outdir}/report.tsv"
 
+	rule asm_collate_stage_reports:
+		input:
+			assemblies = expand(join(ASSEMBLY_DIR, "{sample}", "assembly.fasta"), sample=INPUTFILES)
+		output:
+			assembly_stages = join(OUTPUTDIR, "reports", "assembly_stages.tsv"),
+			assembly_stage_summary = join(OUTPUTDIR, "reports", "assembly_stage_summary.tsv"),
+			samplesheet = join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.asm_pass.tsv")
+		run:
+			import yaml
+			from bgrrl.reporters import collate_assembly_information as report
+			report(ASSEMBLY_DIR, output.assembly_stages, output.assembly_stage_summary, output.samplesheet, supported_stages=yaml.load(open(join(OUTPUTDIR, "config", "assembly_stages.yaml")), Loader=yaml.SafeLoader))
 
-	rule collate_quast_reports:
+	rule asm_collate_quast_reports:
 		input:
 			quast_reports = expand(join(ASSEMBLY_DIR, "{sample}", "quast", "transposed_report.tsv"), sample=INPUTFILES)
 		output:
@@ -208,21 +222,7 @@ if config["module"] == "bgasm":
 		run:
 			from bgrrl.reporters import collate_quast_reports as report
 			report(output.report, *input.quast_reports)
-"""
-			import os
-			import sys
-			import csv
 
-			header = ""
-			with open(output.report, "w") as report_out:
-				for f in input.quast_reports:
-					for i, row in enumerate(csv.reader(open(f), delimiter="\t")):
-						if i == 0 and not header:
-							header = row
-							print(*header, file=report_out, sep="\t")
-						elif i:
-							print(*row, file=report_out, sep="\t")
-"""
 
 if config["run_prokka"]:
 	rule ann_prokka:
