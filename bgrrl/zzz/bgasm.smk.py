@@ -67,6 +67,11 @@ if config["run_ratt"]:
 		TARGETS.append(join(RATT_REF_PATH, d, "gff", d + ".gff"))
 		REF_PREFIXES[d] = list(f.strip(".embl").split(".")[-1] for f in next(os.walk(join(RATT_REF_PATH, d)))[2] if f.endswith(".embl"))
 
+	TARGETS.extend([join(RATT_DIR, sample, "{}.ratt_report.tsv".format(sample)) for sample in INPUTFILES])
+	TARGETS.append(join(OUTPUTDIR, "reports", "annotation_report.tsv"))
+
+
+
 # define normalization/no-normalization behaviour
 if SKIP_NORMALIZATION:
 	PRIMARY_READDIR = BBDUK_DIR
@@ -128,7 +133,7 @@ QAA_CMD_CALL = get_cmd_call(config, "qaa_container")
 ### RULES ###
 
 if config["run_prokka"]:
-	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, asm_collate_quast_reports, asm_collate_stage_reports, ann_check_prokka_nodes
+	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, asm_collate_quast_reports, asm_collate_stage_reports, ann_check_prokka_nodes, ann_ratt_report, ann_compare_annotations
 else:
 	localrules: all, asm_collate_quast_reports, asm_collate_stage_reports
 
@@ -212,7 +217,7 @@ if config["module"] == "bgasm":
 			samplesheet = join(OUTPUTDIR, "reports", "samplesheets", "samplesheet.asm_pass.tsv")
 		run:
 			import yaml
-			from bgrrl.reporters import collate_assembly_information as report
+			from bgrrl.reporters.reporters import collate_assembly_information as report
 			report(ASSEMBLY_DIR, output.assembly_stages, output.assembly_stage_summary, output.samplesheet, supported_stages=yaml.load(open(join(OUTPUTDIR, "config", "assembly_stages.yaml")), Loader=yaml.SafeLoader))
 
 	rule asm_collate_quast_reports:
@@ -221,7 +226,7 @@ if config["module"] == "bgasm":
 		output:
 			report = join(OUTPUTDIR, "reports", "quast_report.tsv")
 		run:
-			from bgrrl.reporters import collate_quast_reports as report
+			from bgrrl.reporters.reporters import collate_quast_reports as report
 			report(output.report, *input.quast_reports)
 
 
@@ -263,7 +268,7 @@ if config["run_prokka"]:
 		output:
 			report = join(OUTPUTDIR, "reports", "prokka_node_report.txt")
 		run:
-			from bgrrl.reporters import check_prokka_nodes as report
+			from bgrrl.reporters.reporters import check_prokka_nodes as report
 			report(PROKKA_DIR, output.report)
 
 
@@ -309,7 +314,7 @@ if config["run_ratt"]:
 		input:
 			gff = get_ref
 		output:
-			join(config["ratt_reference"], "{ref_ann}", "gff", "{ref_ann}.gff")
+			join(RATT_REF_PATH, "{ref_ann}", "gff", "{ref_ann}.gff")
 		log:
 			join(ANNOTATION_DIR, "log", "{ref_ann}.ann_ratt_mergegff.log")
 		params:
@@ -340,3 +345,27 @@ if config["run_ratt"]:
 			1
 		shell:
 			"ratt_wrapper {params.container} -o {params.outdir} {input.contigs} {input.reference} some_dummy_path &> {log}"
+
+
+	rule ann_ratt_report:
+		input:
+			annotations = expand(join(RATT_DIR, "{sample}", "{ref_ann}", "{sample}_{ref_ann}.final.gff"), sample=INPUTFILES, ref_ann=next(os.walk(RATT_REF_PATH))[1])
+		output:
+			reports = expand(join(RATT_DIR, "{sample}", "{sample}.ratt_report.tsv"), sample=INPUTFILES)
+		run:
+			from bgrrl.reporters.ann_report import main as report
+			report(["--report-dir", join(OUTPUTDIR, "reports"), "--ref-dir", RATT_REF_PATH, RATT_DIR])
+
+	rule ann_compare_annotations:
+		input:
+			ratt_reports = rules.ann_ratt_report.output.reports,
+			prokka_gffs = expand(join(PROKKA_DIR, "{sample}", "{sample}.gff"), sample=INPUTFILES)
+		output:
+			annotation_report = join(OUTPUTDIR, "reports", "annotation_report.tsv")
+		run:
+			from bgrrl.reporters.annocmp import main as report
+			report([PROKKA_DIR, RATT_DIR, join(OUTPUTDIR, "reports")])
+
+
+
+
