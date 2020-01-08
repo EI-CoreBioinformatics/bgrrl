@@ -52,6 +52,7 @@ if config["run_prokka"]:
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".gff"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".fna"), INPUTFILES))
 	TARGETS.extend(map(lambda s:join(PROKKA_DIR, s, s + ".ffn.16S"), INPUTFILES))
+	TARGETS.append(join(OUTPUTDIR, "reports", "prokka_node_report.txt"))
 else:
 	TARGETS.extend(map(lambda s:join(ASSEMBLY_DIR, s, s + ".assembly.fasta"), INPUTFILES))
 
@@ -127,9 +128,9 @@ QAA_CMD_CALL = get_cmd_call(config, "qaa_container")
 ### RULES ###
 
 if config["run_prokka"]:
-	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, asm_collate_quast_reports, asm_collate_stage_reports
+	localrules: all, ann_prokka_gffconvert, ann_prokka_16S, asm_collate_quast_reports, asm_collate_stage_reports, ann_check_prokka_nodes
 else:
-	localrules: all
+	localrules: all, asm_collate_quast_reports, asm_collate_stage_reports
 
 rule all:
 	input: TARGETS
@@ -249,11 +250,22 @@ if config["run_prokka"]:
 		threads:
 			8
 		shell:
-			"prokka_wrapper {input.contigs} {params.container} --prefix {params.prefix} --outdir {params.outdir} --seq-centre {params.centre} --force --threads {threads}" + \
-            " {params.custom_proteins} && " + \
+			"rm -rf {PROKKA_DIR}/{wildcards.sample}/PROKKA_FAILED &&" + \
+			" prokka_wrapper {input.contigs} {params.container} --prefix {params.prefix} --outdir {params.outdir} --seq-centre {params.centre} --force --threads {threads}" + \
+			" {params.custom_proteins} && " + \
 			" touch {PROKKA_DIR}/{wildcards.sample}/{wildcards.sample}.txt && " + \
 			" sed -i \"s/strain/{wildcards.sample}/\" {PROKKA_DIR}/{wildcards.sample}/{wildcards.sample}.txt" + \
 			" &> {log}"
+
+	rule ann_check_prokka_nodes:
+		input:
+			annotations = expand(join(PROKKA_DIR, "{sample}", "{sample}.fna"), sample=INPUTFILES)
+		output:
+			report = join(OUTPUTDIR, "reports", "prokka_node_report.txt")
+		run:
+			from bgrrl.reporters import check_prokka_nodes as report
+			report(PROKKA_DIR, output.report)
+
 
 	rule ann_prokka_16S:
 		message:

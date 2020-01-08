@@ -63,7 +63,6 @@ setup(
 			"asm_report=bgrrl.bin.asm_report:main",
 			"ann_report=bgrrl.bin.ann_report:main",
 			"bg_datasum=bgrrl.bin.bg_datasum:main",
-			"asm_stage_report=bgrrl.bin.asm_stage_report:main",
 			"ann_cmp=bgrrl.bin.annocmp:main",
 			"create_samplesheet=bgrrl.bin.create_samplesheet:main",
 			"prokka_report=bgrrl.bin.prokka_report:main",

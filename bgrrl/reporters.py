@@ -40,3 +40,15 @@ def collate_assembly_information(assembly_dir, stage_report_file, stage_summary_
 			if assembly_stages[stage_id]:
 				print(stage, assembly_stages[stage_id], assembly_stages[stage_id]/N, sep="\t", file=summary_out)
 		print("Total", "", "", N, sep="\t", file=summary_out)
+
+def check_prokka_nodes(prokka_dir, prokka_run_report):
+	nodes = set()
+	for f in glob.glob(join(prokka_dir, "*", "PROKKA_FAILED")):
+		nodes.add(open(f).read().strip())
+	with open(prokka_run_report, "at") as run_report:
+		print(*sorted(nodes), sep="\n", file=run_report)
+	if nodes:
+		print(
+			"Failed prokka jobs were executed on nodes: {}.\n" + \
+			"Try to exclude those nodes from being used for rule ann_prokka.".format(sorted(list(nodes))),
+		)
