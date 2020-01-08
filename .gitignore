@@ -1,3 +1,5 @@
 bgrrl.egg-info/
 build/
 dist/
+*/__pycache__
+*/*/__pycache__
