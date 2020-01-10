@@ -1,0 +1,55 @@
+Bootstrap: docker
+From: conda/miniconda3
+
+%environment
+
+	PATH=/opt/software/prokka/bin:$PATH
+	export PATH
+	#export LC_ALL=en_GB.UTF-8
+    #export LANG=en_GB.UTF-8
+	#export LANGUAGE=en_US.UTF-8
+	#export LC_ALL=en_US.UTF-8
+	#export LANG=en_US.UTF-8
+	#export LC_CTYPE=en_US.UTF-8
+
+%post
+
+    ### Install your packages ###
+
+    # conda env update --prune -n base -f /environment.yml && conda clean -afy
+	conda update conda
+    apt update && apt-get install -qq -y sudo git locales wget zlib1g-dev g++ perl curl build-essential libssl-dev cpanminus && apt clean
+
+	# https://askubuntu.com/questions/683406/how-to-automate-dpkg-reconfigure-locales-with-one-command
+	sudo sed -i '/^#.* en_GB.* /s/^#//' /etc/locale.gen
+	sudo locale-gen
+
+	apt-get install -y bioperl libtime-piece-perl libxml-simple-perl libdigest-perl-md5-perl default-jre libmodule-build-perl libcam-pdf-perl
+	cpan List::Util
+	cpanm Bio::Root::Version
+	apt-get remove -y ncbi-blast+ ncbi-blast+-legacy
+
+	#curl -L https://cpanmin.us | perl - --sudo App::cpanminus --force
+	#cpanm --self-upgrade --sudo
+
+	makeblastdb -version || echo XXX
+	# sudo yum install git perl-Time-Piece perl-XML-Simple perl-Digest-MD5 perl-App-cpanminus git java perl-CPAN perl-Module-Build
+	conda install -y -c bioconda barrnap blast">=2.8"
+	makeblastdb -version
+	which makeblastdb
+
+	#cpanm Bio::Perl
+#	conda install -y -c bioconda perl-bioperl prokka barrnap
+#	#conda remove -y --force tbl2asn
+#	rm -fv /usr/local/bin/tbl2asn
+#	chmod 777 linux64.tbl2asn
+#	./linux64.tbl2asn --help
+	wget ftp://ftp.ncbi.nih.gov/toolbox/ncbi_tools/converters/by_program/tbl2asn/linux64.tbl2asn.gz
+	gunzip linux64.tbl2asn.gz
+	mv -v linux64.tbl2asn /usr/local/bin/tbl2asn
+	chmod 777 /usr/local/bin/tbl2asn
+	tbl2asn --help
+#	which tbl2asn
+
+	git clone https://github.com/tseemann/prokka.git /opt/software/prokka
+    /opt/software/prokka/bin/prokka --setupdb	

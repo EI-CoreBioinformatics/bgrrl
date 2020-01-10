@@ -2,6 +2,7 @@ singularity:
   use_singularity: true
   bgrrl_container: "/ei/software/testing/bgrrl/singularity/bgrrl_exec.img"
   qaa_container: "/ei/software/testing/qaa/singularity/qaa_exec.img"
+  prokka_container: "/ei/software/testing/bgrrl/singularity/prokka/Singularity.img"
 
 tools:
   time: "/usr/bin/time -v"

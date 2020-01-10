@@ -1,14 +1,10 @@
 BootStrap: docker 
 From: centos:7
 OSVersion: 7
-# MirrorURL: http://yum-repos.hpccluster/centos/7/os/$basearch/
 MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
 Include: yum wget
 
-# If you want the updates (available at the bootstrap date) to be installed
-# inside the container during the bootstrap instead of the General Availability
-# point release (7.x) then uncomment the following line
-
+# maybe?
 # UpdateURL: http://yum-repos.hpccluster/centos/7/updates/$basearch/
 
 %setup
@@ -24,8 +20,6 @@ Include: yum wget
     PATH=/opt/software/prokka/bin:/opt/software/samtools:/opt/software/ratt-code:/opt/miniconda/bin:$PATH
     export PATH
 
-
-
 %post
     mkdir -p /opt/software
 
@@ -36,9 +30,16 @@ Include: yum wget
     yum update -y
 
     yum -y install git bzip2 wget which sudo vi source zlib-devel xz-devel bzip2-devel
-    yum -y group install "Development Tools"
+    yum -y groupinstall "Development Tools"
 
+	# This run of yum installs
+	# - prokka perl dependencies according to github installation instructions: https://github.com/tseemann/prokka
+	# i.e., these: sudo yum install git perl-Time-Piece perl-XML-Simple perl-Digest-MD5 perl-App-cpanminus git java perl-CPAN perl-Module-Build
+	# - and a bunch of other libraries (perl-Env, perl-core) that seemed to be necessary during the last build (2020-01-09)
+	yum -y install perl-Time-Piece perl-XML-Simple perl-Digest-MD5 perl-App-cpanminus java perl-CPAN perl-Module-Build perl-Env perl-core
+	cpanm Bio::Perl
 
+	# Miniconda
     mini_version=4.5.4
     wget https://repo.anaconda.com/miniconda/Miniconda3-${mini_version}-Linux-x86_64.sh
     bash Miniconda3-${mini_version}-Linux-x86_64.sh -b -p /opt/miniconda
@@ -46,35 +47,23 @@ Include: yum wget
     echo "export PATH" >> /root/.bashrc
     rm Miniconda3-${mini_version}-Linux-x86_64.sh
     source /root/.bashrc
-
-	yum -y install git perl-Time-Piece perl-XML-Simple perl-Digest-MD5 perl-App-cpanminus git java perl-CPAN perl-Module-Build
-	cpanm Bio::Perl
+	
+	# Prokka	
 	git clone https://github.com/tseemann/prokka.git /opt/software/prokka
 	/opt/software/prokka/bin/prokka --setupdb
 	
-	
-
-
-	# if this is uncommented, build process will not proceed after this!
-    # conda update -n base conda
-
     export PYTHONPATH=/opt/miniconda/lib/python3.6/site-packages
 
-	wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2
-    bunzip2 samtools-1.9.tar.bz2
-    tar xvf samtools-1.9.tar
-    mv samtools-1.9 /opt/software/samtools
-    cd /opt/software/samtools
-    ./configure --without-curses
-    make
-    ls
-    cd
+	# Remaining bgrrl (non-qaa) dependencies
+	conda install -y -c bioconda bbmap fastqc kat unicycler spades velvet perl-velvetoptimiser seqtk emboss mummer barrnap samtools
 
+    wget ftp://ftp.ncbi.nih.gov/toolbox/ncbi_tools/converters/by_program/tbl2asn/linux64.tbl2asn.gz
+    gunzip linux64.tbl2asn.gz
+    mv -v linux64.tbl2asn /usr/local/bin/tbl2asn
+    chmod 777 /usr/local/bin/tbl2asn
+    tbl2asn --help
 
-	echo "CONDA_INSTALL"
-	#conda install -y -c bioconda bbmap fastqc kat unicycler spades velvet perl-velvetoptimiser prokka>=1.12 seqtk emboss mummer 
-	conda install -y -c bioconda bbmap fastqc kat unicycler spades velvet perl-velvetoptimiser seqtk emboss mummer barrnap
-
+	# install, build and patch ratt
 	svn co "https://svn.code.sf.net/p/ratt/code/" /opt/software/ratt-code 	
 	RATT_HOME=/opt/software/ratt-code
 	export RATT_HOME
