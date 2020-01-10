@@ -129,6 +129,8 @@ CMD_CALL = get_cmd_call(config, "bgrrl_container")
 CONTAINER_PARAM = ("--singularity-container " + " ".join(CMD_CALL.split(" ")[2:])) if CMD_CALL else ""
 
 QAA_CMD_CALL = get_cmd_call(config, "qaa_container")
+PROKKA_CMD_CALL = get_cmd_call(config, "prokka_container")
+PROKKA_CONTAINER_PARAM = ("--singularity-container " + " ".join(PROKKA_CMD_CALL.split(" ")[2:])) if PROKKA_CMD_CALL else ""
 
 ### RULES ###
 
@@ -248,7 +250,7 @@ if config["run_prokka"]:
 			outdir = lambda wildcards: join(PROKKA_DIR, wildcards.sample),
 			prefix = lambda wildcards: wildcards.sample,
 			centre = config["misc"]["seqcentre"],
-			container = CONTAINER_PARAM,
+			container = PROKKA_CONTAINER_PARAM,
 			custom_proteins = ("--proteins " + config["custom_prokka_proteins"]) if config.get("custom_prokka_proteins", "") else ""
 		resources:
 			mem_mb = 8000
@@ -292,9 +294,9 @@ if config["run_ratt"]:
 		message:
 			"Preprocessing reference annotations for ratt-annotation transfer..."
 		input:
-			embl_ref = join(RATT_REF_PATH, "{ref_ann}", "{prefix}.embl")
+			embl_ref = join(RATT_REF_PATH, "{ref_ann}", "{ref_ann}.embl")
 		output:
-			join(RATT_REF_PATH, "{ref_ann}", "gff", "{prefix}.parts_gff")
+			join(RATT_REF_PATH, "{ref_ann}", "gff", "{ref_ann}.parts_gff")
 		params:
 			refdir = join(RATT_REF_PATH, "{ref_ann}"),
 			cmd = CMD_CALL + "seqret"			
