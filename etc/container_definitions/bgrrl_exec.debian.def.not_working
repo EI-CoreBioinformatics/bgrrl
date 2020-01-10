@@ -25,6 +25,7 @@ From: conda/miniconda3
 	sudo locale-gen
 
 	apt-get install -y bioperl libtime-piece-perl libxml-simple-perl libdigest-perl-md5-perl default-jre libmodule-build-perl libcam-pdf-perl
+	# update List::Util https://github.com/tseemann/prokka/issues/414
 	cpan List::Util
 	cpanm Bio::Root::Version
 	apt-get remove -y ncbi-blast+ ncbi-blast+-legacy

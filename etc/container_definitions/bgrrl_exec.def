@@ -35,7 +35,9 @@ Include: yum wget
 	# This run of yum installs
 	# - prokka perl dependencies according to github installation instructions: https://github.com/tseemann/prokka
 	# i.e., these: sudo yum install git perl-Time-Piece perl-XML-Simple perl-Digest-MD5 perl-App-cpanminus git java perl-CPAN perl-Module-Build
-	# - and a bunch of other libraries (perl-Env, perl-core) that seemed to be necessary during the last build (2020-01-09)
+	# - and a bunch of other libraries (perl-Env, perl-core) that seemed to be necessary during the last build (2020-01-09):
+	#   - https://github.com/xslate/p5-Mouse/issues/95: perl-core necessary as Fatal is not included in perl in CentOS7 ?why did this not occur before?
+	#   - perl-Env required by some dependent libs
 	yum -y install perl-Time-Piece perl-XML-Simple perl-Digest-MD5 perl-App-cpanminus java perl-CPAN perl-Module-Build perl-Env perl-core
 	cpanm Bio::Perl
 
