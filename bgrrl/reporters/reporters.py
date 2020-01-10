@@ -43,7 +43,7 @@ def collate_assembly_information(assembly_dir, stage_report_file, stage_summary_
 
 def check_prokka_nodes(prokka_dir, prokka_run_report):
 	nodes = set()
-	for f in glob.glob(join(prokka_dir, "*", "PROKKA_FAILED")):
+	for f in glob.glob(os.path.join(prokka_dir, "*", "PROKKA_FAILED")):
 		nodes.add(open(f).read().strip())
 	with open(prokka_run_report, "at") as run_report:
 		print(*sorted(nodes), sep="\n", file=run_report)
