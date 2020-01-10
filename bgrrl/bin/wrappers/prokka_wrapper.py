@@ -36,7 +36,8 @@ def main():
 	args = ap.parse_args()
 
 	singularity_prefix = ("singularity exec " + args.singularity_container + " ") if args.singularity_container else ""
-
+	if os.path.exists(join(args.outdir, "PROKKA_FAILED")):
+		os.remove(join(args.outdir, "PROKKA_FAILED"))
 
 	cmd = "mkdir -p {1}" + \
 		" && cp -v {4} {1}/prokka_contigs.fasta" + \
