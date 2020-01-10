@@ -173,7 +173,7 @@ def main(args=sys.argv[1:]):
     with open(join(args.report_dir, "annotation_report.tsv"), "w") as delta_out:
         print(*HEADER, sep="\t", file=delta_out)
         for sample in samples:
-            prokka_gff = join(args.prokka_dir, sample, sample + ".prokka.gff")
+            prokka_gff = join(args.prokka_dir, sample, sample + ".gff")
             ratt_tsv = join(args.ratt_dir, sample, sample + ".ratt_report.tsv")
             prokka_ratt_delta_gff = join(delta_dir, sample + ".prokka_ratt_delta.gff")
             ratt_prokka_delta_gff = join(delta_dir, sample + ".ratt_prokka_delta.gff")
