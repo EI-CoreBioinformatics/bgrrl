@@ -16,6 +16,8 @@ from bgrrl.bgrrl_config import BgrrlConfigurationManager
 
 from qaa.runners import QaaRunner
 
+PROKKA_ANNOTATION_WARNING = "WARNING: Prokka annotation selected\nIf your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails)."
+
 class BgrrlModuleRunner:
 	def __init__(self, module, config_manager):
 		self.snake = join(dirname(__file__), "zzz", module + ".smk.py")
@@ -89,17 +91,13 @@ class BgrrlAssemblyRunner(BgrrlModuleRunner):
 			self.config_manager._config.get("enterobase_criteria", "")
 		]
 
-		run_result = self.run_module()
 		qaa_stage = "asm"
+		if self.config_manager.run_annotation:
+			qaa_stage = "asm,ann"
+			print(PROKKA_ANNOTATION_WARNING)
+
+		run_result = self.run_module()
 		if run_result:
-			if self.config_manager.run_annotation:
-				print(
-					"WARNING: Prokka annotation selected\n" + \
-					"If your jobs fail, you might have to update tbl2asn and/or exclude nodes " + \
-					"(hmmscan/GNU parallel fails)."
-				)
-				qaa_stage = "asm,ann" if self.config_manager._config["run_ratt"] else "asm"
-				
 			qaa_args = self.config_manager.create_qaa_args(stage=qaa_stage)
 			run_result = QaaRunner(qaa_args).run()
 			if run_result:
@@ -107,7 +105,7 @@ class BgrrlAssemblyRunner(BgrrlModuleRunner):
 					run_result = asm_report_main(asm_report_args)
 				if run_result and not self.config_manager.no_packaging:
 					package_mode = qaa_stage + (",analysis" if self.config_manager.is_final_step or self.config_manager.run_annotation else "")
-					self.config_manager.package_mode = package_mode # "asm"
+					self.config_manager.package_mode = package_mode
 					run_result = BgrrlPackageRunner("bgpackage", self.config_manager).run_module()
 
 		return run_result
@@ -119,33 +117,13 @@ class BgrrlAnnotationRunner(BgrrlModuleRunner):
 		self.cols_to_verify = ["Assembly"]
 		self.sampletype = ANN_Sample
 
-	@staticmethod
-	def run_ratt_report(ratt_reference, ratt_dir, prokka_dir, report_dir):
-		try:
-			ann_report_main(["--ref-dir", ratt_reference, ratt_dir])
-			annocmp_main([prokka_dir, ratt_dir, report_dir])
-		except:
-			open(join(report_dir, "annotation_report.tsv"), "at").close()
-
 	def run(self):
-		run_result = False
+		print(PROKKA_ANNOTATION_WARNING)
 
-		print(
-			"WARNING: Prokka annotation selected\n" + \
-			"If your jobs fail, you might have to update tbl2asn and/or exclude nodes (hmmscan/GNU parallel fails)."
-		)
 		run_result = self.run_module()
 		if run_result:
 			qaa_args = self.config_manager.create_qaa_args(stage="ann")
 			run_result = QaaRunner(qaa_args).run()
-
-			if self.config_manager._config["run_ratt"]: 
-				BgrrlAnnotationRunner.run_ratt_report(
-					self.config_manager.ratt_reference,                          				
-					join(self.config_manager.output_dir, "annotation", "ratt"),
-					join(self.config_manager.output_dir, "annotation", "prokka"),
-					join(self.config_manager.output_dir, "reports")
-				)
 
 			if run_result and not self.config_manager.no_packaging:
 				self.config_manager.package_mode = "ann"
