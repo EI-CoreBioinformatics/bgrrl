@@ -163,6 +163,9 @@ if config["run_multiqc"]:
 				for f in input_files:
 					if (os.path.basename(os.path.dirname(f)) in valid_samples or os.path.basename(os.path.dirname(os.path.dirname(f)))) and os.stat(f).st_size > 0:
 						print(f, file=out)
+				for f in glob.glob(os.path.join(qaa_env.output_dir, "assembly", "*", "quast", "report.tsv")):
+					if os.path.basename(os.path.dirname(os.path.dirname(f))) in valid_samples and os.stat(f).st_size > 0:
+						print(f, file=out)
 
 	rule qaa_multiqc:
 		input:

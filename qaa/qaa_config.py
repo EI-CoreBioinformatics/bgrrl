@@ -114,7 +114,11 @@ class QaaConfigurationManager(ConfigurationManager):
 					}
 				sheet[sample]["busco_db"] = self.busco_db
 		else:
-			sample_data = yaml.load(open(self.input), Loader=yaml.SafeLoader)
+			try:
+				sample_data = yaml.load(open(self.input_sheet), Loader=yaml.SafeLoader)
+			except:
+				sample_data = yaml.load(open(self.input), Loader=yaml.SafeLoader)
+
 			for sample, data in sample_data.items():
 				if self.runmode == "asm":
 					sheet[sample] = {
